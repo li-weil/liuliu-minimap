@@ -51,6 +51,14 @@ function normalizeWalkRecord(item) {
 const ENDPOINTS = {
   syncUser: {
     cloudName: 'syncUser',
+    web: {
+      path: '/auth/sync-user',
+      method: 'POST',
+      normalizeResponse: (data) => {
+        persistAuthSession(data);
+        return data;
+      },
+    },
   },
   generateTheme: {
     cloudName: 'generateTheme',
@@ -122,6 +130,19 @@ const ENDPOINTS = {
   },
   verifyMission: {
     cloudName: 'verifyMission',
+    web: {
+      path: '/ai/missions/verify',
+      method: 'POST',
+      normalizeRequest: (data) => {
+        const fileIDs = Array.isArray(data.fileIDs) ? data.fileIDs.filter(Boolean) : [];
+        return {
+          mission: data.mission,
+          noteText: data.noteText,
+          fileIDs,
+          fileUrls: fileIDs.filter((item) => String(item).startsWith('http')),
+        };
+      },
+    },
   },
   createWalk: {
     cloudName: 'createWalk',
@@ -234,6 +255,26 @@ function getStoredToken() {
     return wx.getStorageSync('citywalk_token') || '';
   } catch (error) {
     return '';
+  }
+}
+
+function persistAuthSession(data) {
+  if (!data || typeof data !== 'object') {
+    return;
+  }
+
+  try {
+    if (data.token) {
+      wx.setStorageSync('citywalk_token', data.token);
+    }
+    if (data.refreshToken) {
+      wx.setStorageSync('citywalk_refresh_token', data.refreshToken);
+    }
+    if (data.expiresIn !== undefined) {
+      wx.setStorageSync('citywalk_token_expires_in', data.expiresIn);
+    }
+  } catch (error) {
+    // Ignore storage failures so login can still proceed in-memory.
   }
 }
 

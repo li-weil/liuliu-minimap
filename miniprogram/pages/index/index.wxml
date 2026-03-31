@@ -12,7 +12,7 @@
     </view>
 
     <view class="search-panel">
-      <input class="search-input" placeholder="搜索地点或街区，作为 3km 范围探索中心" value="{{searchKeyword}}" bindinput="handleSearchInput" confirm-type="search" bindconfirm="searchLocation" />
+      <input class="search-input" placeholder="搜索地点或街区" value="{{searchKeyword}}" bindinput="handleSearchInput" confirm-type="search" bindconfirm="searchLocation" />
       <button class="ghost-btn search-btn" bindtap="searchLocation" loading="{{loadingSearch}}">搜索</button>
     </view>
 
@@ -67,7 +67,7 @@
 
   <view wx:if="{{walkMode === 'pure'}}" class="mode-board">
     <view class="section-card mode-card">
-      <view class="section-title">随机主题 / 组合主题</view>
+      <view class="section-title">漫步主题</view>
 
       <view class="field-label section-label">主题选择（1 个或 2 个）</view>
       <view class="pill-row selection-row">
@@ -106,6 +106,12 @@
       <view class="pill-row selection-row">
         <view wx:for="{{preferenceOptions}}" wx:key="item" class="{{preference === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="preference" data-value="{{item}}">{{item}}</view>
       </view>
+
+      <view class="field-label">漫步主题（1 个或 2 个）</view>
+      <view class="pill-row selection-row">
+        <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
+      </view>
+      <view class="helper-copy">AI 会综合天气、季节、状态、偏好和你选定的主题方向来生成内容</view>
 
       <button class="primary-btn full-width-btn advanced-generate-btn" bindtap="handleGenerateTheme" loading="{{isGenerating}}">AI 生成</button>
     </view>

@@ -77,6 +77,10 @@ function buildCombineOptionViews(selected) {
   }));
 }
 
+function buildSelectedThemeCategories(selected) {
+  return (selected || []).map((item) => (String(item).includes('漫步') ? String(item) : `${item}漫步`));
+}
+
 function buildSearchResultViews(results) {
   return (results || []).slice(0, 5).map((item, index) => ({
     id: item.id || item.location || `${item.name || item.address || 'result'}-${index}`,
@@ -389,6 +393,7 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
+        selectedThemes: buildSelectedThemeCategories(this.data.combineSelections),
       });
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });
@@ -404,7 +409,9 @@ Page({
   async handleRandomTheme() {
     this.setData({ isGenerating: true });
     try {
-      const category = this.data.randomCategories[Math.floor(Math.random() * this.data.randomCategories.length)];
+      const selectedCategories = buildSelectedThemeCategories(this.data.combineSelections);
+      const categoryPool = selectedCategories.length ? selectedCategories : this.data.randomCategories;
+      const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
       const result = await generateRandomTheme({
         category,
         locationName: this.data.locationName,
@@ -412,6 +419,7 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
+        selectedThemes: selectedCategories,
       });
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });

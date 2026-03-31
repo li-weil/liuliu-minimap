@@ -112,14 +112,26 @@
   box-shadow: 0 8rpx 16rpx rgba(86, 74, 56, 0.05);
 }
 
-.tool-btn-text {
+.tool-btn-inner {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 16rpx;
   min-height: 96rpx;
   width: 100%;
   padding: 0 20rpx;
   box-sizing: border-box;
+}
+
+.tool-icon-image {
+  width: 38rpx;
+  height: 38rpx;
+  flex-shrink: 0;
+  opacity: 0.88;
+}
+
+.tool-btn-text {
+  display: block;
   font-size: 28rpx;
   font-weight: 600;
   line-height: 1.2;
