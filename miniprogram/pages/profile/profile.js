@@ -14,7 +14,7 @@ Page({
   async handleLogin() {
     this.setData({ syncing: true });
     try {
-      const profile = await wx.getUserProfile({ desc: '用于同步你的漫步者资料' });
+      const profile = await wx.getUserProfile({ desc: '用于同步你的漫步资料' });
       const result = await syncUser({
         nickName: profile.userInfo.nickName,
         avatarUrl: profile.userInfo.avatarUrl,
@@ -32,9 +32,5 @@ Page({
   clearDraft() {
     app.clearWalkDraft();
     wx.showToast({ title: '草稿已清空', icon: 'success' });
-  },
-
-  openMapDebug() {
-    wx.navigateTo({ url: '/pages/feed/feed' });
   },
 });

@@ -4,9 +4,7 @@
     "pages/record/record",
     "pages/walk-detail/walk-detail",
     "pages/history/history",
-    "pages/profile/profile",
-    "pages/mapdebug/mapdebug",
-    "pages/feed/feed"
+    "pages/profile/profile"
   ],
   "window": {
     "navigationBarTitleText": "城市漫步者",

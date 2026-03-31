@@ -1,7 +1,7 @@
 <view class="page-shell">
   <view class="hero-card" style="padding: 32rpx; margin-bottom: 24rpx;">
     <view class="section-title">我的账户</view>
-    <view class="section-subtitle">同步微信资料后，可继续保存 citywalk 记录到当前后端体系。</view>
+    <view class="section-subtitle">同步微信资料后，可继续保存你的 citywalk 记录</view>
   </view>
 
   <view wx:if="{{user}}" class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
@@ -13,7 +13,7 @@
       </view>
     </view>
     <view class="meta-row">
-      <view class="meta-pill">角色：{{user.role || 'user'}}</view>
+      <view class="meta-pill">角色 {{user.role || 'user'}}</view>
       <view class="meta-pill">已同步</view>
     </view>
   </view>
@@ -23,10 +23,9 @@
   <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
     <view class="section-title">当前 MVP 能力</view>
     <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">AI 主题生成</view>
-    <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">图片 + 视频 + 录音 + 轨迹记录</view>
-    <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">足迹保存与纪念卡册占位</view>
+    <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">图片 视频 录音与轨迹记录</view>
+    <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">足迹保存与历史回看</view>
   </view>
 
-  <button class="primary-btn" bindtap="openMapDebug" style="margin-bottom: 24rpx;">打开地图调试页</button>
   <button class="ghost-btn" bindtap="clearDraft">清空本地漫步草稿</button>
 </view>
