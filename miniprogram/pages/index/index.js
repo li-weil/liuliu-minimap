@@ -12,6 +12,7 @@ const { explainLocationError, getCurrentLocation } = require('../../utils/locati
 const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
 const { fetchNearbyPois, searchLocations } = require('../../services/map');
 const { generateCombinedTheme, generateRandomTheme, generateTheme, getLocationContext } = require('../../services/theme');
+const { getBackendProvider } = require('../../services/api');
 
 function normalizeMissionText(mission) {
   if (typeof mission === 'string') {
@@ -186,6 +187,7 @@ Page({
     nearbyPlaces: [],
     nearbyExpanded: false,
     loadingNearbyPlaces: false,
+    supportsNearbyPois: false,
   },
 
   onLoad() {
@@ -213,6 +215,7 @@ Page({
           fontSize: 12,
         },
       }],
+      supportsNearbyPois: getBackendProvider() === 'web',
     });
     app.globalData.currentTheme = currentTheme;
     this.syncDisplayMeta(currentTheme, 'preset', 'pure');
@@ -449,16 +452,28 @@ Page({
     }
 
     this.setData({ loadingSearch: true });
-    const searchResults = buildSearchResultViews(
-      await searchLocations(
-        keyword,
-        this.data.latitude && this.data.longitude ? { latitude: this.data.latitude, longitude: this.data.longitude } : null,
-      )
-    );
-    this.setData({ searchResults, loadingSearch: false });
+    try {
+      const searchResults = buildSearchResultViews(
+        await searchLocations(
+          keyword,
+          this.data.latitude && this.data.longitude ? { latitude: this.data.latitude, longitude: this.data.longitude } : null,
+        )
+      );
+      this.setData({ searchResults });
 
-    if (!searchResults.length) {
-      wx.showToast({ title: '暂无搜索建议，可直接手动选点', icon: 'none' });
+      if (!searchResults.length) {
+        wx.showToast({ title: '暂无搜索建议，可直接手动选点', icon: 'none' });
+      }
+    } catch (error) {
+      const message = String((error && error.errMsg) || (error && error.message) || '搜索失败');
+      wx.showModal({
+        title: '地点搜索失败',
+        content: message,
+        showCancel: false,
+        confirmText: '知道了',
+      });
+    } finally {
+      this.setData({ loadingSearch: false });
     }
   },
 

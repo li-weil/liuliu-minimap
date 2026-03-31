@@ -180,8 +180,7 @@ function buildPoemPrompt(event) {
 function buildStickerImagePrompt(plan) {
   return [
     'Create a premium vertical citywalk check-in sticker poster, Chinese aesthetic, collectible sticker feeling.',
-    `Theme title: ${plan.title || '城市漫步贴纸'}.`,
-    `Poem mood reference: ${plan.poem || ''}.`,
+    `Theme mood and atmosphere: ${(Array.isArray(plan.palette) ? plan.palette.join(', ') : '') || 'gentle, cinematic, poetic, urban'}.`,
     `Focus mission that must be visualized faithfully: ${plan.focusMission || ''}.`,
     `Primary object that must be the real protagonist: ${plan.primaryObject || ''}.`,
     `How the object must exist in the real scene: ${plan.sceneBinding || ''}.`,
@@ -196,9 +195,10 @@ function buildStickerImagePrompt(plan) {
     'If the mission mentions curved or arched shapes, the curve must belong to the actual target object itself inside the real scene. Do not satisfy the curve using an unrelated foreground object, road barrier, sculpture, wooden slab, decorative prop, or random rounded shape.',
     'The mission object should be visually prominent and easy to identify at first glance, occupying a meaningful portion of the frame rather than appearing as a tiny distant detail.',
     'Warm paper texture, layered collage, cinematic light, refined full-bleed composition, rich visual content across the whole frame.',
+    'The generated background image must not contain any poem text, title text, decorative title block, slogan, or calligraphy overlay. All poem and title text will be added later by the app UI.',
     'Do not reserve any text area. Do not create any wide blank wall, empty strip, pale side panel, margin column, poster frame, signage panel, hanging scroll, announcement board, lightbox, empty canvas, or any abrupt object aligned for text placement.',
     'No isolated object centered in foreground unless the mission explicitly asks for an isolated object. No placeholder object. No object mockup. No display stand. No prop introduced only to satisfy the task keywords.',
-    'No readable text, no watermark, no logo.',
+    'No readable text, no watermark, no logo. Especially no poem text, no title text, no vertical calligraphy, no slogan, no caption, no subtitle, and no decorative characters matching the poem.',
   ].join(' ');
 }
 

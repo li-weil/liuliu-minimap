@@ -17,5 +17,5 @@ module.exports = {
   // 贴纸生成尺寸
   imageSize: '2K',
 
-  timeoutMs: 20000,
+  timeoutMs: 55000,
 };

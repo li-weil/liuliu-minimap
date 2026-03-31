@@ -63,7 +63,7 @@
       <button class="primary-btn map-confirm-btn" bindtap="confirmMapCenterLocation">设为探索点</button>
     </view>
 
-    <view class="nearby-panel">
+    <view wx:if="{{supportsNearbyPois}}" class="nearby-panel">
       <view class="nearby-panel-head">
         <view>
           <view class="nearby-panel-title">周边地点推荐</view>

@@ -40,12 +40,12 @@ function getInputTips({ keyword, location }) {
     return Promise.resolve([]);
   }
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     amap.getInputtips({
       keywords: keyword,
       location: location ? `${location.longitude},${location.latitude}` : '',
       success: (result) => resolve((result && result.tips) || []),
-      fail: () => resolve([]),
+      fail: reject,
     });
   });
 }
