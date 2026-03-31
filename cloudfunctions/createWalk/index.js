@@ -29,6 +29,7 @@ exports.main = async (event) => {
       pointCount: Array.isArray(event.routePoints) ? event.routePoints.length : 0,
       distanceMeters: 0,
     },
+    sticker: event.sticker || null,
     isPublic: !!event.isPublic,
     walkMode: event.walkMode || 'pure',
     generationSource: event.generationSource || 'unknown',

@@ -1,11 +1,49 @@
 const { getWalkDetail } = require('../../services/walk');
 const { formatDate } = require('../../utils/format');
 
+function splitPoemLines(poem) {
+  const normalized = String(poem || '').replace(/[。！？]+$/g, '');
+  const lines = normalized
+    .split(/[，、；]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (lines.length) {
+    return lines;
+  }
+  const compact = normalized.replace(/\s+/g, '');
+  const result = [];
+  for (let index = 0; index < compact.length; index += 6) {
+    result.push(compact.slice(index, index + 6));
+  }
+  return result.filter(Boolean);
+}
+
+function splitPoemColumns(poemLines) {
+  return (poemLines || []).map((line) => String(line || '').split('').filter(Boolean));
+}
+
+function decorateSticker(sticker) {
+  if (!sticker) {
+    return null;
+  }
+  const poemLines = Array.isArray(sticker.poemLines) && sticker.poemLines.length
+    ? sticker.poemLines
+    : splitPoemLines(sticker.poem);
+  return {
+    ...sticker,
+    poemLines,
+    poemColumns: Array.isArray(sticker.poemColumns) && sticker.poemColumns.length
+      ? sticker.poemColumns
+      : splitPoemColumns(poemLines),
+  };
+}
+
 Page({
   data: {
     loading: true,
     source: 'history',
     walk: null,
+    showStickerModal: false,
   },
 
   onLoad(query) {
@@ -17,6 +55,15 @@ Page({
     }
   },
 
+  onShareAppMessage() {
+    const walk = this.data.walk;
+    return {
+      title: walk ? `${walk.themeTitle}｜我的城市漫步贴纸` : '城市漫步贴纸',
+      path: walk ? `/pages/walk-detail/walk-detail?id=${walk.id || walk._id}&source=share` : '/pages/history/history',
+      imageUrl: walk && walk.sticker ? walk.sticker.imageUrl : '',
+    };
+  },
+
   async fetchDetail(id) {
     this.setData({ loading: true });
     try {
@@ -24,6 +71,7 @@ Page({
       const walk = result.walk
         ? {
             ...result.walk,
+            sticker: decorateSticker(result.walk.sticker),
             createdAtLabel: formatDate(result.walk.createdAt),
             missionItems: ((result.walk.themeSnapshot && result.walk.themeSnapshot.missions) || []).map((mission) => ({
               mission,
@@ -39,4 +87,49 @@ Page({
       this.setData({ loading: false });
     }
   },
+
+  openStickerModal() {
+    if (!(this.data.walk && this.data.walk.sticker)) {
+      return;
+    }
+    this.setData({ showStickerModal: true });
+  },
+
+  closeStickerModal() {
+    this.setData({ showStickerModal: false });
+  },
+
+  resolveStickerUrl() {
+    const sticker = this.data.walk && this.data.walk.sticker;
+    if (!sticker) {
+      return Promise.reject(new Error('missing_sticker'));
+    }
+    const src = sticker.imageUrl || sticker.backgroundUrl || '';
+    if (!src) {
+      return Promise.reject(new Error('missing_sticker_image'));
+    }
+    if (String(src).startsWith('cloud://')) {
+      return wx.cloud.getTempFileURL({ fileList: [src] }).then((result) => {
+        const item = result.fileList && result.fileList[0];
+        return item && item.tempFileURL ? item.tempFileURL : '';
+      });
+    }
+    return Promise.resolve(src);
+  },
+
+  async handleSaveStickerToAlbum() {
+    try {
+      const imageUrl = await this.resolveStickerUrl();
+      if (!imageUrl) {
+        throw new Error('missing_sticker_image');
+      }
+      const download = await wx.downloadFile({ url: imageUrl });
+      await wx.saveImageToPhotosAlbum({ filePath: download.tempFilePath });
+      wx.showToast({ title: '已保存到相册', icon: 'success' });
+    } catch (error) {
+      wx.showToast({ title: '保存贴纸失败', icon: 'none' });
+    }
+  },
+
+  noop() {},
 });

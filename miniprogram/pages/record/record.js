@@ -4,6 +4,7 @@ const { requestUpload } = require('../../services/api');
 const { getCurrentLocation } = require('../../utils/location');
 const { chooseImage, chooseVideo } = require('../../utils/media');
 const { verifyMission } = require('../../services/theme');
+const { generateStickerPlan, generateStickerImage } = require('../../services/sticker');
 
 let recorderManager = null;
 let routeTimer = null;
@@ -94,6 +95,55 @@ function buildRouteStats(routePoints, trackStartedAt, trackStoppedAt, isTracking
   };
 }
 
+function splitPoemLines(poem) {
+  const normalized = String(poem || '').replace(/[。！？]+$/g, '');
+  const lines = normalized
+    .split(/[，、；]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (lines.length) {
+    return lines;
+  }
+  const compact = normalized.replace(/\s+/g, '');
+  const result = [];
+  for (let index = 0; index < compact.length; index += 6) {
+    result.push(compact.slice(index, index + 6));
+  }
+  return result.filter(Boolean);
+}
+
+function splitPoemColumns(poemLines) {
+  return (poemLines || []).map((line) => String(line || '').split('').filter(Boolean));
+}
+
+function buildThemeKey(theme, draft) {
+  if (!theme) {
+    return '';
+  }
+  return [
+    theme.title || '',
+    theme.category || '',
+    draft && draft.locationName ? draft.locationName : '',
+    draft && draft.walkMode ? draft.walkMode : '',
+  ].join('::');
+}
+
+function decorateSticker(sticker) {
+  if (!sticker) {
+    return null;
+  }
+  const poemLines = Array.isArray(sticker.poemLines) && sticker.poemLines.length
+    ? sticker.poemLines
+    : splitPoemLines(sticker.poem);
+  return {
+    ...sticker,
+    poemLines,
+    poemColumns: Array.isArray(sticker.poemColumns) && sticker.poemColumns.length
+      ? sticker.poemColumns
+      : splitPoemColumns(poemLines),
+  };
+}
+
 Page({
   data: {
     activeMission: '',
@@ -102,6 +152,8 @@ Page({
     draft: null,
     isTracking: false,
     isSaving: false,
+    isGeneratingSticker: false,
+    showStickerModal: false,
     isMapOpen: false,
     isRecordingAudio: false,
     expandedMission: '',
@@ -170,10 +222,22 @@ Page({
       draft.trackStoppedAt,
       this.data.isTracking
     );
+    const themeKey = buildThemeKey(theme, draft);
+    let nextDraft = draft;
+    if (draft.sticker && draft.sticker.themeKey && draft.sticker.themeKey !== themeKey) {
+      nextDraft = {
+        ...draft,
+        sticker: null,
+      };
+      app.setWalkDraft(nextDraft);
+    }
     this.setData({
-      activeMission: draft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || ''),
+      activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || ''),
       theme,
-      draft,
+      draft: {
+        ...nextDraft,
+        sticker: decorateSticker(nextDraft.sticker),
+      },
       routeStats,
     });
   },
@@ -803,6 +867,7 @@ Page({
           pointCount: routeStats.pointCount,
           distanceMeters: routeStats.distanceMeters,
         },
+        sticker: this.data.draft.sticker || null,
       });
       this.stopTracking();
       app.clearWalkDraft();
@@ -829,6 +894,114 @@ Page({
       return Promise.resolve(filePath);
     }
     return requestUpload(filePath, { kind });
+  },
+
+  openStickerModal() {
+    if (!(this.data.draft && this.data.draft.sticker)) {
+      return;
+    }
+    this.setData({ showStickerModal: true });
+  },
+
+  closeStickerModal() {
+    this.setData({ showStickerModal: false });
+  },
+
+  resolveStickerUrl() {
+    const sticker = this.data.draft && this.data.draft.sticker;
+    if (!sticker) {
+      return Promise.reject(new Error('missing_sticker'));
+    }
+    const src = sticker.imageUrl || sticker.backgroundUrl || '';
+    if (!src) {
+      return Promise.reject(new Error('missing_sticker_image'));
+    }
+    if (String(src).startsWith('cloud://')) {
+      return wx.cloud.getTempFileURL({ fileList: [src] }).then((result) => {
+        const item = result.fileList && result.fileList[0];
+        return item && item.tempFileURL ? item.tempFileURL : '';
+      });
+    }
+    return Promise.resolve(src);
+  },
+
+  async handleSaveStickerToAlbum() {
+    try {
+      const imageUrl = await this.resolveStickerUrl();
+      if (!imageUrl) {
+        throw new Error('missing_sticker_image');
+      }
+      const download = await wx.downloadFile({ url: imageUrl });
+      await wx.saveImageToPhotosAlbum({ filePath: download.tempFilePath });
+      wx.showToast({ title: '已保存到相册', icon: 'success' });
+    } catch (error) {
+      wx.showToast({ title: '保存贴纸失败', icon: 'none' });
+    }
+  },
+
+  handleShareStickerFromRecord() {
+    wx.showToast({ title: '先保存漫步，再去详情页分享', icon: 'none' });
+  },
+
+  async handleGenerateSticker() {
+    if (!this.data.theme) {
+      wx.showToast({ title: '先生成漫步主题', icon: 'none' });
+      return;
+    }
+
+    this.setData({ isGeneratingSticker: true });
+    try {
+      const planResult = await generateStickerPlan({
+        themeTitle: this.data.theme.title,
+        themeDescription: this.data.theme.description,
+        themeCategory: this.data.theme.category,
+        walkMode: this.data.draft.walkMode,
+        locationName: this.data.draft.locationName,
+        locationContext: this.data.draft.locationContext,
+        overallNoteText: this.data.draft.noteText,
+        missions: this.data.theme.missions || [],
+        completedMissions: this.data.draft.completedMissions || [],
+      });
+      const stickerPlan = planResult && planResult.sticker ? planResult.sticker : null;
+      if (!stickerPlan) {
+        wx.showToast({ title: '贴纸文案生成失败', icon: 'none' });
+        return;
+      }
+      const themedStickerPlan = {
+        ...stickerPlan,
+        themeKey: buildThemeKey(this.data.theme, this.data.draft),
+      };
+      this.setDraft({
+        ...this.data.draft,
+        sticker: decorateSticker(themedStickerPlan),
+      });
+      const result = await generateStickerImage({
+        sticker: themedStickerPlan,
+        themeTitle: this.data.theme.title,
+      });
+      const sticker = result && result.sticker ? result.sticker : null;
+      if (!sticker) {
+        wx.showToast({ title: '贴纸生成失败', icon: 'none' });
+        return;
+      }
+      this.setDraft({
+        ...this.data.draft,
+        sticker: decorateSticker({
+          ...sticker,
+          themeKey: buildThemeKey(this.data.theme, this.data.draft),
+        }),
+      });
+      wx.showToast({ title: '贴纸图片已生成', icon: 'success' });
+    } catch (error) {
+      wx.showModal({
+        title: '贴纸生成失败',
+        content: (error && error.message) || '未知错误',
+        showCancel: false,
+        confirmText: '知道了',
+      });
+    } finally {
+      this.setData({ isGeneratingSticker: false });
+    }
   },
 
   noop() {},

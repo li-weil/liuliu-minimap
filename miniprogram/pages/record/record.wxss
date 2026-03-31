@@ -261,3 +261,181 @@
   width: 360rpx;
   margin: 8rpx auto 0;
 }
+
+.sticker-generate-btn {
+  width: 100%;
+  margin-top: 22rpx;
+  background: linear-gradient(180deg, #f3ece1 0%, #ece3d6 100%);
+  color: #2f2b24;
+  border: 1rpx solid #e4d8c8;
+  box-shadow: 0 8rpx 16rpx rgba(86, 74, 56, 0.05);
+}
+
+.sticker-preview-card {
+  position: relative;
+  margin-top: 22rpx;
+  border-radius: 36rpx;
+  overflow: hidden;
+  min-height: 680rpx;
+  background: #f4ecdf;
+}
+
+.sticker-preview-image {
+  width: 100%;
+  height: 680rpx;
+  display: block;
+}
+
+.sticker-preview-placeholder {
+  width: 100%;
+  height: 680rpx;
+  background: linear-gradient(135deg, #efe4d1 0%, #d7c2a0 100%);
+}
+
+.sticker-preview-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 34rpx 30rpx;
+  background: linear-gradient(180deg, rgba(39, 32, 20, 0.06), rgba(39, 32, 20, 0.32));
+  box-sizing: border-box;
+}
+
+.sticker-preview-poem {
+  align-self: flex-end;
+  max-width: 62%;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 16rpx;
+  color: #fffaf2;
+  font-weight: 600;
+  text-shadow: 0 8rpx 18rpx rgba(0, 0, 0, 0.22);
+  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
+  padding: 16rpx 18rpx;
+  border-radius: 24rpx;
+  background: linear-gradient(180deg, rgba(34, 29, 22, 0.16), rgba(34, 29, 22, 0.08));
+  backdrop-filter: blur(8rpx);
+}
+
+.sticker-preview-poem-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 10rpx 0;
+}
+
+.sticker-preview-poem-char {
+  font-size: 46rpx;
+  line-height: 1;
+  letter-spacing: 0;
+  font-style: italic;
+}
+
+.sticker-preview-theme {
+  align-self: flex-start;
+  font-size: 24rpx;
+  color: rgba(255, 250, 242, 0.92);
+  padding: 12rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(34, 29, 22, 0.28);
+  backdrop-filter: blur(10rpx);
+}
+
+.sticker-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 17, 12, 0.56);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  box-sizing: border-box;
+  z-index: 30;
+}
+
+.sticker-modal-sheet {
+  width: 100%;
+  max-width: 680rpx;
+}
+
+.sticker-modal-card {
+  position: relative;
+  border-radius: 40rpx;
+  overflow: hidden;
+  min-height: 920rpx;
+  background: #f4ecdf;
+  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.18);
+}
+
+.sticker-modal-image,
+.sticker-modal-placeholder {
+  width: 100%;
+  height: 920rpx;
+  display: block;
+}
+
+.sticker-modal-placeholder {
+  background: linear-gradient(135deg, #efe4d1 0%, #d7c2a0 100%);
+}
+
+.sticker-modal-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40rpx 36rpx;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(39, 32, 20, 0.04), rgba(39, 32, 20, 0.34));
+}
+
+.sticker-modal-poem {
+  align-self: flex-end;
+  max-width: 62%;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 18rpx;
+  color: #fffaf2;
+  font-weight: 600;
+  text-shadow: 0 8rpx 18rpx rgba(0, 0, 0, 0.22);
+  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
+  padding: 18rpx 20rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(180deg, rgba(34, 29, 22, 0.18), rgba(34, 29, 22, 0.08));
+  backdrop-filter: blur(10rpx);
+}
+
+.sticker-modal-poem-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.sticker-modal-poem-char {
+  font-size: 54rpx;
+  line-height: 1;
+  font-style: italic;
+}
+
+.sticker-modal-theme {
+  align-self: flex-start;
+  font-size: 28rpx;
+  color: rgba(255, 250, 242, 0.94);
+  padding: 14rpx 22rpx;
+  border-radius: 999rpx;
+  background: rgba(34, 29, 22, 0.28);
+}
+
+.sticker-modal-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.sticker-modal-action {
+  flex: 1;
+}

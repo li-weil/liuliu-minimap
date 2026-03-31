@@ -3,7 +3,7 @@ const { callCloud, uploadToCloud } = require('./cloud');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission']
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage']
     : []
 );
 
@@ -88,6 +88,7 @@ function normalizeWalkRecord(item) {
       startedLabel: formatTrackTime(trackStartedAt),
       stoppedLabel: formatTrackTime(trackStoppedAt),
     },
+    sticker: item.sticker || null,
     photoList,
     videoList,
     audioList,
@@ -211,6 +212,15 @@ const ENDPOINTS = {
         };
       },
     },
+  },
+  generateSticker: {
+    cloudName: 'generateSticker',
+  },
+  generateStickerPlan: {
+    cloudName: 'generateSticker',
+  },
+  generateStickerImage: {
+    cloudName: 'generateSticker',
   },
   createWalk: {
     cloudName: 'createWalk',
