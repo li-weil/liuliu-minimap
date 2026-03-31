@@ -1,7 +1,7 @@
 const { callApi } = require('./api');
 
-function syncUser(profile = {}) {
-  return callApi('syncUser', { profile });
+function syncUser(payload = {}) {
+  return callApi('syncUser', payload);
 }
 
 module.exports = {

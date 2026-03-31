@@ -9,6 +9,12 @@ App({
   },
 
   onLaunch() {
+    try {
+      this.globalData.user = wx.getStorageSync('citywalk_user') || null;
+    } catch (error) {
+      this.globalData.user = null;
+    }
+
     if (!apiBaseUrl && wx.cloud) {
       wx.cloud.init({
         env: cloudEnvId,

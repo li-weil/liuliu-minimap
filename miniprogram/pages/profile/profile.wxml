@@ -1,31 +1,32 @@
 <view class="page-shell">
-  <view class="hero-card" style="padding: 32rpx; margin-bottom: 24rpx;">
+  <view class="hero-card profile-hero">
     <view class="section-title">我的账户</view>
-    <view class="section-subtitle">同步微信资料后，可继续保存你的 citywalk 记录</view>
+    <view class="section-subtitle">{{user ? '你的漫步资料已经留在这里，随时可以继续出发' : '同步微信资料后，就能保存属于你的漫步轨迹与记录'}}</view>
   </view>
 
-  <view wx:if="{{user}}" class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
-    <view style="display: flex; align-items: center; gap: 20rpx; margin-bottom: 18rpx;">
-      <image src="{{user.avatarUrl}}" style="width: 96rpx; height: 96rpx; border-radius: 50%; background: #ede8de;" />
-      <view>
-        <view style="font-size: 34rpx; font-weight: 600;">{{user.nickName}}</view>
-        <view style="font-size: 24rpx; color: #7f7a6f;">{{user.openid || user._id}}</view>
+  <view wx:if="{{user}}" class="section-card profile-card">
+    <view class="profile-user-row">
+      <image src="{{user.avatarUrl}}" class="profile-avatar" />
+      <view class="profile-copy">
+        <view class="profile-name">{{user.nickName}}</view>
+        <view class="profile-meta-id">{{user.openid || user._id}}</view>
       </view>
     </view>
-    <view class="meta-row">
+    <view class="meta-row profile-meta-row">
       <view class="meta-pill">角色 {{user.role || 'user'}}</view>
       <view class="meta-pill">已同步</view>
     </view>
+    <button class="ghost-btn profile-logout-btn" bindtap="handleLogout">退出登录</button>
   </view>
 
-  <button wx:if="{{!user}}" class="primary-btn" bindtap="handleLogin" loading="{{syncing}}" style="margin-bottom: 24rpx;">微信登录并同步资料</button>
+  <button wx:if="{{!user}}" class="primary-btn profile-login-btn" bindtap="handleLogin" loading="{{syncing}}">微信登录并同步资料</button>
 
-  <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
+  <view class="section-card profile-section">
     <view class="section-title">当前 MVP 能力</view>
-    <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">AI 主题生成</view>
-    <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">图片 视频 录音与轨迹记录</view>
-    <view class="mission-card" style="padding: 20rpx; margin-bottom: 12rpx;">足迹保存与历史回看</view>
+    <view class="mission-card profile-capability-card">AI 主题生成</view>
+    <view class="mission-card profile-capability-card">图片 视频 录音与轨迹记录</view>
+    <view class="mission-card profile-capability-card">足迹保存与历史回看</view>
   </view>
 
-  <button class="ghost-btn" bindtap="clearDraft">清空本地漫步草稿</button>
+  <button class="ghost-btn profile-draft-btn" bindtap="clearDraft">清空本地漫步草稿</button>
 </view>

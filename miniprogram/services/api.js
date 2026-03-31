@@ -52,8 +52,13 @@ const ENDPOINTS = {
   syncUser: {
     cloudName: 'syncUser',
     web: {
-      path: '/auth/sync-user',
+      path: '/miniapp/auth/sync-user',
       method: 'POST',
+      normalizeRequest: (data) => ({
+        code: data.code,
+        nickName: data.nickName,
+        avatarUrl: data.avatarUrl,
+      }),
       normalizeResponse: (data) => {
         persistAuthSession(data);
         return data;
