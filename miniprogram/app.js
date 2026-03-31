@@ -1,4 +1,4 @@
-const { cloudEnvId, apiBaseUrl } = require('./utils/config');
+const { cloudEnvId, apiBaseUrl, useCloudMediaStorage, useCloudWalkStorage } = require('./utils/config');
 const { loadDraft, saveDraft } = require('./utils/draft');
 
 App({
@@ -15,7 +15,7 @@ App({
       this.globalData.user = null;
     }
 
-    if (!apiBaseUrl && wx.cloud) {
+    if ((!apiBaseUrl || useCloudWalkStorage || useCloudMediaStorage) && wx.cloud) {
       wx.cloud.init({
         env: cloudEnvId,
         traceUser: true,

@@ -24,7 +24,6 @@
         <view wx:if="{{item.review}}" style="font-size: 24rpx; color: {{item.review.passed ? '#4f6d45' : '#8a6a52'}}; line-height: 1.6;">
           {{item.review.comment}}
         </view>
-        <view wx:else style="font-size: 24rpx; color: #7f7a6f;">暂无 AI 核验记录</view>
       </view>
     </view>
 
@@ -32,8 +31,13 @@
       <view class="section-title">地图与轨迹</view>
       <map longitude="{{walk.routePoints.length ? walk.routePoints[walk.routePoints.length - 1].longitude : 116.39747}}" latitude="{{walk.routePoints.length ? walk.routePoints[walk.routePoints.length - 1].latitude : 39.908823}}" scale="15" show-location polyline="{{[{ points: walk.routePoints, color: '#5a5a40', width: 4 }]}}" style="width: 100%; height: 360rpx; border-radius: 22rpx; overflow: hidden;" />
       <view class="meta-row" style="margin-top: 20rpx;">
-        <view class="meta-pill">{{walk.routePoints.length}} 个轨迹点</view>
+        <view class="meta-pill">{{walk.routeStats.distanceLabel || '0 m'}}</view>
+        <view class="meta-pill">{{walk.routeStats.durationLabel || '0秒'}}</view>
         <view class="meta-pill">{{walk.isPublic ? '已公开' : '仅自己可见'}}</view>
+      </view>
+      <view class="meta-row" style="margin-top: 16rpx;">
+        <view class="meta-pill">开始 {{walk.routeStats.startedLabel || '未记录'}}</view>
+        <view class="meta-pill">结束 {{walk.routeStats.stoppedLabel || '未记录'}}</view>
       </view>
     </view>
 
@@ -43,6 +47,32 @@
         <image wx:for="{{walk.photoList}}" wx:key="index" src="{{item}}" mode="aspectFill" style="width: 208rpx; height: 208rpx; border-radius: 18rpx;" />
       </view>
       <view wx:else class="empty-copy" style="padding: 20rpx 0;">这次漫步没有上传图片。</view>
+    </view>
+
+    <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
+      <view class="section-title">视频记录</view>
+      <view wx:if="{{walk.videoList.length}}">
+        <video
+          wx:for="{{walk.videoList}}"
+          wx:key="index"
+          src="{{item}}"
+          controls
+          objectFit="cover"
+          style="width: 100%; height: 360rpx; border-radius: 18rpx; margin-bottom: 16rpx;"
+        />
+      </view>
+      <view wx:else class="empty-copy" style="padding: 20rpx 0;">这次漫步没有上传视频。</view>
+    </view>
+
+    <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
+      <view class="section-title">录音记录</view>
+      <view wx:if="{{walk.audioList.length}}">
+        <view wx:for="{{walk.audioList}}" wx:key="index" class="mission-card" style="padding: 18rpx 20rpx; margin-bottom: 14rpx;">
+          <view style="font-size: 24rpx; font-weight: 600; margin-bottom: 12rpx;">录音 {{index + 1}}</view>
+          <audio src="{{item}}" controls style="width: 100%;" />
+        </view>
+      </view>
+      <view wx:else class="empty-copy" style="padding: 20rpx 0;">这次漫步没有上传录音。</view>
     </view>
 
     <view class="section-card" style="padding: 28rpx;">

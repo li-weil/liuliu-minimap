@@ -1,5 +1,11 @@
-const { apiBaseUrl, apiPrefix, requestTimeout } = require('../utils/config');
+const { apiBaseUrl, apiPrefix, requestTimeout, useCloudMediaStorage, useCloudWalkStorage } = require('../utils/config');
 const { callCloud, uploadToCloud } = require('./cloud');
+
+const CLOUD_ENDPOINTS = new Set(
+  useCloudWalkStorage
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail']
+    : []
+);
 
 function normalizeThemeResponse(data, requestData, source) {
   return {
@@ -14,36 +20,91 @@ function normalizeWalkRecord(item) {
     return null;
   }
 
+  const recordId = item._id || item.id || '';
   const completedMissions = Array.isArray(item.completedMissions) ? item.completedMissions : [];
   const missionList = completedMissions
-    .map((mission) => (mission && mission.mission ? mission.mission : ''))
+    .map((mission) => {
+      if (typeof mission === 'string') {
+        return mission;
+      }
+      return mission && mission.mission ? mission.mission : '';
+    })
     .filter(Boolean);
-
-  return {
-    _id: item.id,
-    id: item.id,
-    themeTitle: item.themeTitle,
-    themeCategory: item.themeCategory,
-    locationName: item.locationName,
-    noteText: item.noteText || '',
-    createdAt: item.createdAt || Date.now(),
-    photoList: item.photoUrl ? [item.photoUrl] : [],
-    videoList: item.videoUrl ? [item.videoUrl] : [],
-    audioList: item.audioUrl ? [item.audioUrl] : [],
-    routePoints: Array.isArray(item.path)
+  const routePoints = Array.isArray(item.routePoints)
+    ? item.routePoints
+        .map((point) => ({
+          latitude: point.latitude !== undefined ? point.latitude : point.lat,
+          longitude: point.longitude !== undefined ? point.longitude : point.lng,
+          timestamp: point.timestamp,
+        }))
+        .filter((point) => point.latitude !== undefined && point.longitude !== undefined)
+    : Array.isArray(item.path)
       ? item.path.map((point) => ({
           latitude: point.lat,
           longitude: point.lng,
           timestamp: point.timestamp,
         }))
-      : [],
+      : [];
+  const photoList = Array.isArray(item.photoList)
+    ? item.photoList.filter(Boolean)
+    : item.photoUrl
+      ? [item.photoUrl]
+      : [];
+  const videoList = Array.isArray(item.videoList)
+    ? item.videoList.filter(Boolean)
+    : item.videoUrl
+      ? [item.videoUrl]
+      : [];
+  const audioList = Array.isArray(item.audioList)
+    ? item.audioList.filter(Boolean)
+    : item.audioUrl
+      ? [item.audioUrl]
+      : [];
+  const themeSnapshot = item.themeSnapshot || {};
+  const routeStats = item.routeStats || {};
+  const durationMs = routeStats.durationMs || 0;
+  const distanceMeters = routeStats.distanceMeters || 0;
+  const trackStartedAt = item.trackStartedAt || null;
+  const trackStoppedAt = item.trackStoppedAt || null;
+  return {
+    _id: recordId,
+    id: recordId,
+    themeTitle: item.themeTitle || themeSnapshot.title || '',
+    themeCategory: item.themeCategory || themeSnapshot.category || '',
+    locationName: item.locationName || '未知地点',
+    locationContext: item.locationContext || '',
+    locationAddress: item.locationAddress || '',
+    noteText: item.noteText || '',
+    createdAt: item.createdAt || Date.now(),
+    trackStartedAt,
+    trackStoppedAt,
+    routeStats: {
+      durationMs,
+      pointCount: routeStats.pointCount || routePoints.length,
+      distanceMeters,
+      durationLabel: formatDuration(durationMs),
+      distanceLabel: formatDistance(distanceMeters),
+      startedLabel: formatTrackTime(trackStartedAt),
+      stoppedLabel: formatTrackTime(trackStoppedAt),
+    },
+    photoList,
+    videoList,
+    audioList,
+    coverImage: item.coverImage || photoList[0] || '',
+    routePoints,
     completedMissions: missionList,
-    missionReviews: {},
+    missionReviews: item.missionReviews || {},
+    isPublic: !!item.isPublic,
+    walkMode: item.walkMode || 'pure',
+    generationSource: item.generationSource || 'unknown',
     themeSnapshot: {
-      title: item.themeTitle,
-      category: item.themeCategory,
-      description: item.noteText || '',
-      missions: missionList,
+      ...themeSnapshot,
+      title: item.themeTitle || themeSnapshot.title || '',
+      category: item.themeCategory || themeSnapshot.category || '',
+      description: themeSnapshot.description || item.noteText || '',
+      missions: Array.isArray(themeSnapshot.missions) && themeSnapshot.missions.length
+        ? themeSnapshot.missions
+        : missionList,
     },
   };
 }
@@ -151,6 +212,7 @@ const ENDPOINTS = {
   },
   createWalk: {
     cloudName: 'createWalk',
+    normalizeCloudResponse: (data) => data,
     web: {
       path: '/walks',
       method: 'POST',
@@ -196,6 +258,9 @@ const ENDPOINTS = {
   },
   listMyWalks: {
     cloudName: 'listMyWalks',
+    normalizeCloudResponse: (data) => ({
+      records: Array.isArray(data.records) ? data.records.map(normalizeWalkRecord).filter(Boolean) : [],
+    }),
     web: {
       path: '/walks/me',
       method: 'GET',
@@ -210,6 +275,9 @@ const ENDPOINTS = {
   },
   listPublicWalks: {
     cloudName: 'listPublicWalks',
+    normalizeCloudResponse: (data) => ({
+      records: Array.isArray(data.records) ? data.records.map(normalizeWalkRecord).filter(Boolean) : [],
+    }),
     web: {
       path: '/walks/public',
       method: 'GET',
@@ -224,6 +292,9 @@ const ENDPOINTS = {
   },
   getWalkDetail: {
     cloudName: 'getWalkDetail',
+    normalizeCloudResponse: (data) => ({
+      walk: data && data.walk ? normalizeWalkRecord(data.walk) : null,
+    }),
     web: {
       path: '/walks',
       method: 'GET',
@@ -253,6 +324,13 @@ const ENDPOINTS = {
 
 function getBackendProvider() {
   return apiBaseUrl ? 'web' : 'cloud';
+}
+
+function shouldUseCloudEndpoint(name) {
+  if (!apiBaseUrl) {
+    return true;
+  }
+  return CLOUD_ENDPOINTS.has(name);
 }
 
 function getStoredToken() {
@@ -291,6 +369,40 @@ function normalizeResponse(response) {
     return response;
   }
   return {};
+}
+
+function formatDistance(distanceMeters) {
+  const meters = Number(distanceMeters || 0);
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(2)} km`;
+  }
+  return `${Math.round(meters)} m`;
+}
+
+function formatDuration(durationMs) {
+  const totalSeconds = Math.max(0, Math.round((durationMs || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}小时${minutes}分`;
+  }
+  if (minutes > 0) {
+    return `${minutes}分${seconds}秒`;
+  }
+  return `${seconds}秒`;
+}
+
+function formatTrackTime(timestamp) {
+  if (!timestamp) {
+    return '未记录';
+  }
+  const date = new Date(timestamp);
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  const hours = `${date.getHours()}`.padStart(2, '0');
+  const minutes = `${date.getMinutes()}`.padStart(2, '0');
+  return `${month}-${day} ${hours}:${minutes}`;
 }
 
 function buildUrl(path) {
@@ -336,7 +448,7 @@ function requestWeb({ path, method, data, header }) {
 
 function requestUpload(filePath, formData = {}) {
   const endpoint = ENDPOINTS.uploadMedia;
-  if (getBackendProvider() !== 'web' || !endpoint.web) {
+  if (getBackendProvider() !== 'web' || !endpoint.web || useCloudMediaStorage) {
     const ext = String(filePath).split('.').pop() || 'jpg';
     return uploadToCloud({
       cloudPath: `walks/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
@@ -376,8 +488,10 @@ function callApi(name, data = {}) {
     return Promise.reject(new Error(`unknown_endpoint_${name}`));
   }
 
-  if (getBackendProvider() !== 'web') {
-    return callCloud(endpoint.cloudName || name, data);
+  if (shouldUseCloudEndpoint(name) || getBackendProvider() !== 'web') {
+    return callCloud(endpoint.cloudName || name, data).then((response) => (
+      endpoint.normalizeCloudResponse ? endpoint.normalizeCloudResponse(response, data) : response
+    ));
   }
 
   if (!endpoint.web) {
