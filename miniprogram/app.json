@@ -16,10 +16,19 @@
   "permission": {
     "scope.userLocation": {
       "desc": "用于获取当前位置、选点探索和记录漫步轨迹"
+    },
+    "scope.userLocationBackground": {
+      "desc": "用于在切到后台或锁屏后继续记录漫步轨迹"
     }
   },
   "requiredPrivateInfos": [
-    "getLocation"
+    "getLocation",
+    "onLocationChange",
+    "startLocationUpdate",
+    "startLocationUpdateBackground"
+  ],
+  "requiredBackgroundModes": [
+    "location"
   ],
   "tabBar": {
     "color": "#6f6a5f",

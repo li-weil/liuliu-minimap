@@ -53,7 +53,8 @@ Component({
 
     verifyMission(event) {
       const mission = event.currentTarget.dataset.mission;
-      this.triggerEvent('verify', { mission });
+      const mode = event.currentTarget.dataset.mode || '';
+      this.triggerEvent('verify', { mission, mode });
     },
   },
 });

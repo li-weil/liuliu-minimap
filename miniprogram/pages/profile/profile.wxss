@@ -11,12 +11,42 @@
   gap: 20rpx;
 }
 
+.profile-setup-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
 .profile-avatar {
   width: 96rpx;
   height: 96rpx;
   border-radius: 999rpx;
   background: #ede8de;
   flex-shrink: 0;
+}
+
+.profile-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7f7669;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.profile-avatar-picker {
+  width: 96rpx;
+  height: 96rpx;
+  min-width: 96rpx;
+  flex: 0 0 96rpx;
+  padding: 0;
+  border: none;
+  background: transparent;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .profile-copy {
@@ -38,6 +68,31 @@
   word-break: break-all;
 }
 
+.profile-nickname-input {
+  width: 100%;
+  min-height: 88rpx;
+  padding: 0 24rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(180deg, #f8f4ed 0%, #f2eadf 100%);
+  border: 1rpx solid #e8dece;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  color: #2f2b24;
+}
+
+.profile-form-block {
+  min-width: 0;
+  flex: 1;
+  margin-left: -2rpx;
+}
+
+.profile-input-tip {
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #8a8173;
+}
+
 .profile-meta-row {
   margin-top: 20rpx;
 }
@@ -50,6 +105,10 @@
 
 .profile-logout-btn {
   margin-top: 24rpx;
+}
+
+.profile-login-btn {
+  margin-top: 26rpx;
 }
 
 .profile-capability-card {

@@ -1,16 +1,6 @@
 const app = getApp();
 const { syncUser } = require('../../services/user');
 
-function requestUserProfile() {
-  return new Promise((resolve, reject) => {
-    wx.getUserProfile({
-      desc: '用于同步你的漫步资料',
-      success: resolve,
-      fail: reject,
-    });
-  });
-}
-
 function requestLoginCode() {
   return new Promise((resolve, reject) => {
     wx.login({
@@ -24,34 +14,74 @@ Page({
   data: {
     user: null,
     syncing: false,
+    draftNickName: '',
+    draftAvatarUrl: '',
   },
 
   onShow() {
-    this.setData({ user: app.globalData.user });
+    const user = this.normalizeUser(app.globalData.user);
+    this.setData({
+      user,
+      draftNickName: user ? user.nickName : '',
+      draftAvatarUrl: user ? user.avatarUrl : '',
+    });
+  },
+
+  normalizeUser(user) {
+    if (!user || typeof user !== 'object') {
+      return null;
+    }
+    return {
+      ...user,
+      nickName: user.nickName || user.nickname || '微信用户',
+      avatarUrl: user.avatarUrl || '',
+    };
+  },
+
+  handleChooseAvatar(event) {
+    const avatarUrl = event.detail && event.detail.avatarUrl ? event.detail.avatarUrl : '';
+    if (!avatarUrl) {
+      return;
+    }
+    this.setData({ draftAvatarUrl: avatarUrl });
+  },
+
+  handleNickNameInput(event) {
+    this.setData({ draftNickName: event.detail.value || '' });
   },
 
   async handleLogin() {
     this.setData({ syncing: true });
     try {
-      const [profile, loginResult] = await Promise.all([
-        requestUserProfile(),
-        requestLoginCode(),
-      ]);
+      const nickName = (this.data.draftNickName || '').trim();
+      const avatarUrl = this.data.draftAvatarUrl || '';
+      if (!nickName) {
+        throw new Error('nickname_required');
+      }
+      const loginResult = await requestLoginCode();
       const code = loginResult && loginResult.code;
       if (!code) {
         throw new Error('wechat_login_code_missing');
       }
       const result = await syncUser({
         code,
-        nickName: profile.userInfo.nickName,
-        avatarUrl: profile.userInfo.avatarUrl,
+        nickName,
+        avatarUrl,
       });
-      app.globalData.user = result.user;
-      wx.setStorageSync('citywalk_user', result.user || null);
-      this.setData({ user: result.user });
+      const mergedUser = this.normalizeUser({
+        ...(result.user || {}),
+        nickName: (result.user && (result.user.nickName || result.user.nickname)) || nickName,
+        avatarUrl: (result.user && result.user.avatarUrl) || avatarUrl,
+      });
+      app.globalData.user = mergedUser;
+      wx.setStorageSync('citywalk_user', mergedUser || null);
+      this.setData({ user: mergedUser });
       wx.showToast({ title: '登录成功', icon: 'success' });
     } catch (error) {
-      wx.showToast({ title: '登录失败', icon: 'none' });
+      wx.showToast({
+        title: error && error.message === 'nickname_required' ? '先填写昵称' : '登录失败',
+        icon: 'none',
+      });
     } finally {
       this.setData({ syncing: false });
     }
@@ -76,7 +106,7 @@ Page({
         }
 
         app.globalData.user = null;
-        this.setData({ user: null });
+        this.setData({ user: null, draftNickName: '', draftAvatarUrl: '' });
         wx.showToast({ title: '已退出登录', icon: 'success' });
       },
     });

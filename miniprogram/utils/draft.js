@@ -17,6 +17,13 @@ function getDefaultDraft() {
     audioList: [],
     isPublic: false,
     startedAt: null,
+    trackStartedAt: null,
+    trackStoppedAt: null,
+    routeStats: {
+      durationMs: 0,
+      pointCount: 0,
+      distanceMeters: 0,
+    },
     walkMode: 'pure',
     generationSource: 'preset',
   };

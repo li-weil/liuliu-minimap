@@ -18,12 +18,11 @@
 
     <view class="meta-row hero-meta">
       <view class="meta-pill">{{locationName}}</view>
-      <view class="meta-pill">{{locationContext}}</view>
       <view class="meta-pill">{{walkMode === 'advanced' ? '3 个任务' : '1 个任务'}}</view>
     </view>
 
     <view class="hero-actions">
-      <button class="ghost-btn" bindtap="useCurrentLocation">当前位置</button>
+      <button class="ghost-btn" bindtap="useCurrentLocation">当前定位</button>
       <button class="ghost-btn" bindtap="handleChooseLocation">地图选点</button>
     </view>
 
@@ -63,6 +62,28 @@
       <view class="map-helper-copy">{{isMapDragging ? '慢慢移动，寻找最想走进去的那一片街景' : '把定位针停在此刻最想出发的地方'}}</view>
       <button class="primary-btn map-confirm-btn" bindtap="confirmMapCenterLocation">设为探索点</button>
     </view>
+
+    <view class="nearby-panel">
+      <view class="nearby-panel-head">
+        <view>
+          <view class="nearby-panel-title">周边地点推荐</view>
+          <view class="nearby-panel-subtitle">沿着这个点位往外看一圈，挑一个更想走近的地方</view>
+        </view>
+        <view class="nearby-panel-actions">
+          <view wx:if="{{loadingNearbyPlaces}}" class="meta-pill">加载中</view>
+          <view wx:else class="nearby-toggle" bindtap="toggleNearbyPanel">{{nearbyExpanded ? '收起' : '展开'}}</view>
+        </view>
+      </view>
+      <view wx:if="{{nearbyPlaces.length && !nearbyExpanded}}" class="nearby-collapsed-copy">先看看这一带有哪些值得拐进去的地方，点“展开”就能切换新的探索点</view>
+      <scroll-view wx:elif="{{nearbyPlaces.length}}" scroll-y class="nearby-list">
+        <view wx:for="{{nearbyPlaces}}" wx:key="id" class="nearby-item" bindtap="chooseNearbyPlace" data-index="{{index}}">
+          <view class="nearby-item-name">{{item.name}}</view>
+          <view class="nearby-item-address">{{item.address}}</view>
+        </view>
+      </scroll-view>
+      <view wx:elif="{{loadingNearbyPlaces}}" class="nearby-empty">正在把这片街区里值得停下来的地点整理出来</view>
+      <view wx:else class="nearby-empty">先定位、搜索或设定探索点，这里就会出现周边地点推荐</view>
+    </view>
   </view>
 
   <view wx:if="{{walkMode === 'pure'}}" class="mode-board">
@@ -77,7 +98,7 @@
       <view class="action-grid">
         <button class="ghost-btn action-tall-btn" bindtap="handleRandomTheme" loading="{{isGenerating}}">随机生成</button>
         <button class="primary-btn action-tall-btn" bindtap="handleCombinedTheme" loading="{{isCombining}}">组合生成</button>
-      </view>      
+      </view>
     </view>
 
     <view class="display-card-shell">

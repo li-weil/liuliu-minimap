@@ -12,24 +12,22 @@
     <view wx:if="{{item.expanded}}" class="mission-inline-panel">
       <view class="mission-inline-title">打卡此任务</view>
       <view class="mission-inline-row">
-        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}">
+        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="photo">
           <view class="mission-inline-btn-inner">
             <image class="mission-inline-icon-image" src="/assets/icons/camera.svg" mode="aspectFit" />
-            <text>拍照</text>
+            <text class="mission-inline-btn-text">拍照</text>
           </view>
         </button>
-        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}">
+        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="video">
           <view class="mission-inline-btn-inner">
             <image class="mission-inline-icon-image" src="/assets/icons/video.svg" mode="aspectFit" />
-            <text>录像</text>
+            <text class="mission-inline-btn-text">录像</text>
           </view>
         </button>
-      </view>
-      <view class="mission-inline-row mission-inline-row-single">
-        <button class="mission-inline-btn mission-inline-btn-single" bindtap="verifyMission" data-mission="{{item.mission}}">
+        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="audio">
           <view class="mission-inline-btn-inner">
             <image class="mission-inline-icon-image" src="/assets/icons/mic.svg" mode="aspectFit" />
-            <text>录音</text>
+            <text class="mission-inline-btn-text">录音</text>
           </view>
         </button>
       </view>

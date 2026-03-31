@@ -10,7 +10,7 @@ const {
 } = require('../../utils/constants');
 const { explainLocationError, getCurrentLocation } = require('../../utils/location');
 const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
-const { searchLocations } = require('../../services/map');
+const { fetchNearbyPois, searchLocations } = require('../../services/map');
 const { generateCombinedTheme, generateRandomTheme, generateTheme, getLocationContext } = require('../../services/theme');
 
 function normalizeMissionText(mission) {
@@ -105,6 +105,50 @@ function buildSearchResultViews(results) {
   }));
 }
 
+function looksLikeStreetAddress(value) {
+  if (!value) {
+    return false;
+  }
+  const text = String(value).trim();
+  return /路|街|巷|道|号|弄|村|大道/.test(text) && /\d/.test(text);
+}
+
+function pickBestLocationName({ location, amapSummary, contextResponse }) {
+  const candidates = [
+    location && location.placeName,
+    location && location.name,
+    contextResponse && contextResponse.placeName,
+    amapSummary && amapSummary.placeName,
+    amapSummary && amapSummary.pois && amapSummary.pois[0] && amapSummary.pois[0].name,
+    location && location.address,
+  ]
+    .map((item) => (item ? String(item).trim() : ''))
+    .filter(Boolean);
+
+  const nonAddressLike = candidates.find((item) => !looksLikeStreetAddress(item) && item !== '地图选点');
+  return nonAddressLike || candidates[0] || '当前位置';
+}
+
+function buildNearbyPlaceViews(results) {
+  return (results || []).slice(0, 12).map((item, index) => ({
+    id: item.id || item.link || `${item.title || 'poi'}-${index}`,
+    name: item.title || item.name || '附近地点',
+    address: item.address || '把这片街区继续展开成新的漫步线索',
+    latitude:
+      item.latitude !== undefined && item.latitude !== null
+        ? Number(item.latitude)
+        : item.lat !== undefined && item.lat !== null
+          ? Number(item.lat)
+          : null,
+    longitude:
+      item.longitude !== undefined && item.longitude !== null
+        ? Number(item.longitude)
+        : item.lng !== undefined && item.lng !== null
+          ? Number(item.lng)
+          : null,
+  })).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
+}
+
 Page({
   data: {
     combineOptionViews: buildCombineOptionViews([]),
@@ -139,6 +183,9 @@ Page({
     searchKeyword: '',
     searchResults: [],
     loadingSearch: false,
+    nearbyPlaces: [],
+    nearbyExpanded: false,
+    loadingNearbyPlaces: false,
   },
 
   onLoad() {
@@ -260,18 +307,69 @@ Page({
       placeName: amapSummary.placeName || location.placeName || location.name || location.address,
       address: amapSummary.address || location.address || '',
     }).catch(() => ({}));
+    const displayLocationName = pickBestLocationName({
+      location,
+      amapSummary,
+      contextResponse,
+    });
     this.setData({
       latitude: location.latitude,
       longitude: location.longitude,
-      locationName: contextResponse.placeName || amapSummary.placeName || '当前位置',
+      locationName: displayLocationName,
       locationContext: contextResponse.context || amapSummary.district || '城市街道',
       locationAddress: amapSummary.address || location.address || '',
       searchResults: [],
       ...this.buildMapState({
         latitude: location.latitude,
         longitude: location.longitude,
-        placeName: contextResponse.placeName || amapSummary.placeName || location.name || '已选地点',
+        placeName: displayLocationName || location.name || '已选地点',
       }),
+      nearbyPlaces: [],
+      nearbyExpanded: false,
+    });
+  },
+
+  async loadNearbyPlaces(latitude, longitude) {
+    if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) {
+      this.setData({ nearbyPlaces: [], nearbyExpanded: false, loadingNearbyPlaces: false });
+      return;
+    }
+
+    this.setData({ loadingNearbyPlaces: true });
+    try {
+      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(Number(latitude), Number(longitude)));
+      this.setData({
+        nearbyPlaces,
+        nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
+      });
+    } catch (error) {
+      this.setData({ nearbyPlaces: [], nearbyExpanded: false });
+    } finally {
+      this.setData({ loadingNearbyPlaces: false });
+    }
+  },
+
+  toggleNearbyPanel() {
+    if (this.data.nearbyExpanded) {
+      this.setData({ nearbyExpanded: false });
+      return;
+    }
+
+    const latitude = Number(this.data.latitude);
+    const longitude = Number(this.data.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return;
+    }
+
+    if (this.data.nearbyPlaces.length) {
+      this.setData({ nearbyExpanded: true });
+      return;
+    }
+
+    this.loadNearbyPlaces(latitude, longitude).then(() => {
+      if (this.data.nearbyPlaces.length) {
+        this.setData({ nearbyExpanded: true });
+      }
     });
   },
 
@@ -375,6 +473,28 @@ Page({
     try {
       await this.enrichLocation(item);
       this.setData({ searchKeyword: item.name });
+    } finally {
+      wx.hideLoading();
+    }
+  },
+
+  async chooseNearbyPlace(event) {
+    const index = Number(event.currentTarget.dataset.index);
+    const item = this.data.nearbyPlaces[index];
+    if (!item) {
+      return;
+    }
+    wx.showLoading({ title: '切换地点' });
+    try {
+      await this.enrichLocation({
+        latitude: item.latitude,
+        longitude: item.longitude,
+        name: item.name,
+        address: item.address || '',
+      });
+      this.setData({ searchKeyword: item.name });
+    } catch (error) {
+      wx.showToast({ title: '地点切换失败', icon: 'none' });
     } finally {
       wx.hideLoading();
     }

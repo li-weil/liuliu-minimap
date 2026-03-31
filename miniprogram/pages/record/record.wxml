@@ -26,7 +26,25 @@
     </view>
   </view>
 
-  <button class="map-switch-btn" bindtap="toggleTracking">{{isTracking ? '停止地图' : '开启地图'}}</button>
+  <button class="map-switch-btn" bindtap="toggleTracking">{{isTracking ? '停止追踪' : '开启轨迹追踪'}}</button>
+
+  <view class="section-card section-block track-stats-block">
+    <view class="section-title">轨迹信息</view>
+    <view class="track-stats-grid">
+      <view class="track-stat-card">
+        <view class="track-stat-value">{{routeStats.durationLabel}}</view>
+        <view class="track-stat-label">总时长</view>
+      </view>
+      <view class="track-stat-card">
+        <view class="track-stat-value">{{routeStats.distanceLabel}}</view>
+        <view class="track-stat-label">里程估算</view>
+      </view>
+    </view>
+    <view class="track-time-row">
+      <view class="track-time-item">开始：{{routeStats.startedLabel}}</view>
+      <view class="track-time-item">结束：{{routeStats.stoppedLabel}}</view>
+    </view>
+  </view>
 
   <view class="section-card section-block">
     <view class="section-title">任务打卡</view>

@@ -6,7 +6,8 @@
 
   <view wx:if="{{user}}" class="section-card profile-card">
     <view class="profile-user-row">
-      <image src="{{user.avatarUrl}}" class="profile-avatar" />
+      <image wx:if="{{user.avatarUrl}}" src="{{user.avatarUrl}}" class="profile-avatar" />
+      <view wx:else class="profile-avatar profile-avatar-fallback">留</view>
       <view class="profile-copy">
         <view class="profile-name">{{user.nickName}}</view>
         <view class="profile-meta-id">{{user.openid || user._id}}</view>
@@ -19,14 +20,17 @@
     <button class="ghost-btn profile-logout-btn" bindtap="handleLogout">退出登录</button>
   </view>
 
-  <button wx:if="{{!user}}" class="primary-btn profile-login-btn" bindtap="handleLogin" loading="{{syncing}}">微信登录并同步资料</button>
-
-  <view class="section-card profile-section">
-    <view class="section-title">当前 MVP 能力</view>
-    <view class="mission-card profile-capability-card">AI 主题生成</view>
-    <view class="mission-card profile-capability-card">图片 视频 录音与轨迹记录</view>
-    <view class="mission-card profile-capability-card">足迹保存与历史回看</view>
+  <view wx:if="{{!user}}" class="section-card profile-card">
+    <view class="profile-setup-row">
+      <button class="profile-avatar-picker" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar">
+        <image wx:if="{{draftAvatarUrl}}" src="{{draftAvatarUrl}}" class="profile-avatar" />
+        <view wx:else class="profile-avatar profile-avatar-fallback">选</view>
+      </button>
+      <view class="profile-form-block">
+        <input class="profile-nickname-input" type="nickname" placeholder="写下想展示的昵称" value="{{draftNickName}}" bindinput="handleNickNameInput" />
+      </view>
+    </view>
+    <button class="primary-btn profile-login-btn" bindtap="handleLogin" loading="{{syncing}}">登录并同步资料</button>
   </view>
 
-  <button class="ghost-btn profile-draft-btn" bindtap="clearDraft">清空本地漫步草稿</button>
 </view>
