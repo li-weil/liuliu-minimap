@@ -125,13 +125,21 @@ Page({
           tempFilePath: result.tempFilePath,
           duration: result.duration || 0,
         });
-        const draft = { ...app.globalData.walkDraft, audioList };
+        let draft = { ...app.globalData.walkDraft, audioList };
+        if (this.recordingMission) {
+          draft = this.attachMissionAsset(draft, this.recordingMission, 'audioList', {
+            tempFilePath: result.tempFilePath,
+            duration: result.duration || 0,
+          });
+        }
         app.setWalkDraft(draft);
         this.setData({ isRecordingAudio: false });
+        this.recordingMission = '';
         this.refreshState();
       });
       recorderManager.onError(() => {
         this.setData({ isRecordingAudio: false });
+        this.recordingMission = '';
         wx.showToast({ title: '录音失败', icon: 'none' });
       });
     }
@@ -139,6 +147,7 @@ Page({
       this.appendTrackPoint(location);
     };
     this.trackingMode = '';
+    this.recordingMission = '';
   },
 
   onShow() {
@@ -174,6 +183,73 @@ Page({
     this.refreshState();
   },
 
+  getMissionAssets(mission, draft = this.data.draft) {
+    const missionAssetMap = (draft && draft.missionAssetMap) || {};
+    return missionAssetMap[mission] || {
+      photoList: [],
+      videoList: [],
+      audioList: [],
+      noteText: '',
+    };
+  },
+
+  getMissionAssetsForVerify(mission) {
+    const missionAssets = this.getMissionAssets(mission);
+    const hasMissionMedia =
+      (missionAssets.photoList && missionAssets.photoList.length) ||
+      (missionAssets.videoList && missionAssets.videoList.length) ||
+      (missionAssets.audioList && missionAssets.audioList.length);
+    const hasMissionNote = missionAssets.noteText && missionAssets.noteText.trim();
+
+    if (hasMissionMedia || hasMissionNote) {
+      return missionAssets;
+    }
+
+    return {
+      photoList: [...(this.data.draft.photoList || [])],
+      videoList: [...(this.data.draft.videoList || [])],
+      audioList: [...(this.data.draft.audioList || [])],
+      noteText: '',
+    };
+  },
+
+  attachMissionAsset(draft, mission, field, asset) {
+    if (!mission) {
+      return draft;
+    }
+    const missionAssetMap = { ...(draft.missionAssetMap || {}) };
+    const missionAssets = {
+      photoList: [],
+      videoList: [],
+      audioList: [],
+      noteText: '',
+      ...(missionAssetMap[mission] || {}),
+    };
+    missionAssets[field] = [...(missionAssets[field] || []), asset];
+    missionAssetMap[mission] = missionAssets;
+    return {
+      ...draft,
+      missionAssetMap,
+    };
+  },
+
+  updateMissionAssets(mission, patch) {
+    const draft = { ...this.data.draft };
+    const missionAssetMap = { ...(draft.missionAssetMap || {}) };
+    missionAssetMap[mission] = {
+      photoList: [],
+      videoList: [],
+      audioList: [],
+      noteText: '',
+      ...(missionAssetMap[mission] || {}),
+      ...patch,
+    };
+    this.setDraft({
+      ...draft,
+      missionAssetMap,
+    });
+  },
+
   selectMission(event) {
     const mission = event.detail.mission;
     const draft = { ...this.data.draft, selectedMission: mission };
@@ -205,17 +281,30 @@ Page({
       this.setData({ activeMission: mission });
     }
     if (mode === 'photo') {
-      await this.choosePhoto();
+      await this.choosePhoto(mission);
       return;
     }
     if (mode === 'video') {
-      await this.chooseVideo();
+      await this.chooseVideo(mission);
       return;
     }
     if (mode === 'audio') {
-      this.toggleAudioRecording();
+      this.toggleAudioRecording(mission);
       return;
     }
+    if (mode === 'verify') {
+      await this.verifyMissionForTask(mission);
+      return;
+    }
+  },
+
+  handleMissionNoteInput(event) {
+    const mission = event.detail.mission;
+    const noteText = event.detail.noteText;
+    if (!mission) {
+      return;
+    }
+    this.updateMissionAssets(mission, { noteText });
   },
 
   markMissionPassed(mission, review) {
@@ -243,11 +332,16 @@ Page({
     this.setDraft(draft);
   },
 
-  async choosePhoto() {
+  async choosePhoto(mission = '') {
     try {
       const result = await chooseImage(9);
       const photoPaths = (result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean);
-      const draft = { ...this.data.draft, photoList: [...(this.data.draft.photoList || []), ...photoPaths] };
+      let draft = { ...this.data.draft, photoList: [...(this.data.draft.photoList || []), ...photoPaths] };
+      if (mission) {
+        photoPaths.forEach((path) => {
+          draft = this.attachMissionAsset(draft, mission, 'photoList', path);
+        });
+      }
       this.setDraft(draft);
     } catch (error) {
       if (error && error.errMsg && error.errMsg.includes('cancel')) {
@@ -257,15 +351,24 @@ Page({
     }
   },
 
-  async chooseVideo() {
+  async chooseVideo(mission = '') {
     try {
       const result = await chooseVideo(3);
-      const videoList = [...(this.data.draft.videoList || []), ...(result.tempFiles || []).map((item) => ({
+      const selectedVideos = (result.tempFiles || []).map((item) => ({
         tempFilePath: item.tempFilePath,
         duration: item.duration || 0,
         size: item.size || 0,
-      }))];
-      this.setDraft({ ...this.data.draft, videoList });
+      }));
+      let draft = {
+        ...this.data.draft,
+        videoList: [...(this.data.draft.videoList || []), ...selectedVideos],
+      };
+      if (mission) {
+        selectedVideos.forEach((item) => {
+          draft = this.attachMissionAsset(draft, mission, 'videoList', item);
+        });
+      }
+      this.setDraft(draft);
     } catch (error) {
       if (error && error.errMsg && error.errMsg.includes('cancel')) {
         return;
@@ -274,7 +377,7 @@ Page({
     }
   },
 
-  toggleAudioRecording() {
+  toggleAudioRecording(mission = '') {
     if (!recorderManager) {
       wx.showToast({ title: '当前环境不支持录音', icon: 'none' });
       return;
@@ -285,6 +388,7 @@ Page({
       return;
     }
 
+    this.recordingMission = mission || '';
     recorderManager.start({
       duration: 60000,
       sampleRate: 44100,
@@ -335,25 +439,129 @@ Page({
     }
   },
 
+  async verifyMissionForTask(mission) {
+    if (!mission) {
+      wx.showToast({ title: '先选择一个任务', icon: 'none' });
+      return;
+    }
+
+    const missionAssets = this.getMissionAssetsForVerify(mission);
+    const hasMedia =
+      (missionAssets.photoList && missionAssets.photoList.length) ||
+      (missionAssets.videoList && missionAssets.videoList.length) ||
+      (missionAssets.audioList && missionAssets.audioList.length);
+    const missionNoteText = missionAssets.noteText || '';
+
+    if (!hasMedia && !missionNoteText.trim()) {
+      wx.showToast({ title: '先补一点素材或文字', icon: 'none' });
+      return;
+    }
+
+    const clearedReviews = { ...(this.data.draft.missionReviews || {}) };
+    delete clearedReviews[mission];
+    this.setDraft({
+      ...this.data.draft,
+      missionReviews: clearedReviews,
+      selectedMission: mission,
+    });
+    this.setData({ isVerifyingMission: true });
+    try {
+      const uploadedImages = await Promise.all((missionAssets.photoList || []).map((path) => this.uploadAsset(path, 'image')));
+      const uploadedVideos = await Promise.all((missionAssets.videoList || []).map((item) => this.uploadAsset(item.tempFilePath || item, 'video')));
+      const uploadedAudios = await Promise.all((missionAssets.audioList || []).map((item) => this.uploadAsset(item.tempFilePath || item, 'audio')));
+      const review = await verifyMission({
+        missionId: `mission-${((this.data.theme && this.data.theme.missions) || []).indexOf(mission) + 1}`,
+        mission,
+        missionNoteText,
+        overallNoteText: this.data.draft.noteText,
+        imageFileIDs: uploadedImages,
+        videoFileIDs: uploadedVideos,
+        audioFileIDs: uploadedAudios,
+      });
+      const nextReview = {
+        passed: !!review.passed,
+        score: Number(review.score || 0),
+        version: review.version || '',
+        comment: review.comment,
+        confidence: review.confidence || 'medium',
+        evidence: Array.isArray(review.evidence) ? review.evidence : [],
+        reviewedAt: review.reviewedAt || Date.now(),
+        mediaSummary: review.mediaSummary || {
+          imageCount: uploadedImages.length,
+          videoCount: uploadedVideos.length,
+          audioCount: uploadedAudios.length,
+        },
+      };
+      if (review.passed) {
+        this.markMissionPassed(mission, nextReview);
+      } else {
+        this.saveMissionReview(mission, nextReview);
+      }
+      this.updateMissionAssets(mission, {
+        ...missionAssets,
+        photoList: uploadedImages,
+        videoList: uploadedVideos,
+        audioList: uploadedAudios,
+      });
+      wx.showToast({ title: `已评分 ${nextReview.score} 分`, icon: 'none' });
+    } catch (error) {
+      wx.showToast({ title: '核验失败', icon: 'none' });
+    } finally {
+      this.setData({ isVerifyingMission: false });
+    }
+  },
+
   removePhoto(event) {
     const index = Number(event.currentTarget.dataset.index);
     const photoList = [...(this.data.draft.photoList || [])];
-    photoList.splice(index, 1);
-    this.setDraft({ ...this.data.draft, photoList });
+    const [removed] = photoList.splice(index, 1);
+    const missionAssetMap = { ...(this.data.draft.missionAssetMap || {}) };
+    Object.keys(missionAssetMap).forEach((mission) => {
+      const assets = missionAssetMap[mission];
+      missionAssetMap[mission] = {
+        ...assets,
+        photoList: (assets.photoList || []).filter((item) => item !== removed),
+      };
+    });
+    this.setDraft({ ...this.data.draft, photoList, missionAssetMap });
   },
 
   removeVideo(event) {
     const index = Number(event.currentTarget.dataset.index);
     const videoList = [...(this.data.draft.videoList || [])];
-    videoList.splice(index, 1);
-    this.setDraft({ ...this.data.draft, videoList });
+    const [removed] = videoList.splice(index, 1);
+    const removedPath = removed && removed.tempFilePath ? removed.tempFilePath : removed;
+    const missionAssetMap = { ...(this.data.draft.missionAssetMap || {}) };
+    Object.keys(missionAssetMap).forEach((mission) => {
+      const assets = missionAssetMap[mission];
+      missionAssetMap[mission] = {
+        ...assets,
+        videoList: (assets.videoList || []).filter((item) => {
+          const currentPath = item && item.tempFilePath ? item.tempFilePath : item;
+          return currentPath !== removedPath;
+        }),
+      };
+    });
+    this.setDraft({ ...this.data.draft, videoList, missionAssetMap });
   },
 
   removeAudio(event) {
     const index = Number(event.currentTarget.dataset.index);
     const audioList = [...(this.data.draft.audioList || [])];
-    audioList.splice(index, 1);
-    this.setDraft({ ...this.data.draft, audioList });
+    const [removed] = audioList.splice(index, 1);
+    const removedPath = removed && removed.tempFilePath ? removed.tempFilePath : removed;
+    const missionAssetMap = { ...(this.data.draft.missionAssetMap || {}) };
+    Object.keys(missionAssetMap).forEach((mission) => {
+      const assets = missionAssetMap[mission];
+      missionAssetMap[mission] = {
+        ...assets,
+        audioList: (assets.audioList || []).filter((item) => {
+          const currentPath = item && item.tempFilePath ? item.tempFilePath : item;
+          return currentPath !== removedPath;
+        }),
+      };
+    });
+    this.setDraft({ ...this.data.draft, audioList, missionAssetMap });
   },
 
   async toggleTracking() {
@@ -543,9 +751,28 @@ Page({
 
     this.setData({ isSaving: true });
     try {
-      const uploadedPhotos = await Promise.all((this.data.draft.photoList || []).map((path) => this.uploadAsset(path, 'image')));
-      const uploadedVideos = await Promise.all((this.data.draft.videoList || []).map((item) => this.uploadAsset(item.tempFilePath, 'video')));
-      const uploadedAudios = await Promise.all((this.data.draft.audioList || []).map((item) => this.uploadAsset(item.tempFilePath, 'audio')));
+      const uploadCache = {};
+      const uploadCached = (filePath, kind) => {
+        const key = `${kind}:${filePath}`;
+        if (!uploadCache[key]) {
+          uploadCache[key] = this.uploadAsset(filePath, kind);
+        }
+        return uploadCache[key];
+      };
+      const uploadedPhotos = await Promise.all((this.data.draft.photoList || []).map((path) => uploadCached(path, 'image')));
+      const uploadedVideos = await Promise.all((this.data.draft.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video')));
+      const uploadedAudios = await Promise.all((this.data.draft.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio')));
+      const missionAssetEntries = Object.entries(this.data.draft.missionAssetMap || {});
+      const uploadedMissionAssetEntries = await Promise.all(missionAssetEntries.map(async ([mission, assets]) => ([
+        mission,
+        {
+          noteText: assets.noteText || '',
+          photoList: await Promise.all((assets.photoList || []).map((path) => uploadCached(path, 'image'))),
+          videoList: await Promise.all((assets.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video'))),
+          audioList: await Promise.all((assets.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio'))),
+        },
+      ])));
+      const missionAssetMap = Object.fromEntries(uploadedMissionAssetEntries);
       const routeStats = buildRouteStats(
         this.data.draft.routePoints,
         this.data.draft.trackStartedAt || this.data.draft.startedAt,
@@ -564,6 +791,7 @@ Page({
         photoList: uploadedPhotos,
         videoList: uploadedVideos,
         audioList: uploadedAudios,
+        missionAssetMap,
         noteText: this.data.draft.noteText,
         isPublic: false,
         walkMode: this.data.draft.walkMode,

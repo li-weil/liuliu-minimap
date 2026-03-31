@@ -48,7 +48,7 @@
 
   <view class="section-card section-block">
     <view class="section-title">任务打卡</view>
-    <mission-list missions="{{theme.missions}}" activeMission="{{activeMission}}" expandedMission="{{expandedMission}}" completedMissions="{{draft.completedMissions}}" missionReviews="{{draft.missionReviews}}" bind:select="selectMission" bind:verify="handleMissionVerify" bind:toggle="toggleMissionDone" />
+    <mission-list missions="{{theme.missions}}" activeMission="{{activeMission}}" expandedMission="{{expandedMission}}" completedMissions="{{draft.completedMissions}}" missionReviews="{{draft.missionReviews}}" missionAssetMap="{{draft.missionAssetMap}}" bind:select="selectMission" bind:verify="handleMissionVerify" bind:toggle="toggleMissionDone" bind:missionnote="handleMissionNoteInput" />
   </view>
 
   <view class="section-card section-block">

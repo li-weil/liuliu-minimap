@@ -10,6 +10,7 @@ function getDefaultDraft() {
     routePoints: [],
     completedMissions: [],
     missionReviews: {},
+    missionAssetMap: {},
     selectedMission: '',
     noteText: '',
     photoList: [],

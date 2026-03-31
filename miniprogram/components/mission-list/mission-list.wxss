@@ -73,6 +73,21 @@
   width: 100%;
 }
 
+.mission-inline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.mission-inline-pill {
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #6f675c;
+  background: #f5eee3;
+}
+
 .mission-inline-btn {
   flex: 1 1 0;
   min-width: 0;
@@ -116,4 +131,78 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mission-note-area {
+  width: 100%;
+  min-height: 132rpx;
+  margin-top: 18rpx;
+  padding: 20rpx 22rpx;
+  box-sizing: border-box;
+  border-radius: 28rpx;
+  background: #f7f1e8;
+  border: 1rpx solid #eadfce;
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #4b453b;
+}
+
+.mission-verify-btn {
+  width: 100%;
+  margin-top: 18rpx;
+  min-height: 88rpx;
+  border-radius: 32rpx;
+  background: #6c6a49;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.mission-review-card {
+  display: flex;
+  gap: 18rpx;
+  align-items: flex-start;
+  margin-top: 18rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 28rpx;
+  background: #f7f1e8;
+}
+
+.mission-review-score {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 28rpx;
+  background: #fff;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4rpx;
+  color: #6c6a49;
+  flex-shrink: 0;
+}
+
+.mission-review-score-value {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.mission-review-score-unit {
+  font-size: 20rpx;
+}
+
+.mission-review-copy {
+  flex: 1;
+}
+
+.mission-review-status {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #2f2b24;
+  margin-bottom: 8rpx;
+}
+
+.mission-review-comment {
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: #6f675c;
 }

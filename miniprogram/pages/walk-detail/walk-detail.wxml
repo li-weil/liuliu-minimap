@@ -20,9 +20,21 @@
     <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
       <view class="section-title">任务结果</view>
       <view wx:for="{{walk.missionItems}}" wx:key="mission" class="mission-card" style="padding: 20rpx; margin-bottom: 14rpx;">
-        <view style="font-weight: 600; margin-bottom: 10rpx;">{{item.mission}}</view>
-        <view wx:if="{{item.review}}" style="font-size: 24rpx; color: {{item.review.passed ? '#4f6d45' : '#8a6a52'}}; line-height: 1.6;">
+        <view style="display: flex; justify-content: space-between; gap: 18rpx; align-items: center; margin-bottom: 10rpx;">
+          <view style="font-weight: 600; flex: 1;">{{item.mission}}</view>
+          <view class="meta-pill" wx:if="{{item.review}}">{{item.review.score || 0}} 分</view>
+        </view>
+        <view wx:if="{{item.review}}" style="font-size: 24rpx; color: {{item.review.passed ? '#4f6d45' : '#8a6a52'}}; line-height: 1.6; margin-bottom: 10rpx;">
           {{item.review.comment}}
+        </view>
+        <view wx:if="{{item.review && item.review.evidence && item.review.evidence.length}}" style="display: flex; flex-wrap: wrap; gap: 10rpx;">
+          <view wx:for="{{item.review.evidence}}" wx:key="index" class="meta-pill">{{item}}</view>
+        </view>
+        <view wx:if="{{!item.review}}" class="empty-copy" style="padding: 8rpx 0 0;">这项任务还没有 AI 核验结果</view>
+        <view wx:if="{{item.assets}}" class="meta-row" style="margin-top: 12rpx;">
+          <view class="meta-pill" wx:if="{{item.assets.photoList && item.assets.photoList.length}}">{{item.assets.photoList.length}} 张图片</view>
+          <view class="meta-pill" wx:if="{{item.assets.videoList && item.assets.videoList.length}}">{{item.assets.videoList.length}} 段视频</view>
+          <view class="meta-pill" wx:if="{{item.assets.audioList && item.assets.audioList.length}}">{{item.assets.audioList.length}} 段录音</view>
         </view>
       </view>
     </view>

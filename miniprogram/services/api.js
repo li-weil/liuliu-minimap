@@ -3,7 +3,7 @@ const { callCloud, uploadToCloud } = require('./cloud');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail']
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission']
     : []
 );
 
@@ -61,6 +61,7 @@ function normalizeWalkRecord(item) {
       ? [item.audioUrl]
       : [];
   const themeSnapshot = item.themeSnapshot || {};
+  const missionAssetMap = item.missionAssetMap || {};
   const routeStats = item.routeStats || {};
   const durationMs = routeStats.durationMs || 0;
   const distanceMeters = routeStats.distanceMeters || 0;
@@ -94,6 +95,7 @@ function normalizeWalkRecord(item) {
     routePoints,
     completedMissions: missionList,
     missionReviews: item.missionReviews || {},
+    missionAssetMap,
     isPublic: !!item.isPublic,
     walkMode: item.walkMode || 'pure',
     generationSource: item.generationSource || 'unknown',

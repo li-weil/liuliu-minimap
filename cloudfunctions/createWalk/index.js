@@ -16,6 +16,7 @@ exports.main = async (event) => {
     routePoints: event.routePoints || [],
     missionsCompleted: event.missionsCompleted || [],
     missionReviews: event.missionReviews || {},
+    missionAssetMap: event.missionAssetMap || {},
     photoList: event.photoList || [],
     videoList: event.videoList || [],
     audioList: event.audioList || [],

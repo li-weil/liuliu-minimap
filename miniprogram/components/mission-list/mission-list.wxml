@@ -31,6 +31,34 @@
           </view>
         </button>
       </view>
+
+      <view class="mission-inline-meta" wx:if="{{item.assets}}">
+        <view class="mission-inline-pill" wx:if="{{item.assets.photoList && item.assets.photoList.length}}">{{item.assets.photoList.length}} 张图片</view>
+        <view class="mission-inline-pill" wx:if="{{item.assets.videoList && item.assets.videoList.length}}">{{item.assets.videoList.length}} 段视频</view>
+        <view class="mission-inline-pill" wx:if="{{item.assets.audioList && item.assets.audioList.length}}">{{item.assets.audioList.length}} 段录音</view>
+      </view>
+
+      <textarea
+        class="mission-note-area"
+        placeholder="补一句你是怎么完成这个任务的"
+        maxlength="200"
+        value="{{item.assets && item.assets.noteText ? item.assets.noteText : ''}}"
+        bindinput="inputMissionNote"
+        data-mission="{{item.mission}}"
+      />
+
+      <button class="mission-verify-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="verify">AI核验并打分</button>
+
+      <view wx:if="{{item.review}}" class="mission-review-card">
+        <view class="mission-review-score">
+          <text class="mission-review-score-value">{{item.review.score || 0}}</text>
+          <text class="mission-review-score-unit">分</text>
+        </view>
+        <view class="mission-review-copy">
+          <view class="mission-review-status">{{item.review.passed ? '已完成任务' : '还差一点点'}}</view>
+          <view class="mission-review-comment">{{item.review.comment}}</view>
+        </view>
+      </view>
     </view>
   </view>
 </view>

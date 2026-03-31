@@ -28,6 +28,7 @@ Page({
             missionItems: ((result.walk.themeSnapshot && result.walk.themeSnapshot.missions) || []).map((mission) => ({
               mission,
               review: result.walk.missionReviews && result.walk.missionReviews[mission] ? result.walk.missionReviews[mission] : null,
+              assets: result.walk.missionAssetMap && result.walk.missionAssetMap[mission] ? result.walk.missionAssetMap[mission] : null,
             })),
           }
         : null;
