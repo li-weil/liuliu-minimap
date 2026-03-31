@@ -1,4 +1,4 @@
-const { getWalkDetail } = require('../../services/walk');
+const { getWalkDetail, publishWalkShare } = require('../../services/walk');
 const { formatDate } = require('../../utils/format');
 
 function splitPoemLines(poem) {
@@ -38,12 +38,33 @@ function decorateSticker(sticker) {
   };
 }
 
+function downloadFile(url) {
+  return new Promise((resolve, reject) => {
+    wx.downloadFile({
+      url,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+function saveImageToAlbum(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.saveImageToPhotosAlbum({
+      filePath,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
 Page({
   data: {
     loading: true,
     source: 'history',
     walk: null,
     showStickerModal: false,
+    isPublishingShare: false,
   },
 
   onLoad(query) {
@@ -123,11 +144,57 @@ Page({
       if (!imageUrl) {
         throw new Error('missing_sticker_image');
       }
-      const download = await wx.downloadFile({ url: imageUrl });
-      await wx.saveImageToPhotosAlbum({ filePath: download.tempFilePath });
+      const download = await downloadFile(imageUrl);
+      if (!download || !download.tempFilePath) {
+        throw new Error('download_sticker_failed');
+      }
+      await saveImageToAlbum(download.tempFilePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
+      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
+        wx.showModal({
+          title: '需要相册权限',
+          content: '请在设置里允许保存到相册后，再试一次',
+          confirmText: '去设置',
+          success: (res) => {
+            if (res.confirm) {
+              wx.openSetting({});
+            }
+          },
+        });
+        return;
+      }
       wx.showToast({ title: '保存贴纸失败', icon: 'none' });
+    }
+  },
+
+  async handlePublishShare() {
+    if (!(this.data.walk && (this.data.walk.id || this.data.walk._id))) {
+      wx.showToast({ title: '缺少漫步记录', icon: 'none' });
+      return;
+    }
+    if (this.data.walk.isPublic) {
+      wx.showToast({ title: '已可分享，点右侧按钮发送', icon: 'none' });
+      return;
+    }
+    this.setData({ isPublishingShare: true });
+    try {
+      const result = await publishWalkShare({ id: this.data.walk.id || this.data.walk._id });
+      if (result && result.walk) {
+        this.setData({
+          walk: {
+            ...this.data.walk,
+            ...result.walk,
+            sticker: decorateSticker(result.walk.sticker),
+          },
+        });
+      }
+      wx.showToast({ title: '已发布，可分享给好友', icon: 'success' });
+    } catch (error) {
+      wx.showToast({ title: '发布分享失败', icon: 'none' });
+    } finally {
+      this.setData({ isPublishingShare: false });
     }
   },
 

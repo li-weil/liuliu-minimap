@@ -3,7 +3,7 @@ const { callCloud, uploadToCloud } = require('./cloud');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage']
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'publishWalkShare']
     : []
 );
 
@@ -316,6 +316,13 @@ const ENDPOINTS = {
         walk: normalizeWalkRecord(data),
       }),
     },
+  },
+  publishWalkShare: {
+    cloudName: 'publishWalkShare',
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      walk: data && data.walk ? normalizeWalkRecord(data.walk) : null,
+    }),
   },
   uploadMedia: {
     cloudName: '',

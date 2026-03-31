@@ -144,6 +144,26 @@ function decorateSticker(sticker) {
   };
 }
 
+function downloadFile(url) {
+  return new Promise((resolve, reject) => {
+    wx.downloadFile({
+      url,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+function saveImageToAlbum(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.saveImageToPhotosAlbum({
+      filePath,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
 Page({
   data: {
     activeMission: '',
@@ -931,10 +951,27 @@ Page({
       if (!imageUrl) {
         throw new Error('missing_sticker_image');
       }
-      const download = await wx.downloadFile({ url: imageUrl });
-      await wx.saveImageToPhotosAlbum({ filePath: download.tempFilePath });
+      const download = await downloadFile(imageUrl);
+      if (!download || !download.tempFilePath) {
+        throw new Error('download_sticker_failed');
+      }
+      await saveImageToAlbum(download.tempFilePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
+      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
+        wx.showModal({
+          title: '需要相册权限',
+          content: '请在设置里允许保存到相册后，再试一次',
+          confirmText: '去设置',
+          success: (res) => {
+            if (res.confirm) {
+              wx.openSetting({});
+            }
+          },
+        });
+        return;
+      }
       wx.showToast({ title: '保存贴纸失败', icon: 'none' });
     }
   },

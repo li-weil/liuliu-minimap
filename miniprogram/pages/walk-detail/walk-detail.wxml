@@ -124,7 +124,8 @@
         </view>
       </view>
       <view class="sticker-modal-actions">
-        <button open-type="share" class="ghost-btn sticker-modal-action">分享链接</button>
+        <button wx:if="{{!walk.isPublic && source !== 'share'}}" class="ghost-btn sticker-modal-action" bindtap="handlePublishShare" loading="{{isPublishingShare}}">发布分享链接</button>
+        <button wx:elif="{{source !== 'share'}}" open-type="share" class="ghost-btn sticker-modal-action">分享给微信好友</button>
         <button class="primary-btn sticker-modal-action" bindtap="handleSaveStickerToAlbum">保存到本地</button>
       </view>
     </view>
