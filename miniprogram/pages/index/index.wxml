@@ -97,7 +97,7 @@
       <view class="helper-copy">让主题先落下来，再从街道、光影和情绪里抽出今天的漫步线索</view>
       <view class="action-grid">
         <button class="ghost-btn action-tall-btn" bindtap="handleRandomTheme" loading="{{isGenerating}}">随机生成</button>
-        <button class="primary-btn action-tall-btn" bindtap="handleCombinedTheme" loading="{{isCombining}}">组合生成</button>
+        <button class="primary-btn action-tall-btn" bindtap="handleSelectedThemeGenerate" loading="{{isCombining}}">选择生成</button>
       </view>
     </view>
 

@@ -150,6 +150,10 @@ function buildNearbyPlaceViews(results) {
   })).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
 }
 
+function extractErrorMessage(error, fallback) {
+  return String((error && error.errMsg) || (error && error.message) || fallback || '操作失败');
+}
+
 Page({
   data: {
     combineOptionViews: buildCombineOptionViews([]),
@@ -535,7 +539,12 @@ Page({
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(currentTheme, result.source || 'rag-fallback');
     } catch (error) {
-      wx.showToast({ title: '主题生成失败', icon: 'none' });
+      wx.showModal({
+        title: '主题生成失败',
+        content: extractErrorMessage(error, '主题生成失败'),
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } finally {
       this.setData({ isGenerating: false });
     }
@@ -544,8 +553,7 @@ Page({
   async handleRandomTheme() {
     this.setData({ isGenerating: true });
     try {
-      const selectedCategories = buildSelectedThemeCategories(this.data.combineSelections);
-      const categoryPool = selectedCategories.length ? selectedCategories : this.data.randomCategories;
+      const categoryPool = this.data.randomCategories;
       const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
       const result = await generateRandomTheme({
         category,
@@ -554,20 +562,25 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
-        selectedThemes: selectedCategories,
+        selectedThemes: [],
       });
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(currentTheme, result.source || 'random-fallback');
     } catch (error) {
-      wx.showToast({ title: '随机主题失败', icon: 'none' });
+      wx.showModal({
+        title: '随机生成失败',
+        content: extractErrorMessage(error, '随机生成失败'),
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } finally {
       this.setData({ isGenerating: false });
     }
   },
 
-  async handleCombinedTheme() {
+  async handleSelectedThemeGenerate() {
     if (this.data.combineSelections.length < 1) {
       wx.showToast({ title: '请先选择 1-2 个主题', icon: 'none' });
       return;
@@ -575,20 +588,41 @@ Page({
 
     this.setData({ isCombining: true });
     try {
-      const result = await generateCombinedTheme({
-        categories: this.data.combineSelections,
-        locationName: this.data.locationName,
-        locationContext: this.data.locationContext,
-        latitude: this.data.latitude,
-        longitude: this.data.longitude,
-        walkMode: this.data.walkMode,
-      });
+      const result = this.data.combineSelections.length === 1
+        ? await generateTheme({
+          mood: this.data.mood,
+          weather: this.data.weather,
+          season: this.data.season,
+          preference: this.data.preference,
+          locationName: this.data.locationName,
+          locationContext: this.data.locationContext,
+          latitude: this.data.latitude,
+          longitude: this.data.longitude,
+          walkMode: this.data.walkMode,
+          selectedThemes: buildSelectedThemeCategories(this.data.combineSelections),
+        })
+        : await generateCombinedTheme({
+          categories: this.data.combineSelections,
+          locationName: this.data.locationName,
+          locationContext: this.data.locationContext,
+          latitude: this.data.latitude,
+          longitude: this.data.longitude,
+          walkMode: this.data.walkMode,
+        });
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });
       app.globalData.currentTheme = currentTheme;
-      this.syncDisplayMeta(currentTheme, result.source || 'combined-fallback');
+      this.syncDisplayMeta(
+        currentTheme,
+        result.source || (this.data.combineSelections.length === 1 ? 'rag-fallback' : 'combined-fallback')
+      );
     } catch (error) {
-      wx.showToast({ title: '组合主题失败', icon: 'none' });
+      wx.showModal({
+        title: '选择生成失败',
+        content: extractErrorMessage(error, '选择生成失败'),
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } finally {
       this.setData({ isCombining: false });
     }

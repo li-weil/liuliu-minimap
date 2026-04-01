@@ -1,6 +1,6 @@
 const https = require('https');
 
-const REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 1800);
+const REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 12000);
 
 function requestJson(urlString, options, body) {
   const url = new URL(urlString);

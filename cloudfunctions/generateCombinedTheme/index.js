@@ -1,7 +1,17 @@
 const cloud = require('wx-server-sdk');
 const { chatJson } = require('./ai');
+const { missionTemplates, sceneProfiles } = require('./knowledge');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+
+function shuffle(list) {
+  const copied = [...list];
+  for (let index = copied.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copied[index], copied[swapIndex]] = [copied[swapIndex], copied[index]];
+  }
+  return copied;
+}
 
 function normalizeMissionText(mission) {
   if (typeof mission === 'string') {
@@ -32,6 +42,36 @@ function normalizeTheme(theme, walkMode) {
   };
 }
 
+function enrichPureMissionText(mission, categories) {
+  const text = String(mission || '').trim();
+  if (!text) {
+    return `在街头把${categories.join('与')}放在同一处细节里观察，记录它们如何彼此呼应，并说出最打动你的那个瞬间。`;
+  }
+  if (text.length >= 22 && /，|。|并|同时|比较|观察/.test(text)) {
+    return text;
+  }
+
+  const categoryHint = categories.join('与');
+  return `${text}，再留意它如何同时回应${categoryHint}这两个方向，并用一句话解释它们为什么会在这里相遇。`;
+}
+
+function buildSceneContext(event) {
+  const tokens = [event.locationName, event.locationContext, event.preference, event.weather, event.season]
+    .filter(Boolean)
+    .join(' ');
+  return shuffle(sceneProfiles.filter((scene) => scene.keywords.some((keyword) => tokens.includes(keyword)))).slice(0, 3);
+}
+
+function buildTemplateContext(categories, walkMode) {
+  return categories.map((category) => ({
+    category,
+    references: shuffle(missionTemplates.filter((template) => template.category === category)).slice(0, 2).map((template) => ({
+      cues: shuffle(template.cues).slice(0, 4),
+      samples: shuffle(template.templates).slice(0, walkMode === 'advanced' ? 3 : 2),
+    })),
+  }));
+}
+
 exports.main = async (event) => {
   const categories = Array.isArray(event.categories) ? event.categories.filter(Boolean).slice(0, 3) : [];
   if (categories.length < 2) {
@@ -48,21 +88,61 @@ exports.main = async (event) => {
     };
   }
 
+  const sceneContext = buildSceneContext(event);
+  const templateContext = buildTemplateContext(categories, event.walkMode);
   const fallbackTheme = normalizeTheme({
     title: `${categories.join(' × ')} 组合漫步`,
     description: `把 ${categories.join('、')} 放进同一次城市观察里，寻找它们在 ${event.locationName || '这片街区'} 的交汇。`,
     category: '组合',
     missions: event.walkMode === 'advanced'
-      ? ['找到一个同时呼应这两个方向的场景', '拍下一处让多个感官同时被调动的细节', '用一句话解释它们为什么会在这里相遇']
-      : ['找到一个能同时让你想到这些方向的瞬间'],
+      ? [
+        '找到一个同时呼应这两个方向的场景',
+        '拍下一处让多个感官同时被调动的细节',
+        '用一句话解释它们为什么会在这里相遇',
+      ]
+      : [`在街头寻找一处能同时让你想到${categories.join('与')}的细节，观察它们如何彼此呼应，并说出最打动你的那个瞬间`],
     vibeColor: '#7c6a94',
   }, event.walkMode);
 
-  const prompt = `你正在为微信小程序“遛遛”生成组合主题。\n组合方向：${categories.join('、')}\n地点：${event.locationName}\n地点语境：${event.locationContext}\n模式：${event.walkMode === 'advanced' ? '进阶模式，生成3个任务' : '纯粹模式，生成1个任务'}\n请创建一个真正融合这些方向的主题，而不是简单并列。任务要具体、宽松、具有趣味。\n返回 JSON：title, description, category, missions, vibeColor。`;
+  const prompt = `你正在为微信小程序“遛遛”生成组合主题。
+组合方向：${categories.join('、')}
+地点：${event.locationName || '当前位置'}
+地点语境：${event.locationContext || '城市街道'}
+模式：${event.walkMode === 'advanced' ? '进阶模式，生成3个任务' : '纯粹模式，生成1个完整而有层次的复合任务'}
+
+以下是组合生成的本地知识上下文：
+${JSON.stringify({
+  scenes: sceneContext.map((scene) => ({
+    labels: scene.labels,
+    missionHints: shuffle(scene.missionHints).slice(0, 4),
+  })),
+  themes: templateContext,
+}, null, 2)}
+
+要求：
+1. 请创建一个真正融合这些方向的主题，而不是简单并列。
+2. 三个任务切入角度尽量不同，可以分别从主体、关系、空间、时间、对比、来源、变化等角度切入。
+3. 任务必须只围绕这两个方向展开，不要额外引入第三种无关主题。
+4. 如果没有选择“声音”，就不要把声音当任务重点。
+5. 如果包含“动物”，至少有一个任务必须直接涉及真实动物、动物痕迹或动物轮廓联想。
+6. 如果包含“气味”，至少有一个任务必须直接涉及气味来源、扩散、停留或气味记忆。
+7. 如果包含“形状”，至少有一个任务必须直接涉及线条、轮廓、弧度或几何关系。
+8. 如果包含“色彩”，至少有一个任务必须直接涉及色块、对比、渐变、明暗或环境色调。
+9. 任务要具体、宽松、具有趣味，并且带有明确地点感。
+10. 任务必须安全、可执行，不要进入受限区域。
+11. 如果是纯粹模式，唯一的那个任务必须同时体现已选方向，不要写成过短的一句提示，要有更完整的观察层次。
+
+返回 JSON：title, description, category, missions, vibeColor。`;
 
   try {
     const theme = normalizeTheme(await chatJson('你是遛遛小程序的组合主题策划助手。只返回合法 JSON。', prompt), event.walkMode);
-    return { theme: { ...fallbackTheme, ...theme, category: '组合' }, source: 'combined+ai', combinedCategories: categories };
+    const enrichedTheme = event.walkMode === 'pure'
+      ? {
+        ...theme,
+        missions: [enrichPureMissionText((theme.missions || [])[0], categories)],
+      }
+      : theme;
+    return { theme: { ...fallbackTheme, ...enrichedTheme, category: '组合' }, source: 'combined+ai', combinedCategories: categories };
   } catch (error) {
     return { theme: fallbackTheme, source: 'combined-fallback', combinedCategories: categories, reason: error.message || 'generate_failed' };
   }
