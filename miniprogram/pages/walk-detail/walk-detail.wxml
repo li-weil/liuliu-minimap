@@ -18,20 +18,6 @@
     </view>
 
     <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
-      <view class="section-title">任务结果</view>
-      <view wx:for="{{walk.missionItems}}" wx:key="mission" class="mission-card" style="padding: 20rpx; margin-bottom: 14rpx;">
-        <view style="display: flex; justify-content: space-between; gap: 18rpx; align-items: center; margin-bottom: 10rpx;">
-          <view style="font-weight: 600; flex: 1;">{{item.mission}}</view>
-        </view>
-        <view wx:if="{{item.assets}}" class="meta-row" style="margin-top: 12rpx;">
-          <view class="meta-pill" wx:if="{{item.assets.photoList && item.assets.photoList.length}}">{{item.assets.photoList.length}} 张图片</view>
-          <view class="meta-pill" wx:if="{{item.assets.videoList && item.assets.videoList.length}}">{{item.assets.videoList.length}} 段视频</view>
-          <view class="meta-pill" wx:if="{{item.assets.audioList && item.assets.audioList.length}}">{{item.assets.audioList.length}} 段录音</view>
-        </view>
-      </view>
-    </view>
-
-    <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
       <view class="section-title">地图与轨迹</view>
       <map longitude="{{walk.routePoints.length ? walk.routePoints[walk.routePoints.length - 1].longitude : 116.39747}}" latitude="{{walk.routePoints.length ? walk.routePoints[walk.routePoints.length - 1].latitude : 39.908823}}" scale="15" show-location polyline="{{[{ points: walk.routePoints, color: '#5a5a40', width: 4 }]}}" style="width: 100%; height: 360rpx; border-radius: 22rpx; overflow: hidden;" />
       <view class="meta-row" style="margin-top: 20rpx;">
@@ -44,47 +30,122 @@
         <view class="meta-pill">结束 {{walk.routeStats.stoppedLabel || '未记录'}}</view>
       </view>
     </view>
-
+    
     <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
-      <view class="section-title">图片记录</view>
-      <view wx:if="{{walk.photoList.length}}" style="display: flex; flex-wrap: wrap; gap: 16rpx;">
-        <image wx:for="{{walk.photoList}}" wx:key="index" src="{{item}}" mode="aspectFill" style="width: 208rpx; height: 208rpx; border-radius: 18rpx;" />
+      <view class="section-title">任务记录</view>
+      <view wx:if="{{walk.missionItems.length}}" class="mission-list-block">
+        <block wx:for="{{walk.missionItems}}" wx:key="mission" wx:for-item="missionItem">
+          <view class="mission-group">
+            <view
+              class="mission-row {{activeMission === missionItem.mission ? 'mission-row-active' : ''}}"
+              bindtap="switchMissionTab"
+              data-mission="{{missionItem.mission}}"
+            >
+              <view wx:if="{{missionItem.isSupplemental}}" class="mission-tag">补充</view>
+              <view wx:else class="mission-anchor {{activeMission === missionItem.mission ? 'mission-anchor-active' : ''}}"></view>
+              <view class="mission-copy">{{missionItem.label}}</view>
+            </view>
+
+            <view wx:if="{{activeMission === missionItem.mission}}" class="mission-detail-block">
+              <view class="meta-row mission-detail-meta">
+                <view class="meta-pill" wx:if="{{missionItem.assets.photoList && missionItem.assets.photoList.length}}">{{missionItem.assets.photoList.length}} 张图片</view>
+                <view class="meta-pill" wx:if="{{missionItem.assets.videoList && missionItem.assets.videoList.length}}">{{missionItem.assets.videoList.length}} 段视频</view>
+                <view class="meta-pill" wx:if="{{missionItem.assets.audioList && missionItem.assets.audioList.length}}">{{missionItem.assets.audioList.length}} 段录音</view>
+              </view>
+
+              <view class="mission-detail-note">
+                {{missionItem.assets.noteText || '这个任务下还没有留下文字记录。'}}
+              </view>
+
+
+
+              <view class="mission-media-group">
+                <view class="section-subtitle">图片记录</view>
+                <view wx:if="{{missionItem.assets.photoList.length}}" style="display: flex; flex-wrap: wrap; gap: 16rpx;">
+                  <image wx:for="{{missionItem.assets.photoList}}" wx:key="index" src="{{item}}" mode="aspectFill" style="width: 208rpx; height: 208rpx; border-radius: 18rpx;" />
+                </view>
+                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有图片记录。</view>
+              </view>
+
+              <view class="mission-media-group">
+                <view class="section-subtitle">视频记录</view>
+                <view wx:if="{{missionItem.assets.videoList.length}}">
+                  <video
+                    wx:for="{{missionItem.assets.videoList}}"
+                    wx:key="index"
+                    src="{{item.tempFilePath || item}}"
+                    controls
+                    objectFit="cover"
+                    style="width: 100%; height: 360rpx; border-radius: 18rpx; margin-bottom: 16rpx;"
+                  />
+                </view>
+                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有视频记录。</view>
+              </view>
+
+              <view class="mission-media-group">
+                <view class="section-subtitle">录音记录</view>
+                <view wx:if="{{missionItem.assets.audioList.length}}">
+                  <view wx:for="{{missionItem.assets.audioList}}" wx:key="index" class="mission-card" style="padding: 18rpx 20rpx; margin-bottom: 14rpx;">
+                    <view style="font-size: 24rpx; font-weight: 600; margin-bottom: 12rpx;">录音 {{index + 1}}</view>
+                    <audio src="{{item.tempFilePath || item}}" controls style="width: 100%;" />
+                  </view>
+                </view>
+                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有录音记录。</view>
+              </view>
+
+              <view class="mission-card-preview">
+                <view class="section-subtitle">打卡卡片</view>
+                <view wx:if="{{isRenderingMissionCard}}" class="mission-card-preview-loading">正在整理这张卡片...</view>
+                <image
+                  wx:elif="{{currentMissionCardSrc}}"
+                  class="mission-card-preview-image"
+                  src="{{currentMissionCardSrc}}"
+                  mode="widthFix"
+                  bindtap="openMissionCardModal"
+                  data-src="{{currentMissionCardSrc}}"
+                  data-title="{{missionItem.label || '打卡卡片'}}"
+                />
+              </view>    
+
+            </view>
+          </view>
+        </block>
       </view>
-      <view wx:else class="empty-copy" style="padding: 20rpx 0;">这次漫步没有上传图片。</view>
+      <view wx:if="{{!walk.missionItems.length}}" class="empty-copy" style="padding: 20rpx 0;">
+        这次漫步还没有任务级记录。
+      </view>
     </view>
 
-    <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
-      <view class="section-title">视频记录</view>
-      <view wx:if="{{walk.videoList.length}}">
-        <video
-          wx:for="{{walk.videoList}}"
-          wx:key="index"
-          src="{{item}}"
-          controls
-          objectFit="cover"
-          style="width: 100%; height: 360rpx; border-radius: 18rpx; margin-bottom: 16rpx;"
-        />
-      </view>
-      <view wx:else class="empty-copy" style="padding: 20rpx 0;">这次漫步没有上传视频。</view>
-    </view>
 
-    <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
-      <view class="section-title">录音记录</view>
-      <view wx:if="{{walk.audioList.length}}">
-        <view wx:for="{{walk.audioList}}" wx:key="index" class="mission-card" style="padding: 18rpx 20rpx; margin-bottom: 14rpx;">
-          <view style="font-size: 24rpx; font-weight: 600; margin-bottom: 12rpx;">录音 {{index + 1}}</view>
-          <audio src="{{item}}" controls style="width: 100%;" />
-        </view>
-      </view>
-      <view wx:else class="empty-copy" style="padding: 20rpx 0;">这次漫步没有上传录音。</view>
-    </view>
 
-    <view class="section-card" style="padding: 28rpx;">
-      <view class="section-title">文字记录</view>
-      <view style="color: #6f6a5f; line-height: 1.8;">{{walk.noteText || '这次漫步还没有留下文字记录。'}}</view>
-    </view>
   </view>
 
   <view wx:else class="empty-copy">没有找到这条足迹。</view>
+
+  <checkin-card
+    mission="{{missionCardRenderPayload.mission}}"
+    assets="{{missionCardRenderPayload.assets}}"
+    locationName="{{missionCardRenderPayload.locationName}}"
+    themeTitle="{{missionCardRenderPayload.themeTitle}}"
+    dateLabel="{{missionCardRenderPayload.dateLabel}}"
+    renderVersion="{{missionCardRenderPayload.renderVersion}}"
+    autoRender="{{true}}"
+    bind:generated="handleMissionCardGenerated"
+  />
+
+  <view wx:if="{{showMissionCardModal}}" class="mission-card-modal-mask" catchtap="closeMissionCardModal">
+    <view class="mission-card-modal-sheet" catchtap="noop">
+      <view class="mission-card-modal-panel">
+        <view class="mission-card-modal-title">{{missionCardModal.title || '打卡卡片'}}</view>
+        <scroll-view scroll-y class="mission-card-modal-scroll">
+          <image wx:if="{{missionCardModal.imageSrc}}" class="mission-card-modal-image" src="{{missionCardModal.imageSrc}}" mode="widthFix" />
+        </scroll-view>
+      </view>
+      <view class="mission-card-modal-actions">
+        <button class="ghost-btn mission-card-modal-action" bindtap="closeMissionCardModal">关闭</button>
+        <button class="primary-btn mission-card-modal-action" bindtap="handleSaveMissionCardToAlbum">保存到本地</button>
+      </view>
+    </view>
+  </view>
 
 </view>

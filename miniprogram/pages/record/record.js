@@ -10,6 +10,18 @@ let recorderManager = null;
 let routeTimer = null;
 
 const TRACK_SAMPLE_INTERVAL_MS = 5000;
+const SUMMARY_MISSION_KEY = '__summary__';
+const SUMMARY_MISSION_LABEL = '总结与补充';
+
+function createEmptyMissionAssets() {
+  return {
+    photoList: [],
+    videoList: [],
+    audioList: [],
+    noteText: '',
+    cardImagePath: '',
+  };
+}
 
 function toRadians(value) {
   return (value * Math.PI) / 180;
@@ -128,6 +140,30 @@ function buildThemeKey(theme, draft) {
   ].join('::');
 }
 
+function ensureMissionAssetMap(missionAssetMap = {}) {
+  const nextMap = {};
+  Object.keys(missionAssetMap || {}).forEach((mission) => {
+    nextMap[mission] = {
+      ...createEmptyMissionAssets(),
+      ...(missionAssetMap[mission] || {}),
+    };
+  });
+  return nextMap;
+}
+
+function syncDraftAggregates(draft) {
+  const missionAssetMap = ensureMissionAssetMap(draft.missionAssetMap);
+  const summaryAssets = missionAssetMap[SUMMARY_MISSION_KEY] || createEmptyMissionAssets();
+  return {
+    ...draft,
+    missionAssetMap,
+    noteText: summaryAssets.noteText || '',
+    photoList: [...(summaryAssets.photoList || [])],
+    videoList: [...(summaryAssets.videoList || [])],
+    audioList: [...(summaryAssets.audioList || [])],
+  };
+}
+
 function decorateSticker(sticker) {
   if (!sticker) {
     return null;
@@ -167,6 +203,7 @@ function saveImageToAlbum(filePath) {
 Page({
   data: {
     activeMission: '',
+    summaryMissionKey: SUMMARY_MISSION_KEY,
     isVerifyingMission: false,
     theme: null,
     draft: null,
@@ -176,6 +213,7 @@ Page({
     showStickerModal: false,
     isMapOpen: false,
     isRecordingAudio: false,
+    recordingMission: '',
     expandedMission: '',
     generatedMissionCardMap: {},
     showMissionCardModal: false,
@@ -204,25 +242,20 @@ Page({
     if (wx.getRecorderManager) {
       recorderManager = wx.getRecorderManager();
       recorderManager.onStop((result) => {
-        const audioList = [...((this.data.draft && this.data.draft.audioList) || [])];
-        audioList.push({
+        const nextAudio = {
           tempFilePath: result.tempFilePath,
           duration: result.duration || 0,
-        });
-        let draft = { ...app.globalData.walkDraft, audioList };
-        if (this.recordingMission) {
-          draft = this.attachMissionAsset(draft, this.recordingMission, 'audioList', {
-            tempFilePath: result.tempFilePath,
-            duration: result.duration || 0,
-          });
-        }
-        app.setWalkDraft(draft);
-        this.setData({ isRecordingAudio: false });
+        };
+        const mission = this.recordingMission || this.getActiveMissionKey();
+        let draft = { ...app.globalData.walkDraft };
+        draft = this.attachMissionAsset(draft, mission, 'audioList', nextAudio);
+        app.setWalkDraft(syncDraftAggregates(draft));
+        this.setData({ isRecordingAudio: false, recordingMission: '' });
         this.recordingMission = '';
         this.refreshState();
       });
       recorderManager.onError(() => {
-        this.setData({ isRecordingAudio: false });
+        this.setData({ isRecordingAudio: false, recordingMission: '' });
         this.recordingMission = '';
         wx.showToast({ title: '录音失败', icon: 'none' });
       });
@@ -248,7 +281,7 @@ Page({
 
   refreshState() {
     const theme = app.globalData.currentTheme;
-    const draft = app.globalData.walkDraft;
+    const draft = syncDraftAggregates(app.globalData.walkDraft);
     const routeStats = buildRouteStats(
       draft.routePoints,
       draft.trackStartedAt || draft.startedAt,
@@ -265,7 +298,7 @@ Page({
       app.setWalkDraft(nextDraft);
     }
     this.setData({
-      activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || ''),
+      activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || SUMMARY_MISSION_KEY),
       theme,
       generatedMissionCardMap: this.generatedMissionCardMap || {},
       draft: {
@@ -277,18 +310,18 @@ Page({
   },
 
   setDraft(nextDraft) {
-    app.setWalkDraft(nextDraft);
+    app.setWalkDraft(syncDraftAggregates(nextDraft));
     this.refreshState();
   },
 
+  getActiveMissionKey() {
+    return this.data.activeMission || (this.data.theme && this.data.theme.missions && this.data.theme.missions[0]) || SUMMARY_MISSION_KEY;
+  },
+
   getMissionAssets(mission, draft = this.data.draft) {
-    const missionAssetMap = (draft && draft.missionAssetMap) || {};
-    return missionAssetMap[mission] || {
-      photoList: [],
-      videoList: [],
-      audioList: [],
-      noteText: '',
-    };
+    const missionKey = mission || SUMMARY_MISSION_KEY;
+    const missionAssetMap = ensureMissionAssetMap((draft && draft.missionAssetMap) || {});
+    return missionAssetMap[missionKey] || createEmptyMissionAssets();
   },
 
   getMissionAssetsForVerify(mission) {
@@ -302,29 +335,18 @@ Page({
     if (hasMissionMedia || hasMissionNote) {
       return missionAssets;
     }
-
-    return {
-      photoList: [...(this.data.draft.photoList || [])],
-      videoList: [...(this.data.draft.videoList || [])],
-      audioList: [...(this.data.draft.audioList || [])],
-      noteText: '',
-    };
+    return createEmptyMissionAssets();
   },
 
   attachMissionAsset(draft, mission, field, asset) {
-    if (!mission) {
-      return draft;
-    }
-    const missionAssetMap = { ...(draft.missionAssetMap || {}) };
+    const missionKey = mission || SUMMARY_MISSION_KEY;
+    const missionAssetMap = ensureMissionAssetMap(draft.missionAssetMap || {});
     const missionAssets = {
-      photoList: [],
-      videoList: [],
-      audioList: [],
-      noteText: '',
-      ...(missionAssetMap[mission] || {}),
+      ...createEmptyMissionAssets(),
+      ...(missionAssetMap[missionKey] || {}),
     };
     missionAssets[field] = [...(missionAssets[field] || []), asset];
-    missionAssetMap[mission] = missionAssets;
+    missionAssetMap[missionKey] = missionAssets;
     return {
       ...draft,
       missionAssetMap,
@@ -333,13 +355,11 @@ Page({
 
   updateMissionAssets(mission, patch) {
     const draft = { ...this.data.draft };
-    const missionAssetMap = { ...(draft.missionAssetMap || {}) };
-    missionAssetMap[mission] = {
-      photoList: [],
-      videoList: [],
-      audioList: [],
-      noteText: '',
-      ...(missionAssetMap[mission] || {}),
+    const missionKey = mission || SUMMARY_MISSION_KEY;
+    const missionAssetMap = ensureMissionAssetMap(draft.missionAssetMap || {});
+    missionAssetMap[missionKey] = {
+      ...createEmptyMissionAssets(),
+      ...(missionAssetMap[missionKey] || {}),
       ...patch,
     };
     this.setDraft({
@@ -360,6 +380,9 @@ Page({
 
   toggleMissionDone(event) {
     const mission = event.detail.mission;
+    if (!mission || mission === SUMMARY_MISSION_KEY) {
+      return;
+    }
     const completed = new Set(this.data.draft.completedMissions || []);
     if (completed.has(mission)) {
       completed.delete(mission);
@@ -449,6 +472,10 @@ Page({
     if (!tempFilePath) {
       return;
     }
+    this.updateMissionAssets(mission, {
+      ...this.getMissionAssets(mission),
+      cardImagePath: tempFilePath,
+    });
     this.setData({
       missionCardModal: {
         mission,
@@ -518,20 +545,21 @@ Page({
   },
 
   handleNoteInput(event) {
-    const draft = { ...this.data.draft, noteText: event.detail.value };
-    this.setDraft(draft);
+    this.updateMissionAssets(SUMMARY_MISSION_KEY, {
+      ...this.getMissionAssets(SUMMARY_MISSION_KEY),
+      noteText: event.detail.value,
+    });
   },
 
   async choosePhoto(mission = '') {
     try {
       const result = await chooseImage(9);
       const photoPaths = (result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean);
-      let draft = { ...this.data.draft, photoList: [...(this.data.draft.photoList || []), ...photoPaths] };
-      if (mission) {
-        photoPaths.forEach((path) => {
-          draft = this.attachMissionAsset(draft, mission, 'photoList', path);
-        });
-      }
+      const targetMission = mission || this.getActiveMissionKey();
+      let draft = { ...this.data.draft };
+      photoPaths.forEach((path) => {
+        draft = this.attachMissionAsset(draft, targetMission, 'photoList', path);
+      });
       this.setDraft(draft);
     } catch (error) {
       if (error && error.errMsg && error.errMsg.includes('cancel')) {
@@ -549,15 +577,11 @@ Page({
         duration: item.duration || 0,
         size: item.size || 0,
       }));
-      let draft = {
-        ...this.data.draft,
-        videoList: [...(this.data.draft.videoList || []), ...selectedVideos],
-      };
-      if (mission) {
-        selectedVideos.forEach((item) => {
-          draft = this.attachMissionAsset(draft, mission, 'videoList', item);
-        });
-      }
+      const targetMission = mission || this.getActiveMissionKey();
+      let draft = { ...this.data.draft };
+      selectedVideos.forEach((item) => {
+        draft = this.attachMissionAsset(draft, targetMission, 'videoList', item);
+      });
       this.setDraft(draft);
     } catch (error) {
       if (error && error.errMsg && error.errMsg.includes('cancel')) {
@@ -578,7 +602,7 @@ Page({
       return;
     }
 
-    this.recordingMission = mission || '';
+    this.recordingMission = mission || this.getActiveMissionKey();
     recorderManager.start({
       duration: 60000,
       sampleRate: 44100,
@@ -586,7 +610,7 @@ Page({
       encodeBitRate: 192000,
       format: 'mp3',
     });
-    this.setData({ isRecordingAudio: true });
+    this.setData({ isRecordingAudio: true, recordingMission: this.recordingMission });
   },
 
   async verifyActiveMission() {
@@ -596,17 +620,18 @@ Page({
       return;
     }
 
-    if (!(this.data.draft.photoList || []).length) {
+    const missionAssets = this.getMissionAssets(mission);
+    if (!(missionAssets.photoList || []).length) {
       wx.showToast({ title: '请先上传图片再核验', icon: 'none' });
       return;
     }
 
     this.setData({ isVerifyingMission: true });
     try {
-      const uploadedPhotos = await Promise.all((this.data.draft.photoList || []).map((path) => this.uploadAsset(path, 'image')));
+      const uploadedPhotos = await Promise.all((missionAssets.photoList || []).map((path) => this.uploadAsset(path, 'image')));
       const review = await verifyMission({
         mission,
-        noteText: this.data.draft.noteText,
+        noteText: missionAssets.noteText || '',
         fileIDs: uploadedPhotos,
       });
       const nextReview = {
@@ -701,57 +726,40 @@ Page({
     }
   },
 
-  removePhoto(event) {
-    const index = Number(event.currentTarget.dataset.index);
-    const photoList = [...(this.data.draft.photoList || [])];
-    const [removed] = photoList.splice(index, 1);
-    const missionAssetMap = { ...(this.data.draft.missionAssetMap || {}) };
-    Object.keys(missionAssetMap).forEach((mission) => {
-      const assets = missionAssetMap[mission];
-      missionAssetMap[mission] = {
-        ...assets,
-        photoList: (assets.photoList || []).filter((item) => item !== removed),
-      };
+  removeMissionPhoto(event) {
+    const mission = event.detail.mission || event.currentTarget.dataset.mission;
+    const index = Number(event.detail.index !== undefined ? event.detail.index : event.currentTarget.dataset.index);
+    const assets = this.getMissionAssets(mission);
+    const photoList = [...(assets.photoList || [])];
+    photoList.splice(index, 1);
+    this.updateMissionAssets(mission, {
+      ...assets,
+      photoList,
     });
-    this.setDraft({ ...this.data.draft, photoList, missionAssetMap });
   },
 
-  removeVideo(event) {
-    const index = Number(event.currentTarget.dataset.index);
-    const videoList = [...(this.data.draft.videoList || [])];
-    const [removed] = videoList.splice(index, 1);
-    const removedPath = removed && removed.tempFilePath ? removed.tempFilePath : removed;
-    const missionAssetMap = { ...(this.data.draft.missionAssetMap || {}) };
-    Object.keys(missionAssetMap).forEach((mission) => {
-      const assets = missionAssetMap[mission];
-      missionAssetMap[mission] = {
-        ...assets,
-        videoList: (assets.videoList || []).filter((item) => {
-          const currentPath = item && item.tempFilePath ? item.tempFilePath : item;
-          return currentPath !== removedPath;
-        }),
-      };
+  removeMissionVideo(event) {
+    const mission = event.detail.mission || event.currentTarget.dataset.mission;
+    const index = Number(event.detail.index !== undefined ? event.detail.index : event.currentTarget.dataset.index);
+    const assets = this.getMissionAssets(mission);
+    const videoList = [...(assets.videoList || [])];
+    videoList.splice(index, 1);
+    this.updateMissionAssets(mission, {
+      ...assets,
+      videoList,
     });
-    this.setDraft({ ...this.data.draft, videoList, missionAssetMap });
   },
 
-  removeAudio(event) {
-    const index = Number(event.currentTarget.dataset.index);
-    const audioList = [...(this.data.draft.audioList || [])];
-    const [removed] = audioList.splice(index, 1);
-    const removedPath = removed && removed.tempFilePath ? removed.tempFilePath : removed;
-    const missionAssetMap = { ...(this.data.draft.missionAssetMap || {}) };
-    Object.keys(missionAssetMap).forEach((mission) => {
-      const assets = missionAssetMap[mission];
-      missionAssetMap[mission] = {
-        ...assets,
-        audioList: (assets.audioList || []).filter((item) => {
-          const currentPath = item && item.tempFilePath ? item.tempFilePath : item;
-          return currentPath !== removedPath;
-        }),
-      };
+  removeMissionAudio(event) {
+    const mission = event.detail.mission || event.currentTarget.dataset.mission;
+    const index = Number(event.detail.index !== undefined ? event.detail.index : event.currentTarget.dataset.index);
+    const assets = this.getMissionAssets(mission);
+    const audioList = [...(assets.audioList || [])];
+    audioList.splice(index, 1);
+    this.updateMissionAssets(mission, {
+      ...assets,
+      audioList,
     });
-    this.setDraft({ ...this.data.draft, audioList, missionAssetMap });
   },
 
   async toggleTracking() {
@@ -941,6 +949,7 @@ Page({
 
     this.setData({ isSaving: true });
     try {
+      const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY);
       const uploadCache = {};
       const uploadCached = (filePath, kind) => {
         const key = `${kind}:${filePath}`;
@@ -949,9 +958,9 @@ Page({
         }
         return uploadCache[key];
       };
-      const uploadedPhotos = await Promise.all((this.data.draft.photoList || []).map((path) => uploadCached(path, 'image')));
-      const uploadedVideos = await Promise.all((this.data.draft.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video')));
-      const uploadedAudios = await Promise.all((this.data.draft.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio')));
+      const uploadedPhotos = await Promise.all((summaryAssets.photoList || []).map((path) => uploadCached(path, 'image')));
+      const uploadedVideos = await Promise.all((summaryAssets.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video')));
+      const uploadedAudios = await Promise.all((summaryAssets.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio')));
       const missionAssetEntries = Object.entries(this.data.draft.missionAssetMap || {});
       const uploadedMissionAssetEntries = await Promise.all(missionAssetEntries.map(async ([mission, assets]) => ([
         mission,
@@ -960,6 +969,7 @@ Page({
           photoList: await Promise.all((assets.photoList || []).map((path) => uploadCached(path, 'image'))),
           videoList: await Promise.all((assets.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video'))),
           audioList: await Promise.all((assets.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio'))),
+          cardImagePath: assets.cardImagePath ? await uploadCached(assets.cardImagePath, 'image') : '',
         },
       ])));
       const missionAssetMap = Object.fromEntries(uploadedMissionAssetEntries);
@@ -982,7 +992,7 @@ Page({
         videoList: uploadedVideos,
         audioList: uploadedAudios,
         missionAssetMap,
-        noteText: this.data.draft.noteText,
+        noteText: summaryAssets.noteText || '',
         isPublic: false,
         walkMode: this.data.draft.walkMode,
         generationSource: this.data.draft.generationSource,

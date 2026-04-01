@@ -48,72 +48,31 @@
 
   <view class="section-card section-block">
     <view class="section-title">任务打卡</view>
-    <mission-list missions="{{theme.missions}}" activeMission="{{activeMission}}" expandedMission="{{expandedMission}}" completedMissions="{{draft.completedMissions}}" missionReviews="{{draft.missionReviews}}" missionAssetMap="{{draft.missionAssetMap}}" generatedMissionCardMap="{{generatedMissionCardMap}}" locationName="{{draft.locationName}}" themeTitle="{{theme.title}}" dateLabel="{{routeStats.startedLabel}}" accentColor="{{theme.vibeColor || '#c96f4a'}}" bind:select="selectMission" bind:verify="handleMissionVerify" bind:toggle="toggleMissionDone" bind:missionnote="handleMissionNoteInput" bind:generatecard="handleGenerateMissionCard" />
-  </view>
-
-  <view class="section-card section-block">
-    <view class="section-title">记录与追踪</view>
-    <view class="section-subtitle">把沿途留下的光影、声音和感受收拢起来，成为这次漫步的回声</view>
-
-    <view class="record-tools-grid">
-      <button class="tool-btn" bindtap="choosePhoto">
-        <view class="tool-btn-inner">
-          <image class="tool-icon-image" src="/assets/icons/camera.svg" mode="aspectFit" />
-          <text class="tool-btn-text">随手拍</text>
-        </view>
-      </button>
-      <button class="tool-btn" bindtap="chooseVideo">
-        <view class="tool-btn-inner">
-          <image class="tool-icon-image" src="/assets/icons/video.svg" mode="aspectFit" />
-          <text class="tool-btn-text">录像</text>
-        </view>
-      </button>
-      <button class="tool-btn" bindtap="toggleAudioRecording">
-        <view class="tool-btn-inner">
-          <image class="tool-icon-image" src="/assets/icons/mic.svg" mode="aspectFit" />
-          <text class="tool-btn-text">{{isRecordingAudio ? '停止录音' : '录音'}}</text>
-        </view>
-      </button>
-    </view>
-
-    <textarea class="summary-area" placeholder="写下这一段路给你的感受、画面或突然冒出的念头..." value="{{draft.noteText}}" bindinput="handleNoteInput" maxlength="500" />
-
-    <view wx:if="{{draft.photoList.length}}" class="media-preview-block">
-      <scroll-view scroll-x>
-        <view class="media-scroll">
-          <view wx:for="{{draft.photoList}}" wx:key="index" class="media-thumb">
-            <image src="{{item}}" mode="aspectFill" class="media-image" />
-            <view class="danger-btn media-remove" bindtap="removePhoto" data-index="{{index}}">删</view>
-          </view>
-        </view>
-      </scroll-view>
-    </view>
-
-    <view wx:if="{{draft.videoList.length}}" class="asset-list">
-      <view wx:for="{{draft.videoList}}" wx:key="index" class="asset-row">
-        <view>
-          <view class="asset-title">视频 {{index + 1}}</view>
-          <view class="asset-meta">{{item.duration}} 秒</view>
-        </view>
-        <button class="ghost-btn" size="mini" bindtap="removeVideo" data-index="{{index}}">删除</button>
-      </view>
-    </view>
-
-    <view wx:if="{{draft.audioList.length || isRecordingAudio}}" class="asset-list">
-      <view wx:if="{{isRecordingAudio}}" class="asset-row">
-        <view>
-          <view class="asset-title">正在收集此刻的声音</view>
-          <view class="asset-meta">等这一段声响落定，再把它留在这次漫步里</view>
-        </view>
-      </view>
-      <view wx:for="{{draft.audioList}}" wx:key="index" class="asset-row">
-        <view>
-          <view class="asset-title">录音 {{index + 1}}</view>
-          <view class="asset-meta">{{item.duration}} ms</view>
-        </view>
-        <button class="ghost-btn" size="mini" bindtap="removeAudio" data-index="{{index}}">删除</button>
-      </view>
-    </view>
+    <mission-list
+      missions="{{theme.missions}}"
+      supplementalMissionKey="{{summaryMissionKey}}"
+      supplementalMissionLabel="总结与补充"
+      activeMission="{{activeMission}}"
+      expandedMission="{{expandedMission}}"
+      completedMissions="{{draft.completedMissions}}"
+      missionReviews="{{draft.missionReviews}}"
+      missionAssetMap="{{draft.missionAssetMap}}"
+      generatedMissionCardMap="{{generatedMissionCardMap}}"
+      isRecordingAudio="{{isRecordingAudio}}"
+      recordingMission="{{recordingMission || ''}}"
+      locationName="{{draft.locationName}}"
+      themeTitle="{{theme.title}}"
+      dateLabel="{{routeStats.startedLabel}}"
+      accentColor="{{theme.vibeColor || '#c96f4a'}}"
+      bind:select="selectMission"
+      bind:verify="handleMissionVerify"
+      bind:toggle="toggleMissionDone"
+      bind:missionnote="handleMissionNoteInput"
+      bind:generatecard="handleGenerateMissionCard"
+      bind:removephoto="removeMissionPhoto"
+      bind:removevideo="removeMissionVideo"
+      bind:removeaudio="removeMissionAudio"
+    />
   </view>
 
   <button class="primary-btn save-btn" bindtap="handleSave" loading="{{isSaving}}">完成本次漫步并保存</button>

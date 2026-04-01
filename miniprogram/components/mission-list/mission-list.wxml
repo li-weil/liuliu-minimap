@@ -1,54 +1,92 @@
 <view>
-  <view wx:for="{{missionCards}}" wx:key="mission" class="mission-group">
-    <view class="mission-row" bindtap="selectMission" data-mission="{{item.mission}}">
-      <view class="mission-toggle {{item.completed ? 'mission-toggle-done' : ''}}" catchtap="toggleMission" data-mission="{{item.mission}}">
-        <view wx:if="{{item.completed}}" class="mission-toggle-inner"></view>
+  <view wx:for="{{missionCards}}" wx:key="mission" wx:for-item="card" class="mission-group">
+    <view class="mission-row" bindtap="selectMission" data-mission="{{card.mission}}">
+      <view wx:if="{{!card.isSupplemental}}" class="mission-toggle {{card.completed ? 'mission-toggle-done' : ''}}" catchtap="toggleMission" data-mission="{{card.mission}}">
+        <view wx:if="{{card.completed}}" class="mission-toggle-inner"></view>
       </view>
-      <view class="mission-copy {{item.completed ? 'mission-copy-done' : ''}}">
-        {{item.mission}}
+      <view wx:else class="mission-tag">补充</view>
+      <view class="mission-copy {{card.completed ? 'mission-copy-done' : ''}}">
+        {{card.label}}
       </view>
     </view>
 
-    <view wx:if="{{item.expanded}}" class="mission-inline-panel">
-      <view class="mission-inline-title">打卡此任务</view>
+    <view wx:if="{{card.expanded}}" class="mission-inline-panel">
+      <view class="mission-inline-title">{{card.isSupplemental ? '总结与补充' : '打卡此任务'}}</view>
       <view class="mission-inline-row">
-        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="photo">
+        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{card.mission}}" data-mode="photo">
           <view class="mission-inline-btn-inner">
             <image class="mission-inline-icon-image" src="/assets/icons/camera.svg" mode="aspectFit" />
             <text class="mission-inline-btn-text">拍照</text>
           </view>
         </button>
-        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="video">
+        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{card.mission}}" data-mode="video">
           <view class="mission-inline-btn-inner">
             <image class="mission-inline-icon-image" src="/assets/icons/video.svg" mode="aspectFit" />
             <text class="mission-inline-btn-text">录像</text>
           </view>
         </button>
-        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="audio">
+        <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{card.mission}}" data-mode="audio">
           <view class="mission-inline-btn-inner">
             <image class="mission-inline-icon-image" src="/assets/icons/mic.svg" mode="aspectFit" />
-            <text class="mission-inline-btn-text">录音</text>
+            <text class="mission-inline-btn-text">{{isRecordingAudio && recordingMission === card.mission ? '停止录音' : '录音'}}</text>
           </view>
         </button>
       </view>
 
-      <view class="mission-inline-meta" wx:if="{{item.assets}}">
-        <view class="mission-inline-pill" wx:if="{{item.assets.photoList && item.assets.photoList.length}}">{{item.assets.photoList.length}} 张图片</view>
-        <view class="mission-inline-pill" wx:if="{{item.assets.videoList && item.assets.videoList.length}}">{{item.assets.videoList.length}} 段视频</view>
-        <view class="mission-inline-pill" wx:if="{{item.assets.audioList && item.assets.audioList.length}}">{{item.assets.audioList.length}} 段录音</view>
+      <view class="mission-inline-meta" wx:if="{{card.assets}}">
+        <view class="mission-inline-pill" wx:if="{{card.assets.photoList && card.assets.photoList.length}}">{{card.assets.photoList.length}} 张图片</view>
+        <view class="mission-inline-pill" wx:if="{{card.assets.videoList && card.assets.videoList.length}}">{{card.assets.videoList.length}} 段视频</view>
+        <view class="mission-inline-pill" wx:if="{{card.assets.audioList && card.assets.audioList.length}}">{{card.assets.audioList.length}} 段录音</view>
       </view>
 
       <textarea
         class="mission-note-area"
-        placeholder="补一句你是怎么完成这个任务的"
+        placeholder="{{card.isSupplemental ? '写下这一段路的补充说明、感受或遗漏细节' : '补一句你是怎么完成这个任务的'}}"
         maxlength="200"
-        value="{{item.assets && item.assets.noteText ? item.assets.noteText : ''}}"
+        value="{{card.assets && card.assets.noteText ? card.assets.noteText : ''}}"
         bindinput="inputMissionNote"
-        data-mission="{{item.mission}}"
+        data-mission="{{card.mission}}"
       />
 
-      <button class="mission-verify-btn" bindtap="generateCard" data-mission="{{item.mission}}">
-        {{item.cardVersion ? '重新生成打卡卡片' : '生成打卡卡片'}}
+      <view wx:if="{{card.assets && card.assets.photoList && card.assets.photoList.length}}" class="media-preview-block">
+        <scroll-view scroll-x>
+          <view class="media-scroll">
+            <view wx:for="{{card.assets.photoList}}" wx:key="index" wx:for-item="photo" class="media-thumb">
+              <image src="{{photo}}" mode="aspectFill" class="media-image" />
+              <view class="danger-btn media-remove" bindtap="removePhoto" data-mission="{{card.mission}}" data-index="{{index}}">删</view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view wx:if="{{card.assets && card.assets.videoList && card.assets.videoList.length}}" class="asset-list">
+        <view wx:for="{{card.assets.videoList}}" wx:key="index" wx:for-item="video" class="asset-row">
+          <view>
+            <view class="asset-title">视频 {{index + 1}}</view>
+            <view class="asset-meta">{{video.duration}} 秒</view>
+          </view>
+          <button class="ghost-btn" size="mini" bindtap="removeVideo" data-mission="{{card.mission}}" data-index="{{index}}">删除</button>
+        </view>
+      </view>
+
+      <view wx:if="{{(card.assets && card.assets.audioList && card.assets.audioList.length) || (isRecordingAudio && recordingMission === card.mission)}}" class="asset-list">
+        <view wx:if="{{isRecordingAudio && recordingMission === card.mission}}" class="asset-row">
+          <view>
+            <view class="asset-title">正在收集这段声音</view>
+            <view class="asset-meta">录音结束后会归到当前选项卡里</view>
+          </view>
+        </view>
+        <view wx:for="{{card.assets.audioList}}" wx:key="index" wx:for-item="audio" class="asset-row">
+          <view>
+            <view class="asset-title">录音 {{index + 1}}</view>
+            <view class="asset-meta">{{audio.duration}} ms</view>
+          </view>
+          <button class="ghost-btn" size="mini" bindtap="removeAudio" data-mission="{{card.mission}}" data-index="{{index}}">删除</button>
+        </view>
+      </view>
+
+      <button class="mission-verify-btn" bindtap="generateCard" data-mission="{{card.mission}}">
+        {{card.cardVersion ? '重新生成打卡卡片' : '生成打卡卡片'}}
       </button>
     </view>
   </view>

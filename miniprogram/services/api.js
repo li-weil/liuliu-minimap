@@ -63,6 +63,8 @@ function normalizeWalkRecord(item) {
       : [];
   const themeSnapshot = item.themeSnapshot || {};
   const missionAssetMap = item.missionAssetMap || {};
+  const summaryAssets = missionAssetMap.__summary__ || {};
+  const firstMissionAssetWithCard = Object.values(missionAssetMap).find((asset) => asset && asset.cardImagePath);
   const routeStats = item.routeStats || {};
   const durationMs = routeStats.durationMs || 0;
   const distanceMeters = routeStats.distanceMeters || 0;
@@ -76,7 +78,7 @@ function normalizeWalkRecord(item) {
     locationName: item.locationName || '未知地点',
     locationContext: item.locationContext || '',
     locationAddress: item.locationAddress || '',
-    noteText: item.noteText || '',
+    noteText: item.noteText || summaryAssets.noteText || '',
     createdAt: item.createdAt || Date.now(),
     trackStartedAt,
     trackStoppedAt,
@@ -93,7 +95,7 @@ function normalizeWalkRecord(item) {
     photoList,
     videoList,
     audioList,
-    coverImage: item.coverImage || photoList[0] || '',
+    coverImage: item.coverImage || summaryAssets.cardImagePath || summaryAssets.photoList && summaryAssets.photoList[0] || photoList[0] || (firstMissionAssetWithCard && firstMissionAssetWithCard.cardImagePath) || '',
     routePoints,
     completedMissions: missionList,
     missionReviews: item.missionReviews || {},
@@ -237,10 +239,13 @@ const ENDPOINTS = {
         const primaryMediaType = photoUrl ? 'image' : videoUrl ? 'video' : audioUrl ? 'audio' : '';
         const completed = Array.isArray(data.missionsCompleted) ? data.missionsCompleted : [];
         const reviews = data.missionReviews || {};
+        const missionAssetMap = data.missionAssetMap || {};
         return {
           themeTitle: data.themeTitle || (data.themeSnapshot && data.themeSnapshot.title) || '',
           themeCategory: (data.themeSnapshot && data.themeSnapshot.category) || '',
           locationName: data.locationName || '',
+          locationContext: data.locationContext || '',
+          locationAddress: data.locationAddress || '',
           recordUnit: photoUrl ? 'image' : Array.isArray(data.routePoints) && data.routePoints.length ? 'location' : 'event',
           isPublic: !!data.isPublic,
           noteText: data.noteText || '',
@@ -259,6 +264,15 @@ const ENDPOINTS = {
               mediaType: reviewMediaType || '',
             };
           }),
+          themeSnapshot: data.themeSnapshot || null,
+          missionReviews: reviews,
+          missionAssetMap,
+          walkMode: data.walkMode || 'pure',
+          generationSource: data.generationSource || 'unknown',
+          trackStartedAt: data.trackStartedAt || null,
+          trackStoppedAt: data.trackStoppedAt || null,
+          routeStats: data.routeStats || null,
+          sticker: data.sticker || null,
           photoUrl,
           videoUrl,
           audioUrl,

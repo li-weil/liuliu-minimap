@@ -1,6 +1,9 @@
 const { getWalkDetail, publishWalkShare } = require('../../services/walk');
 const { formatDate } = require('../../utils/format');
 
+const SUMMARY_MISSION_KEY = '__summary__';
+const SUMMARY_MISSION_LABEL = '总结与补充';
+
 function splitPoemLines(poem) {
   const normalized = String(poem || '').replace(/[。！？]+$/g, '');
   const lines = normalized
@@ -58,16 +61,81 @@ function saveImageToAlbum(filePath) {
   });
 }
 
+function createEmptyMissionAssets() {
+  return {
+    photoList: [],
+    videoList: [],
+    audioList: [],
+    noteText: '',
+    cardImagePath: '',
+  };
+}
+
+function buildMissionItems(walk) {
+  const missionKeySet = new Set();
+  const missionNames = [];
+  const missionAssetMap = walk.missionAssetMap || {};
+  const pushMission = (mission, isSupplemental = false) => {
+    if (!mission || mission === SUMMARY_MISSION_KEY || missionKeySet.has(mission)) {
+      return;
+    }
+    missionKeySet.add(mission);
+    missionNames.push({
+      key: mission,
+      label: mission,
+      isSupplemental,
+    });
+  };
+
+  ((walk.themeSnapshot && walk.themeSnapshot.missions) || []).forEach((mission) => pushMission(mission, false));
+  (walk.completedMissions || []).forEach((mission) => pushMission(mission, false));
+  Object.keys(walk.missionReviews || {}).forEach((mission) => pushMission(mission, false));
+  Object.keys(missionAssetMap || {}).forEach((mission) => pushMission(mission, false));
+
+  missionNames.push({
+    key: SUMMARY_MISSION_KEY,
+    label: SUMMARY_MISSION_LABEL,
+    isSupplemental: true,
+  });
+  return missionNames.map((item) => ({
+    mission: item.key,
+    label: item.label,
+    isSupplemental: item.isSupplemental,
+    review: walk.missionReviews && walk.missionReviews[item.key] ? walk.missionReviews[item.key] : null,
+    assets: {
+      ...createEmptyMissionAssets(),
+      ...(missionAssetMap[item.key] || {}),
+    },
+  }));
+}
+
 Page({
   data: {
     loading: true,
     source: 'history',
     walk: null,
+    activeMission: '',
+    currentMissionCardSrc: '',
+    isRenderingMissionCard: false,
+    missionCardRenderPayload: {
+      mission: '',
+      assets: null,
+      locationName: '',
+      themeTitle: '',
+      dateLabel: '',
+      renderVersion: 0,
+    },
     showStickerModal: false,
+    showMissionCardModal: false,
+    missionCardModal: {
+      title: '',
+      imageSrc: '',
+    },
     isPublishingShare: false,
   },
 
   onLoad(query) {
+    this.missionCardRenderVersion = 0;
     this.setData({ source: query.source || 'history' });
     if (query.id) {
       this.fetchDetail(query.id);
@@ -94,19 +162,76 @@ Page({
             ...result.walk,
             sticker: decorateSticker(result.walk.sticker),
             createdAtLabel: formatDate(result.walk.createdAt),
-            missionItems: ((result.walk.themeSnapshot && result.walk.themeSnapshot.missions) || []).map((mission) => ({
-              mission,
-              review: result.walk.missionReviews && result.walk.missionReviews[mission] ? result.walk.missionReviews[mission] : null,
-              assets: result.walk.missionAssetMap && result.walk.missionAssetMap[mission] ? result.walk.missionAssetMap[mission] : null,
-            })),
+            missionItems: buildMissionItems(result.walk),
           }
         : null;
-      this.setData({ walk });
+      this.setData({
+        walk,
+        activeMission: walk && walk.missionItems && walk.missionItems.length ? walk.missionItems[0].mission : '',
+      }, () => {
+        this.prepareMissionCard();
+      });
     } catch (error) {
       wx.showToast({ title: '详情加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  getActiveMissionItem() {
+    const walk = this.data.walk;
+    const activeMission = this.data.activeMission;
+    if (!walk || !Array.isArray(walk.missionItems) || !activeMission) {
+      return null;
+    }
+    return walk.missionItems.find((item) => item.mission === activeMission) || null;
+  },
+
+  prepareMissionCard() {
+    const missionItem = this.getActiveMissionItem();
+    if (!missionItem) {
+      this.setData({
+        currentMissionCardSrc: '',
+        isRenderingMissionCard: false,
+        missionCardRenderPayload: {
+          mission: '',
+          assets: null,
+          locationName: '',
+          themeTitle: '',
+          dateLabel: '',
+          renderVersion: 0,
+        },
+      });
+      return;
+    }
+
+    this.missionCardRenderVersion += 1;
+    this.setData({
+      currentMissionCardSrc: '',
+      isRenderingMissionCard: true,
+      missionCardRenderPayload: {
+        mission: missionItem.label || '打卡卡片',
+        assets: missionItem.assets || createEmptyMissionAssets(),
+        locationName: (this.data.walk && this.data.walk.locationName) || '',
+        themeTitle: (this.data.walk && this.data.walk.themeTitle) || '',
+        dateLabel: (this.data.walk && this.data.walk.createdAtLabel) || '',
+        renderVersion: this.missionCardRenderVersion,
+      },
+    });
+  },
+
+  handleMissionCardGenerated(event) {
+    const tempFilePath = event.detail && event.detail.tempFilePath ? event.detail.tempFilePath : '';
+    const mission = event.detail && event.detail.mission ? event.detail.mission : '';
+    const activeMissionItem = this.getActiveMissionItem();
+    const activeMissionLabel = activeMissionItem ? activeMissionItem.label : '';
+    if (!tempFilePath || !activeMissionLabel || mission !== activeMissionLabel) {
+      return;
+    }
+    this.setData({
+      currentMissionCardSrc: tempFilePath,
+      isRenderingMissionCard: false,
+    });
   },
 
   openStickerModal() {
@@ -118,6 +243,76 @@ Page({
 
   closeStickerModal() {
     this.setData({ showStickerModal: false });
+  },
+
+  openMissionCardModal(event) {
+    const imageSrc = event.currentTarget.dataset.src || this.data.currentMissionCardSrc || '';
+    const title = event.currentTarget.dataset.title || this.data.missionCardRenderPayload.mission || '打卡卡片';
+    if (!imageSrc) {
+      return;
+    }
+    this.setData({
+      showMissionCardModal: true,
+      missionCardModal: {
+        title,
+        imageSrc,
+      },
+    });
+  },
+
+  closeMissionCardModal() {
+    this.setData({
+      showMissionCardModal: false,
+      missionCardModal: {
+        title: '',
+        imageSrc: '',
+      },
+    });
+  },
+
+  resolveMissionCardUrl() {
+    const src = this.data.missionCardModal && this.data.missionCardModal.imageSrc;
+    if (!src) {
+      return Promise.reject(new Error('missing_mission_card'));
+    }
+    if (String(src).startsWith('cloud://')) {
+      return wx.cloud.getTempFileURL({ fileList: [src] }).then((result) => {
+        const item = result.fileList && result.fileList[0];
+        return item && item.tempFileURL ? item.tempFileURL : '';
+      });
+    }
+    return Promise.resolve(src);
+  },
+
+  async handleSaveMissionCardToAlbum() {
+    try {
+      const imageUrl = await this.resolveMissionCardUrl();
+      if (!imageUrl) {
+        throw new Error('missing_mission_card');
+      }
+      const download = await downloadFile(imageUrl);
+      if (!download || !download.tempFilePath) {
+        throw new Error('download_mission_card_failed');
+      }
+      await saveImageToAlbum(download.tempFilePath);
+      wx.showToast({ title: '已保存到相册', icon: 'success' });
+    } catch (error) {
+      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
+        wx.showModal({
+          title: '需要相册权限',
+          content: '请在设置里允许保存到相册后，再试一次',
+          confirmText: '去设置',
+          success: (res) => {
+            if (res.confirm) {
+              wx.openSetting({});
+            }
+          },
+        });
+        return;
+      }
+      wx.showToast({ title: '保存卡片失败', icon: 'none' });
+    }
   },
 
   resolveStickerUrl() {
@@ -196,6 +391,16 @@ Page({
     } finally {
       this.setData({ isPublishingShare: false });
     }
+  },
+
+  switchMissionTab(event) {
+    const mission = event.currentTarget.dataset.mission;
+    const nextMission = this.data.activeMission === mission ? '' : mission;
+    this.setData({
+      activeMission: nextMission,
+    }, () => {
+      this.prepareMissionCard();
+    });
   },
 
   noop() {},
