@@ -22,15 +22,7 @@
       <view wx:for="{{walk.missionItems}}" wx:key="mission" class="mission-card" style="padding: 20rpx; margin-bottom: 14rpx;">
         <view style="display: flex; justify-content: space-between; gap: 18rpx; align-items: center; margin-bottom: 10rpx;">
           <view style="font-weight: 600; flex: 1;">{{item.mission}}</view>
-          <view class="meta-pill" wx:if="{{item.review}}">{{item.review.score || 0}} 分</view>
         </view>
-        <view wx:if="{{item.review}}" style="font-size: 24rpx; color: {{item.review.passed ? '#4f6d45' : '#8a6a52'}}; line-height: 1.6; margin-bottom: 10rpx;">
-          {{item.review.comment}}
-        </view>
-        <view wx:if="{{item.review && item.review.evidence && item.review.evidence.length}}" style="display: flex; flex-wrap: wrap; gap: 10rpx;">
-          <view wx:for="{{item.review.evidence}}" wx:key="index" class="meta-pill">{{item}}</view>
-        </view>
-        <view wx:if="{{!item.review}}" class="empty-copy" style="padding: 8rpx 0 0;">这项任务还没有 AI 核验结果</view>
         <view wx:if="{{item.assets}}" class="meta-row" style="margin-top: 12rpx;">
           <view class="meta-pill" wx:if="{{item.assets.photoList && item.assets.photoList.length}}">{{item.assets.photoList.length}} 张图片</view>
           <view class="meta-pill" wx:if="{{item.assets.videoList && item.assets.videoList.length}}">{{item.assets.videoList.length}} 段视频</view>
@@ -50,21 +42,6 @@
       <view class="meta-row" style="margin-top: 16rpx;">
         <view class="meta-pill">开始 {{walk.routeStats.startedLabel || '未记录'}}</view>
         <view class="meta-pill">结束 {{walk.routeStats.stoppedLabel || '未记录'}}</view>
-      </view>
-    </view>
-
-    <view wx:if="{{walk.sticker}}" class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
-      <view class="section-title">打卡贴纸</view>
-      <view class="sticker-detail-card" bindtap="openStickerModal">
-        <image class="sticker-detail-image" src="{{walk.sticker.imageUrl}}" mode="aspectFill" />
-        <view class="sticker-detail-overlay">
-          <view class="sticker-detail-poem">
-            <view wx:for="{{walk.sticker.poemColumns}}" wx:key="index" class="sticker-detail-poem-column">
-              <view wx:for="{{item}}" wx:key="subIndex" class="sticker-detail-poem-char">{{item}}</view>
-            </view>
-          </view>
-          <view class="sticker-detail-title">{{walk.sticker.title}}</view>
-        </view>
       </view>
     </view>
 
@@ -110,24 +87,4 @@
 
   <view wx:else class="empty-copy">没有找到这条足迹。</view>
 
-  <view wx:if="{{showStickerModal && walk && walk.sticker}}" class="sticker-modal-mask" catchtap="closeStickerModal">
-    <view class="sticker-modal-sheet" catchtap="noop">
-      <view class="sticker-modal-card">
-        <image class="sticker-modal-image" src="{{walk.sticker.imageUrl}}" mode="aspectFill" />
-        <view class="sticker-modal-overlay">
-          <view class="sticker-modal-poem">
-            <view wx:for="{{walk.sticker.poemColumns}}" wx:key="index" class="sticker-modal-poem-column">
-              <view wx:for="{{item}}" wx:key="subIndex" class="sticker-modal-poem-char">{{item}}</view>
-            </view>
-          </view>
-          <view class="sticker-modal-theme">{{walk.sticker.title}}</view>
-        </view>
-      </view>
-      <view class="sticker-modal-actions">
-        <button wx:if="{{!walk.isPublic && source !== 'share'}}" class="ghost-btn sticker-modal-action" bindtap="handlePublishShare" loading="{{isPublishingShare}}">发布分享链接</button>
-        <button wx:elif="{{source !== 'share'}}" open-type="share" class="ghost-btn sticker-modal-action">分享给微信好友</button>
-        <button class="primary-btn sticker-modal-action" bindtap="handleSaveStickerToAlbum">保存到本地</button>
-      </view>
-    </view>
-  </view>
 </view>

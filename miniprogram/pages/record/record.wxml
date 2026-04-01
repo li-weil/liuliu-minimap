@@ -48,7 +48,7 @@
 
   <view class="section-card section-block">
     <view class="section-title">任务打卡</view>
-    <mission-list missions="{{theme.missions}}" activeMission="{{activeMission}}" expandedMission="{{expandedMission}}" completedMissions="{{draft.completedMissions}}" missionReviews="{{draft.missionReviews}}" missionAssetMap="{{draft.missionAssetMap}}" bind:select="selectMission" bind:verify="handleMissionVerify" bind:toggle="toggleMissionDone" bind:missionnote="handleMissionNoteInput" />
+    <mission-list missions="{{theme.missions}}" activeMission="{{activeMission}}" expandedMission="{{expandedMission}}" completedMissions="{{draft.completedMissions}}" missionReviews="{{draft.missionReviews}}" missionAssetMap="{{draft.missionAssetMap}}" generatedMissionCardMap="{{generatedMissionCardMap}}" locationName="{{draft.locationName}}" themeTitle="{{theme.title}}" dateLabel="{{routeStats.startedLabel}}" accentColor="{{theme.vibeColor || '#c96f4a'}}" bind:select="selectMission" bind:verify="handleMissionVerify" bind:toggle="toggleMissionDone" bind:missionnote="handleMissionNoteInput" bind:generatecard="handleGenerateMissionCard" />
   </view>
 
   <view class="section-card section-block">
@@ -116,46 +116,32 @@
     </view>
   </view>
 
-  <view class="section-card section-block">
-    <view class="section-title">打卡贴纸</view>
-    <view class="section-subtitle">让这次漫步的主题和任务，凝成一张可以留住情绪的小纸片</view>
-    <button class="primary-btn sticker-generate-btn" bindtap="handleGenerateSticker" loading="{{isGeneratingSticker}}">
-      {{draft.sticker && draft.sticker.imageUrl ? '重新生成打卡贴纸' : '生成打卡贴纸'}}
-    </button>
-
-    <view wx:if="{{draft.sticker}}" class="sticker-preview-card" bindtap="openStickerModal">
-      <image wx:if="{{draft.sticker.imageUrl}}" class="sticker-preview-image" src="{{draft.sticker.imageUrl}}" mode="aspectFill" />
-      <view wx:else class="sticker-preview-placeholder"></view>
-      <view class="sticker-preview-overlay">
-        <view class="sticker-preview-poem">
-          <view wx:for="{{draft.sticker.poemColumns}}" wx:key="index" class="sticker-preview-poem-column">
-            <view wx:for="{{item}}" wx:key="subIndex" class="sticker-preview-poem-char">{{item}}</view>
-          </view>
-        </view>
-        <view class="sticker-preview-theme">{{draft.sticker.title || theme.title}}</view>
-      </view>
-    </view>
-  </view>
-
   <button class="primary-btn save-btn" bindtap="handleSave" loading="{{isSaving}}">完成本次漫步并保存</button>
 
-  <view wx:if="{{showStickerModal}}" class="sticker-modal-mask" catchtap="closeStickerModal">
-    <view class="sticker-modal-sheet" catchtap="noop">
-      <view class="sticker-modal-card">
-        <image wx:if="{{draft.sticker.imageUrl}}" class="sticker-modal-image" src="{{draft.sticker.imageUrl}}" mode="aspectFill" />
-        <view wx:else class="sticker-modal-placeholder"></view>
-        <view class="sticker-modal-overlay">
-          <view class="sticker-modal-poem">
-            <view wx:for="{{draft.sticker.poemColumns}}" wx:key="index" class="sticker-modal-poem-column">
-              <view wx:for="{{item}}" wx:key="subIndex" class="sticker-modal-poem-char">{{item}}</view>
-            </view>
-          </view>
-          <view class="sticker-modal-theme">{{draft.sticker.title || theme.title}}</view>
-        </view>
+  <checkin-card
+    mission="{{missionCardRenderPayload.mission}}"
+    assets="{{missionCardRenderPayload.assets}}"
+    locationName="{{draft.locationName}}"
+    themeTitle="{{theme.title}}"
+    dateLabel="{{routeStats.startedLabel}}"
+    accentColor="{{theme.vibeColor || '#c96f4a'}}"
+    renderVersion="{{missionCardRenderPayload.renderVersion}}"
+    autoRender="{{true}}"
+    bind:generated="handleMissionCardGenerated"
+  />
+
+  <view wx:if="{{showMissionCardModal}}" class="mission-card-modal-mask" catchtap="closeMissionCardModal">
+    <view class="mission-card-modal-sheet" catchtap="noop">
+      <view class="mission-card-modal-panel">
+        <view class="mission-card-modal-title">{{missionCardModal.mission || '打卡卡片'}}</view>
+        <scroll-view scroll-y class="mission-card-modal-scroll">
+          <view wx:if="{{missionCardModal.isGenerating}}" class="mission-card-modal-loading">正在生成打卡卡片...</view>
+          <image wx:elif="{{missionCardModal.imageSrc}}" class="mission-card-modal-image" src="{{missionCardModal.imageSrc}}" mode="widthFix" />
+        </scroll-view>
       </view>
-      <view class="sticker-modal-actions">
-        <button class="ghost-btn sticker-modal-action" bindtap="handleShareStickerFromRecord">分享链接</button>
-        <button class="primary-btn sticker-modal-action" bindtap="handleSaveStickerToAlbum">保存到本地</button>
+      <view class="mission-card-modal-actions">
+        <button class="ghost-btn mission-card-modal-action" bindtap="closeMissionCardModal">关闭</button>
+        <button class="primary-btn mission-card-modal-action" bindtap="handleSaveMissionCardToAlbum" disabled="{{!missionCardModal.imageSrc || missionCardModal.isGenerating}}">保存到本地</button>
       </view>
     </view>
   </view>

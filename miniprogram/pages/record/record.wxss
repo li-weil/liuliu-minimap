@@ -262,6 +262,77 @@
   margin: 8rpx auto 0;
 }
 
+.mission-card-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 17, 12, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36rpx;
+  box-sizing: border-box;
+  z-index: 40;
+}
+
+.mission-card-modal-sheet {
+  width: 100%;
+  max-width: 680rpx;
+  max-height: calc(100vh - 72rpx);
+  display: flex;
+  flex-direction: column;
+}
+
+.mission-card-modal-panel {
+  border-radius: 36rpx;
+  background: linear-gradient(180deg, #f7f1e8 0%, #efe5d5 100%);
+  padding: 24rpx;
+  box-shadow: 0 24rpx 72rpx rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mission-card-modal-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2f2b24;
+  margin-bottom: 18rpx;
+  flex-shrink: 0;
+}
+
+.mission-card-modal-scroll {
+  max-height: calc(100vh - 280rpx);
+  min-height: 360rpx;
+}
+
+.mission-card-modal-loading {
+  min-height: 360rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #8a8173;
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.mission-card-modal-image {
+  width: 100%;
+  display: block;
+  border-radius: 28rpx;
+  overflow: hidden;
+}
+
+.mission-card-modal-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+
+.mission-card-modal-action {
+  flex: 1;
+}
+
 .sticker-generate-btn {
   width: 100%;
   margin-top: 22rpx;

@@ -177,6 +177,18 @@ Page({
     isMapOpen: false,
     isRecordingAudio: false,
     expandedMission: '',
+    generatedMissionCardMap: {},
+    showMissionCardModal: false,
+    missionCardModal: {
+      mission: '',
+      imageSrc: '',
+      isGenerating: false,
+    },
+    missionCardRenderPayload: {
+      mission: '',
+      assets: null,
+      renderVersion: 0,
+    },
     routeStats: {
       durationMs: 0,
       pointCount: 0,
@@ -220,6 +232,7 @@ Page({
     };
     this.trackingMode = '';
     this.recordingMission = '';
+    this.generatedMissionCardMap = {};
   },
 
   onShow() {
@@ -254,6 +267,7 @@ Page({
     this.setData({
       activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || ''),
       theme,
+      generatedMissionCardMap: this.generatedMissionCardMap || {},
       draft: {
         ...nextDraft,
         sticker: decorateSticker(nextDraft.sticker),
@@ -389,6 +403,98 @@ Page({
       return;
     }
     this.updateMissionAssets(mission, { noteText });
+  },
+
+  handleGenerateMissionCard(event) {
+    const mission = event.detail.mission || this.data.activeMission;
+    if (!mission) {
+      wx.showToast({ title: '先选择一个任务', icon: 'none' });
+      return;
+    }
+
+    const missionAssets = this.getMissionAssets(mission);
+    const hasPhoto = missionAssets.photoList && missionAssets.photoList.length;
+    const hasNote = missionAssets.noteText && missionAssets.noteText.trim();
+    if (!hasPhoto && !hasNote) {
+      wx.showToast({ title: '先上传图片或补一句文字', icon: 'none' });
+      return;
+    }
+
+    const nextMap = {
+      ...(this.generatedMissionCardMap || {}),
+      [mission]: ((this.generatedMissionCardMap && this.generatedMissionCardMap[mission]) || 0) + 1,
+    };
+    this.generatedMissionCardMap = nextMap;
+    const renderVersion = nextMap[mission];
+    this.setData({
+      activeMission: mission,
+      generatedMissionCardMap: nextMap,
+      showMissionCardModal: true,
+      missionCardModal: {
+        mission,
+        imageSrc: '',
+        isGenerating: true,
+      },
+      missionCardRenderPayload: {
+        mission,
+        assets: missionAssets,
+        renderVersion,
+      },
+    });
+  },
+
+  handleMissionCardGenerated(event) {
+    const tempFilePath = event.detail && event.detail.tempFilePath ? event.detail.tempFilePath : '';
+    const mission = event.detail && event.detail.mission ? event.detail.mission : this.data.missionCardModal.mission;
+    if (!tempFilePath) {
+      return;
+    }
+    this.setData({
+      missionCardModal: {
+        mission,
+        imageSrc: tempFilePath,
+        isGenerating: false,
+      },
+    });
+  },
+
+  closeMissionCardModal() {
+    this.setData({
+      showMissionCardModal: false,
+      missionCardModal: {
+        mission: '',
+        imageSrc: '',
+        isGenerating: false,
+      },
+    });
+  },
+
+  async handleSaveMissionCardToAlbum() {
+    const filePath = this.data.missionCardModal && this.data.missionCardModal.imageSrc;
+    if (!filePath) {
+      wx.showToast({ title: '还没有可保存的卡片', icon: 'none' });
+      return;
+    }
+    try {
+      await saveImageToAlbum(filePath);
+      wx.showToast({ title: '已保存到相册', icon: 'success' });
+    } catch (error) {
+      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
+        wx.showModal({
+          title: '需要相册权限',
+          content: '请在设置里允许保存到相册后，再试一次',
+          confirmText: '去设置',
+          success: (res) => {
+            if (res.confirm) {
+              wx.openSetting({});
+            }
+          },
+        });
+        return;
+      }
+      wx.showToast({ title: '保存卡片失败', icon: 'none' });
+    }
   },
 
   markMissionPassed(mission, review) {

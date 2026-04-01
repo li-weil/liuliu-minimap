@@ -1,5 +1,6 @@
 const { apiBaseUrl, apiPrefix, requestTimeout, useCloudMediaStorage, useCloudWalkStorage } = require('../utils/config');
 const { callCloud, uploadToCloud } = require('./cloud');
+const { inferExtension } = require('../utils/media');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
@@ -468,7 +469,13 @@ function requestWeb({ path, method, data, header }) {
 function requestUpload(filePath, formData = {}) {
   const endpoint = ENDPOINTS.uploadMedia;
   if (getBackendProvider() !== 'web' || !endpoint.web || useCloudMediaStorage) {
-    const ext = String(filePath).split('.').pop() || 'jpg';
+    const inferredExt = inferExtension(filePath, formData.kind === 'image' ? 'jpg' : '');
+    const ext =
+      formData.kind === 'video'
+        ? (inferredExt || 'mp4')
+        : formData.kind === 'audio'
+          ? (inferredExt || 'mp3')
+          : (inferredExt || 'jpg');
     return uploadToCloud({
       cloudPath: `walks/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
       filePath,

@@ -47,18 +47,9 @@
         data-mission="{{item.mission}}"
       />
 
-      <button class="mission-verify-btn" bindtap="verifyMission" data-mission="{{item.mission}}" data-mode="verify">AI核验并打分</button>
-
-      <view wx:if="{{item.review}}" class="mission-review-card">
-        <view class="mission-review-score">
-          <text class="mission-review-score-value">{{item.review.score || 0}}</text>
-          <text class="mission-review-score-unit">分</text>
-        </view>
-        <view class="mission-review-copy">
-          <view class="mission-review-status">{{item.review.passed ? '已完成任务' : '还差一点点'}}</view>
-          <view class="mission-review-comment">{{item.review.comment}}</view>
-        </view>
-      </view>
+      <button class="mission-verify-btn" bindtap="generateCard" data-mission="{{item.mission}}">
+        {{item.cardVersion ? '重新生成打卡卡片' : '生成打卡卡片'}}
+      </button>
     </view>
   </view>
 </view>
