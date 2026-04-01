@@ -1,8 +1,8 @@
-const { getWalkDetail, publishWalkShare } = require('../../services/walk');
+const { getWalkDetail, publishWalkShare, deleteWalk } = require('../../services/walk');
 const { formatDate } = require('../../utils/format');
 
 const SUMMARY_MISSION_KEY = '__summary__';
-const SUMMARY_MISSION_LABEL = '总结与补充';
+const SUMMARY_MISSION_LABEL = '花些时间回顾一路的采撷';
 
 function splitPoemLines(poem) {
   const normalized = String(poem || '').replace(/[。！？]+$/g, '');
@@ -132,6 +132,7 @@ Page({
       imageSrc: '',
     },
     isPublishingShare: false,
+    isDeletingWalk: false,
   },
 
   onLoad(query) {
@@ -390,6 +391,50 @@ Page({
       wx.showToast({ title: '发布分享失败', icon: 'none' });
     } finally {
       this.setData({ isPublishingShare: false });
+    }
+  },
+
+  async handleDeleteWalk() {
+    const walk = this.data.walk;
+    const id = walk && (walk.id || walk._id);
+    if (!id || this.data.isDeletingWalk) {
+      return;
+    }
+
+    const confirm = await new Promise((resolve) => {
+      wx.showModal({
+        title: '删除这条历史记录？',
+        content: '删除后将无法恢复，这条漫步的任务、轨迹、图片、视频和录音记录都会从历史中移除。',
+        confirmText: '确认删除',
+        confirmColor: '#c24f35',
+        cancelText: '取消',
+        success: (res) => resolve(!!res.confirm),
+        fail: () => resolve(false),
+      });
+    });
+
+    if (!confirm) {
+      return;
+    }
+
+    this.setData({ isDeletingWalk: true });
+    try {
+      const result = await deleteWalk({ id });
+      if (!result || !result.ok) {
+        throw new Error((result && result.reason) || 'delete_failed');
+      }
+      wx.showToast({ title: '已删除', icon: 'success' });
+      setTimeout(() => {
+        wx.navigateBack({
+          fail: () => {
+            wx.switchTab({ url: '/pages/history/history' });
+          },
+        });
+      }, 400);
+    } catch (error) {
+      wx.showToast({ title: '删除失败', icon: 'none' });
+    } finally {
+      this.setData({ isDeletingWalk: false });
     }
   },
 

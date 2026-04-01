@@ -20,8 +20,13 @@ function publishWalkShare(payload = {}) {
   return callApi('publishWalkShare', payload);
 }
 
+function deleteWalk(payload = {}) {
+  return callApi('deleteWalk', payload);
+}
+
 module.exports = {
   createWalk,
+  deleteWalk,
   getWalkDetail,
   listMyWalks,
   listPublicWalks,

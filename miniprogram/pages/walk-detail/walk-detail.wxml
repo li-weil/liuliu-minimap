@@ -6,7 +6,6 @@
       <view class="meta-row" style="margin-bottom: 16rpx;">
         <view class="meta-pill">{{source === 'feed' ? '来自社区' : '我的足迹'}}</view>
         <view class="meta-pill">{{walk.walkMode === 'advanced' ? '进阶模式' : '纯粹模式'}}</view>
-        <view class="meta-pill">{{walk.generationSource || 'unknown'}}</view>
       </view>
       <view style="font-size: 40rpx; font-weight: 600; margin-bottom: 14rpx;">{{walk.themeTitle}}</view>
       <view style="color: #6f6a5f; line-height: 1.7; margin-bottom: 16rpx;">{{walk.themeSnapshot.description}}</view>
@@ -41,7 +40,7 @@
               bindtap="switchMissionTab"
               data-mission="{{missionItem.mission}}"
             >
-              <view wx:if="{{missionItem.isSupplemental}}" class="mission-tag">补充</view>
+              <view wx:if="{{missionItem.isSupplemental}}" class="mission-tag">总结与补充</view>
               <view wx:else class="mission-anchor {{activeMission === missionItem.mission ? 'mission-anchor-active' : ''}}"></view>
               <view class="mission-copy">{{missionItem.label}}</view>
             </view>
@@ -116,6 +115,9 @@
       </view>
     </view>
 
+    <button class="danger-action-btn" bindtap="handleDeleteWalk" loading="{{isDeletingWalk}}" disabled="{{isDeletingWalk}}">
+      删除这条历史记录
+    </button>
 
 
   </view>

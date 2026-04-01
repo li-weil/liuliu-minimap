@@ -41,6 +41,7 @@
 - [页面结构.md](D:/liuliu-minimap/docs/页面结构.md)
 - [地图功能接入说明.md](D:/liuliu-minimap/docs/地图功能接入说明.md)
 - [Web后端共用接口接入说明.md](D:/liuliu-minimap/docs/Web后端共用接口接入说明.md)
+- [云函数登录系统说明.md](D:/liuliu-minimap/docs/云函数登录系统说明.md)
 
 ## 本地开发
 
@@ -62,8 +63,8 @@ Web 后端模式：
 ## 当前注意点
 
 - 任务核验目前仍以云函数链路为主
+- 云函数模式下已经具备基于 `OPENID` 的登录、用户资料同步与个人历史隔离
 - 微信登录还没有完全统一到 Web 登录体系
-- 历史记录在云开发模式下可按 `OPENID` 区分用户
 - 如果切 Web 模式，仍需补齐小程序 token 与鉴权链路
 
 ## 一句话说明

@@ -51,7 +51,7 @@
     <mission-list
       missions="{{theme.missions}}"
       supplementalMissionKey="{{summaryMissionKey}}"
-      supplementalMissionLabel="总结与补充"
+      supplementalMissionLabel="花些时间回顾一路的采撷"
       activeMission="{{activeMission}}"
       expandedMission="{{expandedMission}}"
       completedMissions="{{draft.completedMissions}}"

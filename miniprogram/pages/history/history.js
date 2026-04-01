@@ -1,14 +1,23 @@
+const app = getApp();
 const { listMyWalks } = require('../../services/walk');
 const { formatDate } = require('../../utils/format');
 
 Page({
   data: {
     activeTab: 'album',
+    user: null,
     walks: [],
     loading: false,
   },
 
-  onShow() {
+  async onShow() {
+    await app.ensureUserReady();
+    const user = app.globalData.user || null;
+    this.setData({ user });
+    if (!user) {
+      this.setData({ walks: [], loading: false });
+      return;
+    }
     this.fetchWalks();
   },
 
@@ -38,5 +47,9 @@ Page({
 
   switchTab(event) {
     this.setData({ activeTab: event.currentTarget.dataset.tab });
+  },
+
+  goToProfile() {
+    wx.switchTab({ url: '/pages/profile/profile' });
   },
 });

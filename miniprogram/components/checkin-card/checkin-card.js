@@ -125,7 +125,7 @@ Component({
     },
     placeholderText: {
       type: String,
-      value: '上传图片后，这里会生成一张适合分享的任务卡片。',
+      value: '',
     },
     renderVersion: {
       type: Number,

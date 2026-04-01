@@ -947,6 +947,21 @@ Page({
       return;
     }
 
+    await app.ensureUserReady();
+    if (!app.globalData.user) {
+      wx.showModal({
+        title: '需要先登录',
+        content: '登录当前微信账户后，才能保存这次漫步记录到个人历史。',
+        confirmText: '去登录',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({ url: '/pages/profile/profile' });
+          }
+        },
+      });
+      return;
+    }
+
     this.setData({ isSaving: true });
     try {
       const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY);

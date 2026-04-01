@@ -4,7 +4,7 @@ const { inferExtension } = require('../utils/media');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'publishWalkShare']
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'publishWalkShare', 'deleteWalk']
     : []
 );
 
@@ -338,6 +338,25 @@ const ENDPOINTS = {
       ok: !!(data && data.ok),
       walk: data && data.walk ? normalizeWalkRecord(data.walk) : null,
     }),
+  },
+  deleteWalk: {
+    cloudName: 'deleteWalk',
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      id: data && data.id ? data.id : '',
+      reason: data && data.reason ? data.reason : '',
+    }),
+    web: {
+      path: '/walks',
+      method: 'DELETE',
+      resolvePath: (data) => `/walks/${encodeURIComponent(data.id)}`,
+      normalizeRequest: () => ({}),
+      normalizeResponse: (data, requestData) => ({
+        ok: !!(data && (data.ok !== undefined ? data.ok : true)),
+        id: (data && data.id) || requestData.id || '',
+        reason: (data && data.reason) || '',
+      }),
+    },
   },
   uploadMedia: {
     cloudName: '',

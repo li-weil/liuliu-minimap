@@ -1,14 +1,5 @@
 const app = getApp();
-const { syncUser } = require('../../services/user');
-
-function requestLoginCode() {
-  return new Promise((resolve, reject) => {
-    wx.login({
-      success: resolve,
-      fail: reject,
-    });
-  });
-}
+const { clearUserStorage, syncUser } = require('../../services/user');
 
 Page({
   data: {
@@ -18,24 +9,14 @@ Page({
     draftAvatarUrl: '',
   },
 
-  onShow() {
-    const user = this.normalizeUser(app.globalData.user);
+  async onShow() {
+    await app.ensureUserReady();
+    const user = app.globalData.user;
     this.setData({
       user,
       draftNickName: user ? user.nickName : '',
       draftAvatarUrl: user ? user.avatarUrl : '',
     });
-  },
-
-  normalizeUser(user) {
-    if (!user || typeof user !== 'object') {
-      return null;
-    }
-    return {
-      ...user,
-      nickName: user.nickName || user.nickname || '微信用户',
-      avatarUrl: user.avatarUrl || '',
-    };
   },
 
   handleChooseAvatar(event) {
@@ -58,24 +39,19 @@ Page({
       if (!nickName) {
         throw new Error('nickname_required');
       }
-      const loginResult = await requestLoginCode();
-      const code = loginResult && loginResult.code;
-      if (!code) {
-        throw new Error('wechat_login_code_missing');
-      }
       const result = await syncUser({
-        code,
         nickName,
         avatarUrl,
       });
-      const mergedUser = this.normalizeUser({
-        ...(result.user || {}),
-        nickName: (result.user && (result.user.nickName || result.user.nickname)) || nickName,
-        avatarUrl: (result.user && result.user.avatarUrl) || avatarUrl,
+      const mergedUser = app.setCurrentUser(result && result.user ? result.user : {
+        nickName,
+        avatarUrl,
       });
-      app.globalData.user = mergedUser;
-      wx.setStorageSync('citywalk_user', mergedUser || null);
-      this.setData({ user: mergedUser });
+      this.setData({
+        user: mergedUser,
+        draftNickName: mergedUser ? mergedUser.nickName : nickName,
+        draftAvatarUrl: mergedUser ? mergedUser.avatarUrl : avatarUrl,
+      });
       wx.showToast({ title: '登录成功', icon: 'success' });
     } catch (error) {
       wx.showToast({
@@ -97,15 +73,12 @@ Page({
         }
 
         try {
-          wx.removeStorageSync('citywalk_token');
-          wx.removeStorageSync('citywalk_refresh_token');
-          wx.removeStorageSync('citywalk_token_expires_in');
-          wx.removeStorageSync('citywalk_user');
+          clearUserStorage();
         } catch (error) {
           // Ignore storage cleanup failure and still reset in-memory user state.
         }
 
-        app.globalData.user = null;
+        app.clearCurrentUser();
         this.setData({ user: null, draftNickName: '', draftAvatarUrl: '' });
         wx.showToast({ title: '已退出登录', icon: 'success' });
       },

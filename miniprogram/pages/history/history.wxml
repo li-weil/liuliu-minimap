@@ -1,17 +1,23 @@
 <view class="page-shell">
   <view class="hero-card history-hero">
     <view class="section-title">足迹</view>
-    <view class="section-subtitle">先保留“纪念卡册”和“成就”两块结构，后续再接完整生成逻辑。</view>
+    <view class="section-subtitle">{{user ? '这里会按当前登录账户整理你的漫步记录。' : '登录后即可查看并管理属于你的漫步历史。'}}</view>
   </view>
 
-  <view class="section-card history-tabs">
+  <view wx:if="{{!user}}" class="section-card history-placeholder">
+    <view class="section-title">还没有登录</view>
+    <view class="section-subtitle">登录当前微信账户后，就能查看这位用户自己的纪念卡册和后续成就。</view>
+    <button class="primary-btn" bindtap="goToProfile">去登录</button>
+  </view>
+
+  <view wx:else class="section-card history-tabs">
     <view class="mode-switch">
       <view class="mode-chip {{activeTab === 'album' ? 'mode-chip-active' : ''}}" bindtap="switchTab" data-tab="album">纪念卡册</view>
       <view class="mode-chip {{activeTab === 'achievement' ? 'mode-chip-active' : ''}}" bindtap="switchTab" data-tab="achievement">成就</view>
     </view>
   </view>
 
-  <view wx:if="{{activeTab === 'album'}}">
+  <view wx:if="{{user && activeTab === 'album'}}">
     <view wx:if="{{!loading && walks.length}}">
       <walk-card wx:for="{{walks}}" wx:key="_id" walk="{{item}}" bind:open="openDetail" />
     </view>
@@ -22,7 +28,7 @@
     </view>
   </view>
 
-  <view wx:else class="section-card history-placeholder">
+  <view wx:elif="{{user}}" class="section-card history-placeholder">
     <view class="section-title">成就</view>
     <view class="section-subtitle">成就模块先留空，后续再按触发条件接入。</view>
   </view>
