@@ -83,10 +83,21 @@ function buildSelectedThemeCategories(selected) {
 }
 
 function buildSearchResultViews(results) {
-  return (results || []).slice(0, 5).map((item, index) => ({
+  function pickTypeLabels(type) {
+    return String(type || '')
+      .split(';')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 2);
+  }
+
+  return (results || []).slice(0, 20).map((item, index) => ({
     id: item.id || item.location || `${item.name || item.address || 'result'}-${index}`,
     name: item.name || item.address || item.district || '推荐地点',
     address: item.address || item.district || '',
+    district: item.district || item.city || '',
+    type: item.type ? String(item.type).split(';')[0] : '',
+    typeLabels: pickTypeLabels(item.type),
     latitude:
       item.latitude !== undefined && item.latitude !== null
         ? Number(item.latitude)
@@ -116,11 +127,11 @@ function looksLikeStreetAddress(value) {
 
 function pickBestLocationName({ location, amapSummary, contextResponse }) {
   const candidates = [
+    amapSummary && amapSummary.pois && amapSummary.pois[0] && amapSummary.pois[0].name,
     location && location.placeName,
     location && location.name,
-    contextResponse && contextResponse.placeName,
     amapSummary && amapSummary.placeName,
-    amapSummary && amapSummary.pois && amapSummary.pois[0] && amapSummary.pois[0].name,
+    contextResponse && contextResponse.placeName,
     location && location.address,
   ]
     .map((item) => (item ? String(item).trim() : ''))
@@ -134,7 +145,9 @@ function buildNearbyPlaceViews(results) {
   return (results || []).slice(0, 12).map((item, index) => ({
     id: item.id || item.link || `${item.title || 'poi'}-${index}`,
     name: item.title || item.name || '附近地点',
-    address: item.address || '把这片街区继续展开成新的漫步线索',
+    address: item.address || item.district || '',
+    district: item.district || item.city || '',
+    type: item.type ? String(item.type).split(';')[0] : '',
     latitude:
       item.latitude !== undefined && item.latitude !== null
         ? Number(item.latitude)
@@ -152,6 +165,50 @@ function buildNearbyPlaceViews(results) {
 
 function extractErrorMessage(error, fallback) {
   return String((error && error.errMsg) || (error && error.message) || fallback || '操作失败');
+}
+
+function explainNearbyPoiError(error) {
+  const message = extractErrorMessage(error, '周边地点加载失败');
+
+  if (/function not found|找不到该函数|not found/i.test(message)) {
+    return {
+      title: '周边地点功能未部署',
+      content: '云函数 fetchNearbyPois 还没有部署到当前云环境，请先上传并部署该云函数后再试。',
+    };
+  }
+
+  if (/missing_amap_web_key/i.test(message)) {
+    return {
+      title: '缺少高德服务 Key',
+      content: '云函数 fetchNearbyPois 没有配置可用的高德 Web 服务 Key。请在云函数环境变量里设置 AMAP_WEB_KEY 后，再重新部署并重试。',
+    };
+  }
+
+  if (/INVALID_USER_KEY|USERKEY_PLAT_NOMATCH|SERVICE_NOT_AVAILABLE|DAILY_QUERY_OVER_LIMIT|ACCESS_TOO_FREQUENT|INVALID_IP/i.test(message)) {
+    return {
+      title: '高德 Key 权限异常',
+      content: `高德周边 POI 请求失败：${message}。请检查当前 Key 是否开通 Web 服务能力、配额是否超限、平台权限是否匹配。`,
+    };
+  }
+
+  if (/timeout|超时/i.test(message)) {
+    return {
+      title: '周边地点请求超时',
+      content: `请求高德周边 POI 超时：${message}。请检查网络状态后重试。`,
+    };
+  }
+
+  if (/invalid_location/i.test(message)) {
+    return {
+      title: '探索点坐标无效',
+      content: '当前探索点没有拿到有效经纬度，请重新定位或重新设定探索点后再试。',
+    };
+  }
+
+  return {
+    title: '周边地点加载失败',
+    content: message,
+  };
 }
 
 Page({
@@ -187,6 +244,7 @@ Page({
     isGenerating: false,
     searchKeyword: '',
     searchResults: [],
+    searchResultCount: 0,
     loadingSearch: false,
     nearbyPlaces: [],
     nearbyExpanded: false,
@@ -219,7 +277,7 @@ Page({
           fontSize: 12,
         },
       }],
-      supportsNearbyPois: getBackendProvider() === 'web',
+      supportsNearbyPois: true,
     });
     app.globalData.currentTheme = currentTheme;
     this.syncDisplayMeta(currentTheme, 'preset', 'pure');
@@ -326,6 +384,7 @@ Page({
       locationContext: contextResponse.context || amapSummary.district || '城市街道',
       locationAddress: amapSummary.address || location.address || '',
       searchResults: [],
+      searchResultCount: 0,
       ...this.buildMapState({
         latitude: location.latitude,
         longitude: location.longitude,
@@ -333,6 +392,11 @@ Page({
       }),
       nearbyPlaces: [],
       nearbyExpanded: false,
+    });
+    this.loadNearbyPlaces(location.latitude, location.longitude).then(() => {
+      if (this.data.nearbyPlaces.length) {
+        this.setData({ nearbyExpanded: true });
+      }
     });
   },
 
@@ -351,6 +415,13 @@ Page({
       });
     } catch (error) {
       this.setData({ nearbyPlaces: [], nearbyExpanded: false });
+      const detail = explainNearbyPoiError(error);
+      wx.showModal({
+        title: detail.title,
+        content: detail.content,
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } finally {
       this.setData({ loadingNearbyPlaces: false });
     }
@@ -422,15 +493,27 @@ Page({
   },
 
   async confirmMapCenterLocation() {
-    const latitude = Number(this.data.mapCenterLatitude);
-    const longitude = Number(this.data.mapCenterLongitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      wx.showToast({ title: '先拖动地图选择位置', icon: 'none' });
-      return;
-    }
-
     wx.showLoading({ title: '分析地点' });
     try {
+      const center = await new Promise((resolve, reject) => {
+        if (!this.mapCtx || !this.mapCtx.getCenterLocation) {
+          reject(new Error('map_center_unavailable'));
+          return;
+        }
+        this.mapCtx.getCenterLocation({
+          success: resolve,
+          fail: reject,
+        });
+      });
+      const latitude = Number(center.latitude);
+      const longitude = Number(center.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        throw new Error('map_center_invalid');
+      }
+      this.setData({
+        mapCenterLatitude: latitude,
+        mapCenterLongitude: longitude,
+      });
       await this.enrichLocation({
         latitude,
         longitude,
@@ -463,7 +546,7 @@ Page({
           this.data.latitude && this.data.longitude ? { latitude: this.data.latitude, longitude: this.data.longitude } : null,
         )
       );
-      this.setData({ searchResults });
+      this.setData({ searchResults, searchResultCount: Array.isArray(searchResults) ? searchResults.length : 0 });
 
       if (!searchResults.length) {
         wx.showToast({ title: '暂无搜索建议，可直接手动选点', icon: 'none' });
@@ -491,7 +574,7 @@ Page({
     wx.showLoading({ title: '确认地点' });
     try {
       await this.enrichLocation(item);
-      this.setData({ searchKeyword: item.name });
+      this.setData({ searchKeyword: item.name, searchResults: [], searchResultCount: 0 });
     } finally {
       wx.hideLoading();
     }

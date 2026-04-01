@@ -27,10 +27,21 @@
     </view>
 
     <view wx:if="{{searchResults.length}}" class="search-result-list">
-      <view wx:for="{{searchResults}}" wx:key="id" class="search-result-item" bindtap="chooseSearchResult" data-index="{{index}}">
-        <view class="search-result-name">{{item.name}}</view>
-        <view class="search-result-address">{{item.address || '把这里作为这次漫步的起点'}}</view>
+      <view class="search-result-head">
+        <view class="search-result-title">地点候选</view>
+        <view class="search-result-count">可下滑查看更多 · {{searchResultCount}} 条</view>
       </view>
+      <scroll-view scroll-y class="search-result-scroll">
+        <view wx:for="{{searchResults}}" wx:key="id" class="search-result-item" bindtap="chooseSearchResult" data-index="{{index}}">
+          <view class="search-result-topline">
+            <view class="search-result-name">{{item.name}}</view>
+          </view>
+          <view wx:if="{{item.district || item.typeLabels.length}}" class="search-result-badges">
+            <view wx:if="{{item.district}}" class="search-result-badge">{{item.district}}</view>
+            <view wx:for="{{item.typeLabels}}" wx:key="index" class="search-result-badge search-result-badge-light">{{item}}</view>
+          </view>
+        </view>
+      </scroll-view>
     </view>
   </view>
 
@@ -78,7 +89,11 @@
       <scroll-view wx:elif="{{nearbyPlaces.length}}" scroll-y class="nearby-list">
         <view wx:for="{{nearbyPlaces}}" wx:key="id" class="nearby-item" bindtap="chooseNearbyPlace" data-index="{{index}}">
           <view class="nearby-item-name">{{item.name}}</view>
-          <view class="nearby-item-address">{{item.address}}</view>
+          <view wx:if="{{item.district || item.type}}" class="nearby-item-meta">
+            <text wx:if="{{item.district}}">{{item.district}}</text>
+            <text wx:if="{{item.type}}">{{item.district ? ' · ' : ''}}{{item.type}}</text>
+          </view>
+          <view wx:if="{{item.address}}" class="nearby-item-address">{{item.address}}</view>
         </view>
       </scroll-view>
       <view wx:elif="{{loadingNearbyPlaces}}" class="nearby-empty">正在把这片街区里值得停下来的地点整理出来</view>
