@@ -6,6 +6,9 @@ const db = cloud.database();
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
+  const now = Date.now();
+  const status = event.status || 'finished';
+  const walkId = event.id || event.walkId || '';
 
   const payload = {
     userId: wxContext.OPENID,
@@ -13,6 +16,8 @@ exports.main = async (event) => {
     themeSnapshot: event.themeSnapshot,
     locationName: event.locationName || '当前位置',
     locationContext: event.locationContext || '城市街道',
+    latitude: event.latitude !== undefined ? event.latitude : null,
+    longitude: event.longitude !== undefined ? event.longitude : null,
     routePoints: event.routePoints || [],
     missionsCompleted: event.missionsCompleted || [],
     missionReviews: event.missionReviews || {},
@@ -35,9 +40,36 @@ exports.main = async (event) => {
     generationSource: event.generationSource || 'unknown',
     season: event.season || '',
     generationContext: event.generationContext || {},
-    createdAt: Date.now(),
+    startedAt: event.startedAt || event.trackStartedAt || now,
+    endedAt: status === 'finished' ? (event.endedAt || event.trackStoppedAt || now) : null,
+    status,
+    updatedAt: now,
   };
 
+  if (walkId) {
+    const existingDoc = await db.collection('walkRecords').doc(walkId).get();
+    const existing = existingDoc.data;
+    if (!existing) {
+      throw new Error('walk_not_found');
+    }
+    if (existing.userId !== wxContext.OPENID) {
+      throw new Error('permission_denied');
+    }
+
+    await db.collection('walkRecords').doc(walkId).update({
+      data: {
+        ...payload,
+        createdAt: existing.createdAt || now,
+        startedAt: existing.startedAt || payload.startedAt,
+        endedAt: status === 'finished' ? payload.endedAt : null,
+      },
+    });
+    const updatedDoc = await db.collection('walkRecords').doc(walkId).get();
+    return { ok: true, id: walkId, walk: updatedDoc.data };
+  }
+
+  payload.createdAt = now;
   const result = await db.collection('walkRecords').add({ data: payload });
-  return { ok: true, id: result._id };
+  const createdDoc = await db.collection('walkRecords').doc(result._id).get();
+  return { ok: true, id: result._id, walk: createdDoc.data };
 };

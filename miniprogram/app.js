@@ -1,5 +1,7 @@
 const { cloudEnvId, apiBaseUrl, useCloudMediaStorage, useCloudWalkStorage } = require('./utils/config');
-const { loadDraft, saveDraft } = require('./utils/draft');
+const { getDefaultDraft, loadDraftStore, removeDraft, saveDraft } = require('./utils/draft');
+const { listMyTeamWalks } = require('./services/team');
+const { listMyWalks } = require('./services/walk');
 const {
   clearUserStorage,
   fetchCurrentUser,
@@ -8,16 +10,30 @@ const {
   persistUser,
 } = require('./services/user');
 
+const PENDING_NAVIGATION_KEY = 'pending_navigation_target_v1';
+
 App({
   globalData: {
     user: null,
-    walkDraft: loadDraft(),
+    activeWalkId: '',
+    walkDraft: getDefaultDraft(),
+    walkDrafts: {},
     currentTheme: null,
     authReady: false,
+    pendingNavigation: null,
+    activeTeamReminderShown: false,
   },
 
   onLaunch() {
+    const draftStore = loadDraftStore();
+    const activeWalkId = draftStore.activeWalkId || '';
     this.globalData.user = getStoredUser();
+    this.globalData.activeWalkId = activeWalkId;
+    this.globalData.walkDrafts = draftStore.drafts || {};
+    this.globalData.walkDraft = activeWalkId && this.globalData.walkDrafts[activeWalkId]
+      ? this.globalData.walkDrafts[activeWalkId]
+      : getDefaultDraft();
+    this.globalData.pendingNavigation = this.getPendingNavigation();
 
     if ((!apiBaseUrl || useCloudWalkStorage || useCloudMediaStorage) && wx.cloud) {
       wx.cloud.init({
@@ -30,16 +46,113 @@ App({
 
     this.loadBrandFonts();
     this.userReadyPromise = this.bootstrapUser();
+    setTimeout(() => {
+      this.checkActiveWalkReminder();
+    }, 800);
   },
 
-  setWalkDraft(nextDraft) {
-    this.globalData.walkDraft = nextDraft;
-    saveDraft(nextDraft);
+  setWalkDraft(nextDraft, walkId = '') {
+    const nextWalkId = walkId || this.globalData.activeWalkId || (nextDraft && nextDraft.walkId) || '';
+    const normalizedDraft = {
+      ...getDefaultDraft(),
+      ...(nextDraft || {}),
+      walkId: nextWalkId,
+    };
+    this.globalData.activeWalkId = nextWalkId;
+    this.globalData.walkDraft = normalizedDraft;
+    this.globalData.walkDrafts = {
+      ...(this.globalData.walkDrafts || {}),
+      ...(nextWalkId ? { [nextWalkId]: normalizedDraft } : {}),
+    };
+    if (nextWalkId) {
+      saveDraft(normalizedDraft, nextWalkId);
+    }
   },
 
-  clearWalkDraft() {
-    this.globalData.walkDraft = loadDraft(true);
-    saveDraft(this.globalData.walkDraft);
+  activateWalkDraft(walkId) {
+    if (!walkId) {
+      this.globalData.activeWalkId = '';
+      this.globalData.walkDraft = getDefaultDraft();
+      return this.globalData.walkDraft;
+    }
+    const walkDraft = (this.globalData.walkDrafts && this.globalData.walkDrafts[walkId]) || null;
+    if (walkDraft) {
+      this.globalData.activeWalkId = walkId;
+      this.globalData.walkDraft = walkDraft;
+      return walkDraft;
+    }
+    const fallbackDraft = {
+      ...getDefaultDraft(),
+      walkId,
+    };
+    this.globalData.activeWalkId = walkId;
+    this.globalData.walkDraft = fallbackDraft;
+    return fallbackDraft;
+  },
+
+  getWalkDraft(walkId) {
+    if (!walkId) {
+      return this.globalData.walkDraft || getDefaultDraft();
+    }
+    return (this.globalData.walkDrafts && this.globalData.walkDrafts[walkId]) || null;
+  },
+
+  clearWalkDraft(walkId = '') {
+    if (!walkId) {
+      Object.keys(this.globalData.walkDrafts || {}).forEach((id) => {
+        removeDraft(id);
+      });
+      this.globalData.activeWalkId = '';
+      this.globalData.walkDrafts = {};
+      this.globalData.walkDraft = getDefaultDraft();
+      return;
+    }
+    removeDraft(walkId);
+    const nextDrafts = { ...(this.globalData.walkDrafts || {}) };
+    delete nextDrafts[walkId];
+    this.globalData.walkDrafts = nextDrafts;
+    if (this.globalData.activeWalkId === walkId) {
+      this.globalData.activeWalkId = '';
+      this.globalData.walkDraft = getDefaultDraft();
+    }
+  },
+
+  setPendingNavigation(target) {
+    const nextTarget = target && typeof target === 'object'
+      ? {
+          url: target.url || '',
+          mode: target.mode || 'redirect',
+        }
+      : null;
+    this.globalData.pendingNavigation = nextTarget;
+    try {
+      if (nextTarget && nextTarget.url) {
+        wx.setStorageSync(PENDING_NAVIGATION_KEY, nextTarget);
+      } else {
+        wx.removeStorageSync(PENDING_NAVIGATION_KEY);
+      }
+    } catch (error) {
+      // Ignore storage failure and still keep in-memory state.
+    }
+    return nextTarget;
+  },
+
+  getPendingNavigation() {
+    if (this.globalData.pendingNavigation && this.globalData.pendingNavigation.url) {
+      return this.globalData.pendingNavigation;
+    }
+    try {
+      const stored = wx.getStorageSync(PENDING_NAVIGATION_KEY);
+      return stored && typeof stored === 'object' && stored.url ? stored : null;
+    } catch (error) {
+      return null;
+    }
+  },
+
+  consumePendingNavigation() {
+    const target = this.getPendingNavigation();
+    this.setPendingNavigation(null);
+    return target;
   },
 
   setCurrentUser(user) {
@@ -78,6 +191,42 @@ App({
 
   ensureUserReady() {
     return this.userReadyPromise || Promise.resolve(this.globalData.user || null);
+  },
+
+  async checkActiveWalkReminder() {
+    if (this.globalData.activeTeamReminderShown) {
+      return;
+    }
+
+    try {
+      await this.ensureUserReady();
+      if (!this.globalData.user) {
+        return;
+      }
+      const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+      const currentRoute = pages.length ? pages[pages.length - 1].route || '' : '';
+      if (currentRoute.indexOf('pages/team-') === 0 || currentRoute === 'pages/record/record' || currentRoute === 'pages/walk-detail/walk-detail') {
+        return;
+      }
+      const [teamResult, soloResult] = await Promise.all([
+        listMyTeamWalks({ limit: 10 }),
+        listMyWalks({ limit: 10 }),
+      ]);
+      const hasActiveTeamWalk = Array.isArray(teamResult.records) && teamResult.records.some((item) => item && item.status === 'active');
+      const hasActiveSoloWalk = Array.isArray(soloResult.records) && soloResult.records.some((item) => item && item.status === 'active');
+      if (!hasActiveTeamWalk && !hasActiveSoloWalk) {
+        return;
+      }
+      this.globalData.activeTeamReminderShown = true;
+      wx.showModal({
+        title: '你还有进行中的漫步',
+        content: '请前往“足迹 - 纪念卡册”，打开显示“进行中”的记录详情页，再点击“继续记录这次漫步”或“重新进入这场同行”继续任务。',
+        showCancel: false,
+        confirmText: '知道了',
+      });
+    } catch (error) {
+      // Ignore reminder failure to avoid blocking app startup.
+    }
   },
 
   loadBrandFonts() {

@@ -10,7 +10,8 @@
       </view>
       <view class="detail-title">{{room.themeTitle}}</view>
       <view class="detail-copy">{{room.locationName}} · {{locationContextLabel}}</view>
-      <view wx:if="{{room.noteText}}" class="detail-summary">{{room.noteText}}</view>
+      <view wx:if="{{room.teamSummary}}" class="detail-summary">{{room.teamSummary}}</view>
+      <button wx:if="{{showActionButton}}" class="primary-btn detail-resume-btn" bindtap="handleResume">{{actionLabel}}</button>
     </view>
 
     <view class="section-card detail-section">
@@ -39,23 +40,98 @@
     </view>
 
     <view class="section-card detail-section">
-      <view class="section-title">任务回顾</view>
-      <view wx:for="{{missionGroups}}" wx:key="mission" class="mission-group">
-        <view class="mission-title">{{item.mission}}</view>
-        <view class="mission-state">{{item.completedLabel}}</view>
-        <view wx:if="{{item.contributions.length}}">
-          <view wx:for="{{item.contributions}}" wx:key="id" class="contribution-card">
-            <view class="contribution-author">{{item.nickName}}</view>
-            <view wx:if="{{item.noteText}}" class="contribution-note">{{item.noteText}}</view>
-            <view class="meta-row">
-              <view wx:if="{{item.photoList.length}}" class="meta-pill">{{item.photoList.length}} 张图</view>
-              <view wx:if="{{item.videoList.length}}" class="meta-pill">{{item.videoList.length}} 段视频</view>
-              <view wx:if="{{item.audioList.length}}" class="meta-pill">{{item.audioList.length}} 段录音</view>
+      <view class="section-title">任务记录</view>
+      <view wx:if="{{hasMissionGroups}}" class="mission-list-block">
+        <block wx:for="{{missionGroups}}" wx:key="mission" wx:for-item="missionItem">
+          <view class="mission-group">
+            <view
+              class="{{missionItem.rowClass}}"
+              bindtap="switchMissionTab"
+              data-mission="{{missionItem.mission}}"
+            >
+              <view class="{{missionItem.anchorClass}}"></view>
+              <view class="mission-copy">{{missionItem.mission}}</view>
+              <view class="mission-state">{{missionItem.completedLabel}}</view>
+            </view>
+
+            <view wx:if="{{missionItem.isActive}}" class="mission-detail-block">
+              <view class="meta-row mission-detail-meta">
+                <view class="meta-pill">{{missionItem.contributionCount}} 位成员有记录</view>
+                <view class="meta-pill" wx:if="{{missionItem.aggregate.photoCount}}">{{missionItem.aggregate.photoCount}} 张图片</view>
+                <view class="meta-pill" wx:if="{{missionItem.aggregate.videoCount}}">{{missionItem.aggregate.videoCount}} 段视频</view>
+                <view class="meta-pill" wx:if="{{missionItem.aggregate.audioCount}}">{{missionItem.aggregate.audioCount}} 段录音</view>
+              </view>
+
+              <view wx:if="{{missionItem.contributions.length}}">
+                <view wx:for="{{missionItem.contributions}}" wx:key="id" class="contribution-detail-card">
+                  <view class="contribution-head">
+                    <image wx:if="{{item.avatarUrl}}" class="contribution-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+                    <view wx:else class="contribution-avatar contribution-avatar-fallback">友</view>
+                    <view class="contribution-meta">
+                      <view class="contribution-author">{{item.nickName}}</view>
+                      <view class="contribution-time">{{item.updatedAtLabel}}</view>
+                    </view>
+                  </view>
+
+                  <view class="mission-detail-note">{{item.noteTextDisplay}}</view>
+
+                  <view class="mission-media-group">
+                    <view class="section-subtitle">图片记录</view>
+                    <view wx:if="{{item.photoList.length}}" class="photo-grid">
+                      <image wx:for="{{item.photoList}}" wx:key="index" src="{{item}}" mode="aspectFill" class="photo-grid-image" />
+                    </view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传图片。</view>
+                  </view>
+
+                  <view class="mission-media-group">
+                    <view class="section-subtitle">视频记录</view>
+                    <view wx:if="{{item.videoList.length}}">
+                      <video
+                        wx:for="{{item.videoList}}"
+                        wx:key="index"
+                        src="{{item}}"
+                        controls
+                        objectFit="cover"
+                        class="mission-video"
+                      />
+                    </view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传视频。</view>
+                  </view>
+
+                  <view class="mission-media-group">
+                    <view class="section-subtitle">录音记录</view>
+                    <view wx:if="{{item.audioList.length}}">
+                        <view wx:for="{{item.audioList}}" wx:key="index" class="mission-card audio-card">
+                          <view class="audio-card-title">录音 {{index + 1}}</view>
+                        <audio src="{{item}}" controls style="width: 100%;" />
+                      </view>
+                    </view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传录音。</view>
+                  </view>
+                </view>
+              </view>
+              <view wx:else class="empty-copy detail-empty">这个任务下还没有团队记录。</view>
+
+              <view class="mission-card-preview">
+                <view class="section-subtitle">打卡卡片</view>
+                <view wx:if="{{isRenderingMissionCard}}" class="mission-card-preview-loading">正在汇总全部成员的内容，生成团队打卡卡片...</view>
+                <image
+                  wx:elif="{{currentMissionCardSrc}}"
+                  class="mission-card-preview-image"
+                  src="{{currentMissionCardSrc}}"
+                  mode="widthFix"
+                  bindtap="openMissionCardModal"
+                  data-src="{{currentMissionCardSrc}}"
+                  data-title="{{missionItem.mission}}"
+                />
+                <view wx:elif="{{missionItem.contributionCount}}" class="empty-copy mission-empty-copy">66 正在记录卡片...</view>
+                <view wx:else class="empty-copy mission-empty-copy">66 正在记录卡片...</view>
+              </view>
             </view>
           </view>
-        </view>
-        <view wx:else class="empty-copy detail-empty">这个任务下还没有团队记录。</view>
+        </block>
       </view>
+      <view wx:else class="empty-copy detail-empty">这场同行漫步还没有任务记录。</view>
     </view>
 
     <view class="section-card detail-section">
@@ -65,7 +141,37 @@
       </view>
       <view wx:else class="empty-copy detail-empty">这次同行漫步还没有动态记录。</view>
     </view>
+
+    <button class="danger-action-btn" bindtap="handleDeleteTeamWalk" loading="{{isDeleting}}" disabled="{{isDeleting}}">
+      删除这条同行记录
+    </button>
   </view>
 
   <view wx:else class="empty-copy">没有找到这场同行漫步。</view>
+
+  <checkin-card
+    mission="{{missionCardRenderPayload.mission}}"
+    entries="{{missionCardRenderPayload.entries}}"
+    locationName="{{missionCardRenderPayload.locationName}}"
+    themeTitle="{{missionCardRenderPayload.themeTitle}}"
+    dateLabel="{{missionCardRenderPayload.dateLabel}}"
+    renderVersion="{{missionCardRenderPayload.renderVersion}}"
+    autoRender="{{true}}"
+    bind:generated="handleMissionCardGenerated"
+  />
+
+  <view wx:if="{{showMissionCardModal}}" class="mission-card-modal-mask" catchtap="closeMissionCardModal">
+    <view class="mission-card-modal-sheet" catchtap="noop">
+      <view class="mission-card-modal-panel">
+        <view class="mission-card-modal-title">{{missionCardModal.title}}</view>
+        <scroll-view scroll-y class="mission-card-modal-scroll">
+          <image wx:if="{{missionCardModal.imageSrc}}" class="mission-card-modal-image" src="{{missionCardModal.imageSrc}}" mode="widthFix" />
+        </scroll-view>
+      </view>
+      <view class="mission-card-modal-actions">
+        <button class="ghost-btn mission-card-modal-action" bindtap="closeMissionCardModal">关闭</button>
+        <button class="primary-btn mission-card-modal-action" bindtap="handleSaveMissionCardToAlbum">保存到本地</button>
+      </view>
+    </view>
+  </view>
 </view>

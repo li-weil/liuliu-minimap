@@ -52,6 +52,10 @@ Page({
         confirmText: pausedLogin ? '去恢复' : '去设置',
         success: (res) => {
           if (res.confirm) {
+            app.setPendingNavigation({
+              url: `/pages/team-join/team-join?roomId=${encodeURIComponent(this.data.roomId)}`,
+              mode: 'redirect',
+            });
             wx.switchTab({ url: '/pages/profile/profile' });
           }
         },

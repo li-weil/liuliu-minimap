@@ -5,6 +5,7 @@
     <view class="theme-card" style="padding: 28rpx; margin-bottom: 24rpx; border-top: 10rpx solid {{walk.themeSnapshot.vibeColor || '#5a5a40'}};">
       <view class="meta-row" style="margin-bottom: 16rpx;">
         <view class="meta-pill">{{source === 'feed' ? '来自社区' : '我的足迹'}}</view>
+        <view class="meta-pill">{{walk.status === 'active' ? '进行中' : '已结束'}}</view>
         <view class="meta-pill">{{walk.walkMode === 'advanced' ? '进阶模式' : '纯粹模式'}}</view>
       </view>
       <view style="font-size: 40rpx; font-weight: 600; margin-bottom: 14rpx;">{{walk.themeTitle}}</view>
@@ -14,6 +15,7 @@
         <view class="meta-pill">{{walk.locationContext}}</view>
         <view class="meta-pill">{{walk.createdAtLabel}}</view>
       </view>
+      <button wx:if="{{canResume}}" class="primary-btn walk-resume-btn" bindtap="handleResumeWalk">继续记录这次漫步</button>
     </view>
 
     <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">

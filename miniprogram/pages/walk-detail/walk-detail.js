@@ -19,6 +19,9 @@ function explainDeleteFailure(error) {
   if (raw.includes('missing_id')) {
     return '缺少记录编号，暂时无法删除';
   }
+  if (raw.includes('walk_not_finished')) {
+    return '进行中的漫步还不能删除，请先完成并保存';
+  }
   if (raw.includes('function not found') || raw.includes('cloud function')) {
     return '删除云函数还没部署，请先上传 deleteWalk';
   }
@@ -268,6 +271,7 @@ Page({
     loading: true,
     source: 'history',
     walk: null,
+    canResume: false,
     activeMission: '',
     currentMissionCardSrc: '',
     isRenderingMissionCard: false,
@@ -327,6 +331,7 @@ Page({
       const mapCenter = getMapCenter(walk && walk.routePoints);
       this.setData({
         walk,
+        canResume: !!(walk && walk.status === 'active'),
         activeMission: walk && walk.missionItems && walk.missionItems.length ? walk.missionItems[0].mission : '',
         mapCenterLatitude: mapCenter.latitude,
         mapCenterLongitude: mapCenter.longitude,
@@ -606,10 +611,15 @@ Page({
     }
   },
 
-  async handleDeleteWalk() {
+async handleDeleteWalk() {
     const walk = this.data.walk;
     const id = walk && (walk.id || walk._id);
     if (!id || this.data.isDeletingWalk || !(walk && walk.canDelete)) {
+      return;
+    }
+
+    if (walk.status !== 'finished') {
+      wx.showToast({ title: '进行中的漫步还不能删除', icon: 'none' });
       return;
     }
 
@@ -648,6 +658,17 @@ Page({
     } finally {
       this.setData({ isDeletingWalk: false });
     }
+  },
+
+  handleResumeWalk() {
+    const walk = this.data.walk;
+    const walkId = walk && (walk.id || walk._id);
+    if (!walkId || !this.data.canResume) {
+      return;
+    }
+    wx.navigateTo({
+      url: `/pages/record/record?id=${encodeURIComponent(walkId)}`,
+    });
   },
 
   switchMissionTab(event) {

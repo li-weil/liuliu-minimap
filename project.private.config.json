@@ -1,6 +1,18 @@
 {
   "libVersion": "3.15.0",
-  "condition": {},
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "pages/achievement-image-test/achievement-image-test",
+          "pathName": "pages/achievement-image-test/achievement-image-test",
+          "query": "",
+          "scene": null,
+          "launchMode": "default"
+        }
+      ]
+    }
+  },
   "projectname": "liuliu-miniapp",
   "setting": {
     "urlCheck": false,

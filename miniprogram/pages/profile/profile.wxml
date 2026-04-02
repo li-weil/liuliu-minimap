@@ -1,13 +1,8 @@
 <view class="page-shell">
-  <view class="hero-card profile-hero">
-    <view class="section-title">我的账户</view>
-    <view class="section-subtitle">{{user ? '你的漫步资料已经留在这里，随时可以继续出发' : (pageMode === 'register' ? '第一次使用时设置一次头像和昵称，之后就可以直接登录。' : '检测到你当前微信账户可直接登录，不需要重复填写头像和昵称。')}}</view>
-  </view>
-
   <view class="section-card profile-card">
     <view wx:if="{{checkingAccount && !user}}" class="profile-status-block">
-      <view class="profile-status-title">正在确认当前微信账户...</view>
-      <view class="profile-status-desc">稍等一下，我们先看看这个账户是否已经有资料。</view>
+      <view class="profile-status-title">正在翻找你的足迹册...</view>
+      <view class="profile-status-desc">稍等一下，看看这次回来的是不是熟悉的你。</view>
     </view>
 
     <view wx:elif="{{user && pageMode === 'view'}}" class="profile-view-block">
@@ -16,13 +11,7 @@
         <view wx:else class="profile-avatar profile-avatar-fallback">66</view>
         <view class="profile-summary-copy">
           <view class="profile-summary-name">{{user.nickName}}</view>
-          <view class="profile-input-tip">已登录当前微信账户，之后进入小程序会直接恢复账号。</view>
         </view>
-      </view>
-
-      <view class="meta-row profile-meta-row">
-        <view class="meta-pill">角色 {{user.role || 'user'}}</view>
-        <view class="meta-pill">已同步</view>
       </view>
 
       <view class="profile-action-stack">
@@ -33,8 +22,8 @@
 
     <view wx:else>
       <view wx:if="{{pageMode === 'login'}}" class="profile-status-block">
-        <view class="profile-status-title">可以直接登录当前账号</view>
-        <view class="profile-status-desc">我们已经识别到这个微信账户有历史资料，登录时不会再要求你重复选择头像和昵称。</view>
+        <view class="profile-status-title">欢迎回来</view>
+        <view class="profile-status-desc">这本足迹册认得你，轻轻一点，就能继续上次的漫步。</view>
       </view>
 
       <view wx:if="{{pageMode !== 'login'}}" class="profile-setup-row">
@@ -43,14 +32,14 @@
           <view wx:else class="profile-avatar profile-avatar-fallback">{{user ? '改' : '选'}}</view>
         </button>
         <view class="profile-form-block">
-          <input class="profile-nickname-input" type="nickname" placeholder="写下想展示的昵称" value="{{draftNickName}}" bindinput="handleNickNameInput" />
-          <view class="profile-input-tip">{{pageMode === 'edit' ? '修改后保存，会同步到当前账户。' : '首次登录时设置一次，后面就可以直接进入账号。'}}</view>
+          <input class="profile-nickname-input" type="nickname" placeholder="写下你的名字" value="{{draftNickName}}" bindinput="handleNickNameInput" />
+          <view class="profile-input-tip">{{pageMode === 'edit' ? '换一个此刻更喜欢的称呼。' : '让这本足迹册，从你的名字开始。'}}</view>
         </view>
       </view>
 
       <view class="profile-action-row">
-        <button wx:if="{{pageMode === 'login'}}" class="primary-btn profile-action-btn" bindtap="handleQuickLogin" loading="{{syncing}}" disabled="{{syncing || checkingAccount}}">直接登录</button>
-        <button wx:if="{{pageMode === 'register'}}" class="primary-btn profile-action-btn" bindtap="handleRegister" loading="{{syncing}}">创建资料并登录</button>
+        <button wx:if="{{pageMode === 'login'}}" class="primary-btn profile-action-btn" bindtap="handleQuickLogin" loading="{{syncing}}" disabled="{{syncing || checkingAccount}}">继续这次漫步</button>
+        <button wx:if="{{pageMode === 'register'}}" class="primary-btn profile-action-btn" bindtap="handleRegister" loading="{{syncing}}">开启我的足迹册</button>
         <button wx:if="{{pageMode === 'edit'}}" class="primary-btn profile-action-btn" bindtap="handleSaveProfile" loading="{{syncing}}">保存资料</button>
         <button wx:if="{{pageMode === 'register' || pageMode === 'edit'}}" class="ghost-btn profile-action-btn" bindtap="resetDraftProfile">取消</button>
       </view>

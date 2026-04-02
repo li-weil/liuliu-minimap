@@ -40,8 +40,13 @@ function listMyTeamWalks(payload = {}) {
   return callApi('listMyTeamWalks', payload);
 }
 
+function deleteTeamWalk(payload = {}) {
+  return callApi('deleteTeamWalk', payload);
+}
+
 module.exports = {
   createTeamRoom,
+  deleteTeamWalk,
   finishTeamWalk,
   getTeamRoomDetail,
   getTeamWalkDetail,

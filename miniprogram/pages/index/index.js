@@ -13,6 +13,7 @@ const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
 const { fetchNearbyPois, searchLocations } = require('../../services/map');
 const { createTeamRoom } = require('../../services/team');
 const { generateCombinedTheme, generateRandomTheme, generateTheme, getLocationContext } = require('../../services/theme');
+const { createWalk } = require('../../services/walk');
 const { getBackendProvider } = require('../../services/api');
 const { isManualLogoutSuppressed } = require('../../services/user');
 
@@ -82,6 +83,14 @@ function buildCombineOptionViews(selected) {
 
 function buildSelectedThemeCategories(selected) {
   return (selected || []).map((item) => (String(item).includes('漫步') ? String(item) : `${item}漫步`));
+}
+
+function pickRandomThemeCategory(categoryPool) {
+  const categories = Array.isArray(categoryPool) ? categoryPool.filter(Boolean) : [];
+  if (!categories.length) {
+    return '形状';
+  }
+  return String(categories[Math.floor(Math.random() * categories.length)]).replace(/漫步/g, '').trim() || '形状';
 }
 
 function buildGenerationContext(pageData) {
@@ -621,6 +630,10 @@ Page({
   async handleGenerateTheme() {
     this.setData({ isGenerating: true });
     try {
+      const selectedThemes = buildSelectedThemeCategories(this.data.combineSelections);
+      const effectiveThemes = selectedThemes.length
+        ? selectedThemes
+        : buildSelectedThemeCategories([pickRandomThemeCategory(this.data.randomCategories)]);
       const result = await generateTheme({
         mood: this.data.mood,
         weather: this.data.weather,
@@ -631,7 +644,7 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
-        selectedThemes: buildSelectedThemeCategories(this.data.combineSelections),
+        selectedThemes: effectiveThemes,
       });
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });
@@ -727,7 +740,7 @@ Page({
     }
   },
 
-  handleStartWalk() {
+  async handleStartWalk() {
     if (!this.data.currentTheme) {
       return;
     }
@@ -737,41 +750,108 @@ Page({
       return;
     }
 
-    app.globalData.currentTheme = this.data.currentTheme;
-    const generationContext = buildGenerationContext(this.data);
-    const draft = {
-      ...app.globalData.walkDraft,
-      completedMissions: [],
-      missionAssetMap: {},
-      missionReviews: {},
-      startedAt: Date.now(),
-      trackStartedAt: null,
-      trackStoppedAt: null,
-      locationName: this.data.locationName,
-      locationContext: this.data.locationContext,
-      locationAddress: this.data.locationAddress,
-      latitude: this.data.latitude,
-      longitude: this.data.longitude,
-      selectedMission: this.data.currentTheme.missions[0] || '',
-      noteText: '',
-      photoList: [],
-      videoList: [],
-      audioList: [],
-      routePoints: [],
-      routeStats: {
-        durationMs: 0,
-        pointCount: 0,
-        distanceMeters: 0,
-      },
-      sticker: null,
-      walkMode: this.data.walkMode,
-      generationSource: this.data.currentThemeSource,
-      season: generationContext.season || '',
-      generationContext,
-      isPublic: false,
-    };
-    app.setWalkDraft(draft);
-    wx.navigateTo({ url: '/pages/record/record' });
+    await app.ensureUserReady();
+    if (!app.globalData.user) {
+      const pausedLogin = isManualLogoutSuppressed();
+      wx.showModal({
+        title: pausedLogin ? '先恢复登录' : '先完善资料',
+        content: pausedLogin
+          ? '你刚刚主动退出过账号，去个人页点一次登录后，就能开始并记录这次漫步。'
+          : '开始漫步前，需要先在个人页设置一次头像和昵称。',
+        confirmText: pausedLogin ? '去恢复' : '去设置',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({ url: '/pages/profile/profile' });
+          }
+        },
+      });
+      return;
+    }
+
+    wx.showLoading({ title: '创建记录' });
+    try {
+      app.globalData.currentTheme = this.data.currentTheme;
+      const generationContext = buildGenerationContext(this.data);
+      const startedAt = Date.now();
+      const result = await createWalk({
+        themeSnapshot: this.data.currentTheme,
+        themeTitle: this.data.currentTheme.title,
+        locationName: this.data.locationName,
+        locationContext: this.data.locationContext,
+        locationAddress: this.data.locationAddress,
+        routePoints: [],
+        missionsCompleted: [],
+        missionReviews: {},
+        photoList: [],
+        videoList: [],
+        audioList: [],
+        missionAssetMap: {},
+        noteText: '',
+        isPublic: false,
+        walkMode: this.data.walkMode,
+        generationSource: this.data.currentThemeSource,
+        season: generationContext.season || '',
+        generationContext,
+        startedAt,
+        trackStartedAt: null,
+        trackStoppedAt: null,
+        routeStats: {
+          durationMs: 0,
+          pointCount: 0,
+          distanceMeters: 0,
+        },
+        sticker: null,
+        status: 'active',
+      });
+      const walkId = result && result.id ? result.id : (result && result.walk && (result.walk.id || result.walk._id)) || '';
+      if (!walkId) {
+        throw new Error('missing_walk_id');
+      }
+      const draft = {
+        walkId,
+        status: 'active',
+        completedMissions: [],
+        missionAssetMap: {},
+        missionReviews: {},
+        startedAt,
+        endedAt: null,
+        trackStartedAt: null,
+        trackStoppedAt: null,
+        locationName: this.data.locationName,
+        locationContext: this.data.locationContext,
+        locationAddress: this.data.locationAddress,
+        latitude: this.data.latitude,
+        longitude: this.data.longitude,
+        selectedMission: this.data.currentTheme.missions[0] || '',
+        noteText: '',
+        photoList: [],
+        videoList: [],
+        audioList: [],
+        routePoints: [],
+        routeStats: {
+          durationMs: 0,
+          pointCount: 0,
+          distanceMeters: 0,
+        },
+        sticker: null,
+        walkMode: this.data.walkMode,
+        generationSource: this.data.currentThemeSource,
+        season: generationContext.season || '',
+        generationContext,
+        isPublic: false,
+      };
+      app.setWalkDraft(draft, walkId);
+      wx.navigateTo({ url: `/pages/record/record?id=${encodeURIComponent(walkId)}` });
+    } catch (error) {
+      wx.showModal({
+        title: '创建记录失败',
+        content: extractErrorMessage(error, '开始漫步失败'),
+        showCancel: false,
+        confirmText: '知道了',
+      });
+    } finally {
+      wx.hideLoading();
+    }
   },
 
   async handleCreateTeamRoom() {

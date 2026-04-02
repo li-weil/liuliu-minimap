@@ -3,11 +3,26 @@
     <view class="hero-topline">
       <view>
         <view class="section-title">足迹</view>
-        <view class="section-subtitle">{{user ? '你的漫步纪念与成就会按当前登录账户自动整理。' : (loginState === 'paused' ? '你刚刚主动退出过账号，恢复登录后就能继续查看这位用户的漫步历史。' : '第一次使用时完善一次资料，之后就会自动带出属于你的漫步历史。')}}</view>
+        <view class="section-subtitle">{{user ? '走过的街角、收下的纪念、点亮的成就，都会留在这本属于你的足迹册里。' : (loginState === 'paused' ? '你的足迹册暂时合上了，回来之后，那些走过的街角和收下的纪念还会在这里等你。' : '等你第一次留下名字，这本足迹册就会开始记住你此后的每一次漫步。')}}</view>
       </view>
       <view wx:if="{{featuredAchievement}}" class="featured-chip">
         <view class="featured-chip-label">当前佩戴</view>
-        <view class="featured-chip-title">{{featuredAchievement.title}}</view>
+        <view class="featured-chip-body">
+          <image
+            wx:if="{{featuredAchievement.asset}}"
+            class="featured-chip-image"
+            src="{{featuredAchievement.asset}}"
+            mode="aspectFit"
+            binderror="handleFeaturedAchievementImageError"
+          />
+          <view wx:else class="featured-chip-image featured-chip-image-placeholder">
+            <view class="featured-chip-glyph">{{featuredAchievement.progressLabel}}</view>
+          </view>
+          <view class="featured-chip-copy">
+            <view class="featured-chip-title">{{featuredAchievement.title}}</view>
+            <view class="featured-chip-subtitle">{{featuredAchievement.unlocked ? '已点亮' : featuredAchievement.progressText}}</view>
+          </view>
+        </view>
       </view>
     </view>
   </view>
@@ -27,7 +42,9 @@
 
   <view wx:if="{{user && activeTab === 'album'}}">
     <view wx:if="{{!loading && walks.length}}">
-      <walk-card wx:for="{{walks}}" wx:key="_id" walk="{{item}}" bind:open="openDetail" />
+      <view class="album-list">
+        <walk-card wx:for="{{walks}}" wx:key="_id" walk="{{item}}" bind:open="openDetail" />
+      </view>
     </view>
     <view wx:elif="{{loading}}" class="empty-copy">正在整理你的纪念卡册...</view>
     <view wx:else class="section-card history-placeholder">
@@ -60,9 +77,9 @@
       >
         <view class="achievement-badge-shell {{item.unlocked ? 'achievement-badge-shell-on' : 'achievement-badge-shell-off'}}">
           <image
-            wx:if="{{item.assetUrl}}"
+            wx:if="{{item.asset}}"
             class="achievement-badge-image"
-            src="{{item.assetUrl}}"
+            src="{{item.asset}}"
             mode="aspectFit"
             binderror="handleAchievementImageError"
             data-id="{{item.id}}"

@@ -37,6 +37,16 @@ function readFeaturedAchievementId() {
   }
 }
 
+function resolveWalkSortTimestamp(item) {
+  if (!item || typeof item !== 'object') {
+    return 0;
+  }
+  if (item.status === 'finished') {
+    return Number(item.endedAt || item.createdAt || 0);
+  }
+  return Number(item.createdAt || 0);
+}
+
 Page({
   data: {
     activeTab: 'album',
@@ -89,9 +99,9 @@ Page({
           ...item,
           createdAtLabel: formatDate(item.createdAt),
         }))
-        .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0));
+        .sort((left, right) => resolveWalkSortTimestamp(right) - resolveWalkSortTimestamp(left));
       const achievementResult = computeAchievements(walks);
-      const achievements = await this.resolveAchievementAssets(achievementResult.achievements);
+      const achievements = achievementResult.achievements;
       const featuredAchievement = this.resolveFeaturedAchievement(achievements);
       this.setData({
         walks,
@@ -104,40 +114,6 @@ Page({
       wx.showToast({ title: '加载失败', icon: 'none' });
     } finally {
       this.setData({ loading: false });
-    }
-  },
-
-  async resolveAchievementAssets(achievements) {
-    const list = Array.isArray(achievements) ? achievements : [];
-    const cloudFileIds = Array.from(new Set(
-      list
-        .map((item) => item.asset)
-        .filter((asset) => isCloudFileId(asset))
-    ));
-
-    if (!cloudFileIds.length || !wx.cloud || !wx.cloud.getTempFileURL) {
-      return list.map((item) => ({
-        ...item,
-        assetUrl: item.asset || '',
-      }));
-    }
-
-    try {
-      const result = await wx.cloud.getTempFileURL({ fileList: cloudFileIds });
-      const fileMap = (result.fileList || []).reduce((accumulator, file) => {
-        accumulator[file.fileID] = file.tempFileURL || '';
-        return accumulator;
-      }, {});
-
-      return list.map((item) => ({
-        ...item,
-        assetUrl: isCloudFileId(item.asset) ? (fileMap[item.asset] || '') : (item.asset || ''),
-      }));
-    } catch (error) {
-      return list.map((item) => ({
-        ...item,
-        assetUrl: isCloudFileId(item.asset) ? '' : (item.asset || ''),
-      }));
     }
   },
 
@@ -214,11 +190,24 @@ Page({
       item.id === achievementId
         ? {
           ...item,
-          assetUrl: '',
+          asset: '',
         }
         : item
     ));
     this.setData({ achievements });
+  },
+
+  handleFeaturedAchievementImageError() {
+    const featuredAchievement = this.data.featuredAchievement;
+    if (!featuredAchievement) {
+      return;
+    }
+    this.setData({
+      featuredAchievement: {
+        ...featuredAchievement,
+        asset: '',
+      },
+    });
   },
 
   goToProfile() {

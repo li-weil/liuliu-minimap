@@ -1,6 +1,7 @@
 const https = require('https');
+const fileConfig = require('./config');
 
-const REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || 12000);
+const REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || fileConfig.timeoutMs || 12000);
 
 function requestJson(urlString, options, body) {
   const url = new URL(urlString);
@@ -57,9 +58,9 @@ function stripCodeFence(text) {
 
 function getAiConfig() {
   return {
-    apiKey: process.env.AI_API_KEY || '',
-    baseUrl: process.env.AI_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: process.env.AI_CHAT_MODEL || 'qwen-turbo',
+    apiKey: process.env.AI_API_KEY || fileConfig.apiKey || '',
+    baseUrl: process.env.AI_BASE_URL || fileConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: process.env.AI_CHAT_MODEL || fileConfig.model || 'qwen-turbo',
   };
 }
 

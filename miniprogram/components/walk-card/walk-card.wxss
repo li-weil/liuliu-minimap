@@ -1,0 +1,50 @@
+.walk-card {
+  padding: 28rpx;
+  border-radius: 30rpx;
+  background:
+    radial-gradient(circle at top right, rgba(255, 241, 220, 0.88), transparent 34%),
+    linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(246, 239, 229, 0.98));
+  box-shadow: 0 18rpx 42rpx rgba(90, 77, 47, 0.08);
+  border: 1rpx solid rgba(222, 206, 181, 0.72);
+}
+
+.walk-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.walk-card-title {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2f2a22;
+}
+
+.walk-card-meta {
+  margin-bottom: 16rpx;
+}
+
+.walk-card-note {
+  color: #6f6a5f;
+  line-height: 1.6;
+  margin-bottom: 18rpx;
+}
+
+.walk-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.walk-card-date {
+  font-size: 22rpx;
+  color: #8f897e;
+}
+
+.walk-card-link {
+  font-size: 22rpx;
+  color: #5a5a40;
+}

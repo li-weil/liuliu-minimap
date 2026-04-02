@@ -10,7 +10,7 @@ function explainRoomStatus(status) {
   if (status === 'dissolved') {
     return '这个房间已经被解散。';
   }
-  return '把这次主题分享给朋友，等人齐之后就可以一起出发。';
+  return '把这次主题分享给朋友，人齐后就一起出发吧';
 }
 
 Page({
@@ -28,13 +28,22 @@ Page({
 
   onLoad(query) {
     this.setData({ roomId: query.roomId || query.id || '' });
-    this.fetchRoom();
+    this.fetchRoom({ showLoading: true });
   },
 
   onShow() {
     if (this.data.roomId) {
-      this.fetchRoom();
+      this.startAutoRefresh();
+      this.fetchRoom({ silent: true });
     }
+  },
+
+  onHide() {
+    this.stopAutoRefresh();
+  },
+
+  onUnload() {
+    this.stopAutoRefresh();
   },
 
   onShareAppMessage() {
@@ -46,36 +55,84 @@ Page({
     };
   },
 
-  async fetchRoom() {
+  buildRoomViewState(room) {
+    return {
+      room,
+      statusCopy: explainRoomStatus((room && room.status) || 'waiting'),
+      roomModeLabel: room && room.walkMode === 'advanced' ? '进阶模式' : '纯粹模式',
+      roomStatusLabel:
+        room && room.status === 'active'
+          ? '进行中'
+          : room && room.status === 'finished'
+            ? '已结束'
+            : room && room.status === 'dissolved'
+              ? '已解散'
+              : '待出发',
+      roomMemberCountLabel: `${room && room.teamStats ? room.teamStats.memberCount || ((room.members || []).length) : ((room && room.members) || []).length} 人`,
+      roomLocationContextLabel: room && room.locationContext ? room.locationContext : '城市街道',
+      leaveButtonLabel: room && room.memberRole === 'owner' ? '解散房间' : '退出房间',
+    };
+  },
+
+  async fetchRoom(options = {}) {
     if (!this.data.roomId) {
       this.setData({ loading: false, room: null });
       return;
     }
 
-    this.setData({ loading: true });
+    const showLoading = !!options.showLoading;
+    const silent = !!options.silent;
+    if (showLoading) {
+      this.setData({ loading: true });
+    }
     try {
       const result = await getTeamRoomDetail({ roomId: this.data.roomId });
       const room = result.room || null;
-      this.setData({
-        room,
-        statusCopy: explainRoomStatus((room && room.status) || 'waiting'),
-        roomModeLabel: room && room.walkMode === 'advanced' ? '进阶模式' : '纯粹模式',
-        roomStatusLabel:
-          room && room.status === 'active'
-            ? '进行中'
-            : room && room.status === 'finished'
-              ? '已结束'
-              : room && room.status === 'dissolved'
-                ? '已解散'
-                : '待出发',
-        roomMemberCountLabel: `${room && room.teamStats ? room.teamStats.memberCount || ((room.members || []).length) : ((room && room.members) || []).length} 人`,
-        roomLocationContextLabel: room && room.locationContext ? room.locationContext : '城市街道',
-        leaveButtonLabel: room && room.memberRole === 'owner' ? '解散房间' : '退出房间',
-      });
+      const nextState = this.buildRoomViewState(room);
+      const prevRoom = this.data.room || null;
+      const prevSignature = prevRoom ? JSON.stringify({
+        status: prevRoom.status || '',
+        members: prevRoom.members || [],
+        activities: prevRoom.activities || [],
+        teamStats: prevRoom.teamStats || {},
+        memberRole: prevRoom.memberRole || '',
+      }) : '';
+      const nextSignature = room ? JSON.stringify({
+        status: room.status || '',
+        members: room.members || [],
+        activities: room.activities || [],
+        teamStats: room.teamStats || {},
+        memberRole: room.memberRole || '',
+      }) : '';
+
+      if (!silent || prevSignature !== nextSignature) {
+        this.setData(nextState);
+      }
     } catch (error) {
-      wx.showToast({ title: '房间加载失败', icon: 'none' });
+      if (!silent) {
+        wx.showToast({ title: '房间加载失败', icon: 'none' });
+      }
     } finally {
-      this.setData({ loading: false });
+      if (showLoading) {
+        this.setData({ loading: false });
+      }
+    }
+  },
+
+  startAutoRefresh() {
+    this.stopAutoRefresh();
+    this.roomRefreshTimer = setInterval(() => {
+      if (!this.data.roomId || this.data.loading) {
+        return;
+      }
+      this.fetchRoom({ silent: true });
+    }, 4000);
+  },
+
+  stopAutoRefresh() {
+    if (this.roomRefreshTimer) {
+      clearInterval(this.roomRefreshTimer);
+      this.roomRefreshTimer = null;
     }
   },
 
@@ -126,6 +183,7 @@ Page({
     wx.showLoading({ title: room.memberRole === 'owner' ? '正在解散' : '正在退出' });
     try {
       await leaveTeamRoom({ roomId: this.data.roomId });
+      this.stopAutoRefresh();
       wx.showToast({ title: room.memberRole === 'owner' ? '已解散' : '已退出', icon: 'success' });
       setTimeout(() => {
         wx.navigateBack({
@@ -161,6 +219,7 @@ Page({
 
     wx.showLoading({ title: '正在汇总' });
     try {
+      this.stopAutoRefresh();
       await finishTeamWalk({ roomId: this.data.roomId });
       wx.navigateTo({ url: `/pages/team-detail/team-detail?roomId=${encodeURIComponent(this.data.roomId)}` });
     } catch (error) {

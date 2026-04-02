@@ -80,8 +80,14 @@ function normalizeWalkRecord(item) {
     locationName: item.locationName || '未知地点',
     locationContext: item.locationContext || '',
     locationAddress: item.locationAddress || '',
+    latitude: item.latitude !== undefined ? item.latitude : null,
+    longitude: item.longitude !== undefined ? item.longitude : null,
     noteText: item.noteText || summaryAssets.noteText || '',
     createdAt: item.createdAt || Date.now(),
+    updatedAt: item.updatedAt || item.createdAt || Date.now(),
+    startedAt: item.startedAt || item.createdAt || null,
+    endedAt: item.endedAt || null,
+    status: item.status || 'finished',
     trackStartedAt,
     trackStoppedAt,
     routeStats: {
@@ -368,7 +374,11 @@ const ENDPOINTS = {
   },
   createWalk: {
     cloudName: 'createWalk',
-    normalizeCloudResponse: (data) => data,
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      id: data && data.id ? data.id : '',
+      walk: data && data.walk ? normalizeWalkRecord(data.walk) : null,
+    }),
     web: {
       path: '/walks',
       method: 'POST',
@@ -500,6 +510,14 @@ const ENDPOINTS = {
         reason: (data && data.reason) || '',
       }),
     },
+  },
+  deleteTeamWalk: {
+    cloudName: 'deleteTeamWalk',
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      id: data && data.id ? data.id : '',
+      reason: data && data.reason ? data.reason : '',
+    }),
   },
   createTeamRoom: {
     cloudName: 'createTeamRoom',

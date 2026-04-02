@@ -28,6 +28,10 @@ exports.main = async (event) => {
     return { ok: false, reason: 'permission_denied' };
   }
 
+  if (walk.status && walk.status !== 'finished') {
+    return { ok: false, reason: 'walk_not_finished' };
+  }
+
   try {
     await db.collection('walkRecords').doc(id).remove();
   } catch (error) {

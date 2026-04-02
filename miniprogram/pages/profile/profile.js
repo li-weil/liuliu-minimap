@@ -1,4 +1,5 @@
 const app = getApp();
+const { requestUpload } = require('../../services/api');
 const { clearUserStorage, fetchCurrentUser, markManualLogout, syncUser } = require('../../services/user');
 
 Page({
@@ -15,6 +16,22 @@ Page({
   async onShow() {
     await app.ensureUserReady();
     await this.syncPageUser();
+  },
+
+  resumePendingNavigation() {
+    const target = app.consumePendingNavigation();
+    if (!target || !target.url) {
+      return false;
+    }
+
+    const navigate = target.mode === 'navigateTo' ? wx.navigateTo : wx.redirectTo;
+    navigate({
+      url: target.url,
+      fail: () => {
+        wx.reLaunch({ url: target.url });
+      },
+    });
+    return true;
   },
 
   async syncPageUser() {
@@ -78,6 +95,17 @@ Page({
     this.setData({ draftNickName: event.detail.value || '' });
   },
 
+  async ensurePersistedAvatar(avatarUrl) {
+    const normalized = String(avatarUrl || '').trim();
+    if (!normalized) {
+      return '';
+    }
+    if (normalized.startsWith('cloud://') || /^https?:\/\//i.test(normalized)) {
+      return normalized;
+    }
+    return requestUpload(normalized, { kind: 'image' });
+  },
+
   async handleQuickLogin() {
     this.setData({ syncing: true });
     try {
@@ -99,6 +127,9 @@ Page({
         detectedUser: mergedUser,
       });
       wx.showToast({ title: '登录成功', icon: 'success' });
+      setTimeout(() => {
+        this.resumePendingNavigation();
+      }, 80);
     } catch (error) {
       wx.showToast({
         title: error && error.message === 'profile_required' ? '首次登录先设置资料' : '登录失败',
@@ -113,7 +144,7 @@ Page({
     this.setData({ syncing: true });
     try {
       const nickName = (this.data.draftNickName || '').trim();
-      const avatarUrl = this.data.draftAvatarUrl || '';
+      const avatarUrl = await this.ensurePersistedAvatar(this.data.draftAvatarUrl || '');
       if (!nickName) {
         throw new Error('nickname_required');
       }
@@ -133,6 +164,9 @@ Page({
         detectedUser: mergedUser,
       });
       wx.showToast({ title: '登录成功', icon: 'success' });
+      setTimeout(() => {
+        this.resumePendingNavigation();
+      }, 80);
     } catch (error) {
       wx.showToast({
         title: error && error.message === 'nickname_required' ? '先填写昵称' : '登录失败',
@@ -165,7 +199,7 @@ Page({
     this.setData({ syncing: true });
     try {
       const nickName = (this.data.draftNickName || '').trim();
-      const avatarUrl = this.data.draftAvatarUrl || '';
+      const avatarUrl = await this.ensurePersistedAvatar(this.data.draftAvatarUrl || '');
       if (!nickName) {
         throw new Error('nickname_required');
       }

@@ -4,6 +4,8 @@ const { finishTeamWalk, getTeamRoomDetail, submitTeamContribution } = require('.
 const { chooseImage, chooseVideo } = require('../../utils/media');
 
 let recorderManager = null;
+let roomPollingTimer = null;
+let roomPollingInFlight = false;
 
 function createEmptyDraft() {
   return {
@@ -12,6 +14,29 @@ function createEmptyDraft() {
     videoList: [],
     audioList: [],
     completed: false,
+  };
+}
+
+function cloneDraft(draft) {
+  return {
+    noteText: String((draft && draft.noteText) || ''),
+    photoList: Array.isArray(draft && draft.photoList) ? [...draft.photoList] : [],
+    videoList: Array.isArray(draft && draft.videoList) ? [...draft.videoList] : [],
+    audioList: Array.isArray(draft && draft.audioList) ? [...draft.audioList] : [],
+    completed: !!(draft && draft.completed),
+  };
+}
+
+function buildDraftFromContribution(contribution) {
+  if (!contribution) {
+    return createEmptyDraft();
+  }
+  return {
+    noteText: contribution.noteText || '',
+    photoList: [...(contribution.photoList || [])],
+    videoList: [...(contribution.videoList || [])],
+    audioList: [...(contribution.audioList || [])],
+    completed: !!contribution.completed,
   };
 }
 
@@ -54,18 +79,21 @@ Page({
     roomLocationContextLabel: '城市街道',
     audioButtonLabel: '录音',
     completedClassName: '',
+    isLeavingForHistory: false,
   },
 
   onLoad(query) {
+    this.missionDraftCache = {};
+    this.missionDraftDirtyMap = {};
     this.setData({ roomId: query.roomId || query.id || '' });
     if (wx.getRecorderManager) {
       recorderManager = wx.getRecorderManager();
       recorderManager.onStop((result) => {
+        this.setEditorDraft({
+          ...this.data.editorDraft,
+          audioList: [...(this.data.editorDraft.audioList || []), { tempFilePath: result.tempFilePath, duration: result.duration || 0 }],
+        });
         this.setData({
-          editorDraft: {
-            ...this.data.editorDraft,
-            audioList: [...(this.data.editorDraft.audioList || []), { tempFilePath: result.tempFilePath, duration: result.duration || 0 }],
-          },
           isRecordingAudio: false,
           audioButtonLabel: '录音',
         });
@@ -75,20 +103,80 @@ Page({
         wx.showToast({ title: '录音失败', icon: 'none' });
       });
     }
-    this.fetchRoom();
+    this.fetchRoom({ showLoading: true });
   },
 
-  async fetchRoom() {
+  onShow() {
+    this.fetchRoom({ silent: true });
+    this.startRoomPolling();
+  },
+
+  onHide() {
+    this.stopRoomPolling();
+  },
+
+  onUnload() {
+    this.stopRoomPolling();
+  },
+
+  startRoomPolling() {
+    this.stopRoomPolling();
+    if (!this.data.roomId) {
+      return;
+    }
+    roomPollingTimer = setInterval(() => {
+      if (roomPollingInFlight || this.data.isLeavingForHistory) {
+        return;
+      }
+      this.fetchRoom({ silent: true });
+    }, 1000);
+  },
+
+  stopRoomPolling() {
+    if (roomPollingTimer) {
+      clearInterval(roomPollingTimer);
+      roomPollingTimer = null;
+    }
+  },
+
+  goHistoryWithFinishNotice() {
+    if (this.data.isLeavingForHistory) {
+      return;
+    }
+    this.stopRoomPolling();
+    this.setData({ isLeavingForHistory: true });
+    wx.showToast({
+      title: '同行已结束，已回到纪念卡册',
+      icon: 'none',
+      duration: 1800,
+    });
+    setTimeout(() => {
+      wx.switchTab({ url: '/pages/history/history' });
+    }, 300);
+  },
+
+  async fetchRoom(options = {}) {
+    const { showLoading = false, silent = false } = options;
     if (!this.data.roomId) {
       this.setData({ loading: false, room: null });
       return;
     }
+    if (this.data.isLeavingForHistory) {
+      return;
+    }
 
-    this.setData({ loading: true });
+    if (showLoading) {
+      this.setData({ loading: true });
+    }
+    roomPollingInFlight = true;
     try {
       await app.ensureUserReady();
       const result = await getTeamRoomDetail({ roomId: this.data.roomId });
       const room = result.room || null;
+      if (room && room.status === 'finished') {
+        this.goHistoryWithFinishNotice();
+        return;
+      }
       const activeMission = this.data.activeMission || (room && room.themeSnapshot && room.themeSnapshot.missions && room.themeSnapshot.missions[0]) || '';
       const missionViews = withMissionSelection(groupMissionViews(room || {}), activeMission);
       this.setData({
@@ -101,9 +189,14 @@ Page({
       });
       this.syncEditorDraft(activeMission, room);
     } catch (error) {
-      wx.showToast({ title: '加载失败', icon: 'none' });
+      if (!silent) {
+        wx.showToast({ title: '加载失败', icon: 'none' });
+      }
     } finally {
-      this.setData({ loading: false });
+      roomPollingInFlight = false;
+      if (showLoading) {
+        this.setData({ loading: false });
+      }
     }
   },
 
@@ -112,22 +205,65 @@ Page({
     return user.openid || user.userId || user._id || '';
   },
 
-  syncEditorDraft(mission, room = this.data.room) {
-    const userId = this.getCurrentUserId();
-    const contribution = ((room && room.contributions) || []).find((item) => item.missionKey === mission && item.userId === userId);
-    if (!contribution) {
-      this.setData({ editorDraft: createEmptyDraft(), completedClassName: '' });
+  getDraftCache(mission) {
+    if (!mission) {
+      return null;
+    }
+    return this.missionDraftCache && this.missionDraftCache[mission]
+      ? cloneDraft(this.missionDraftCache[mission])
+      : null;
+  },
+
+  isDraftDirty(mission) {
+    return !!(mission && this.missionDraftDirtyMap && this.missionDraftDirtyMap[mission]);
+  },
+
+  cacheMissionDraft(mission, draft, dirty = false) {
+    if (!mission) {
       return;
     }
+    this.missionDraftCache = this.missionDraftCache || {};
+    this.missionDraftDirtyMap = this.missionDraftDirtyMap || {};
+    this.missionDraftCache[mission] = cloneDraft(draft);
+    this.missionDraftDirtyMap[mission] = !!dirty;
+  },
+
+  setEditorDraft(nextDraft, options = {}) {
+    const mission = options.mission || this.data.activeMission;
+    const dirty = Object.prototype.hasOwnProperty.call(options, 'dirty') ? !!options.dirty : true;
+    const draft = cloneDraft(nextDraft);
+    this.cacheMissionDraft(mission, draft, dirty);
     this.setData({
-      editorDraft: {
-        noteText: contribution.noteText || '',
-        photoList: [...(contribution.photoList || [])],
-        videoList: [...(contribution.videoList || [])],
-        audioList: [...(contribution.audioList || [])],
-        completed: !!contribution.completed,
-      },
-      completedClassName: contribution.completed ? 'complete-check-active' : '',
+      editorDraft: draft,
+      completedClassName: draft.completed ? 'complete-check-active' : '',
+    });
+  },
+
+  syncEditorDraft(mission, room = this.data.room, options = {}) {
+    const { force = false } = options;
+    if (!mission) {
+      this.setEditorDraft(createEmptyDraft(), { mission: '', dirty: false });
+      return;
+    }
+
+    if (!force && this.isDraftDirty(mission)) {
+      const cachedDraft = this.getDraftCache(mission);
+      if (cachedDraft) {
+        this.setData({
+          editorDraft: cachedDraft,
+          completedClassName: cachedDraft.completed ? 'complete-check-active' : '',
+        });
+        return;
+      }
+    }
+
+    const userId = this.getCurrentUserId();
+    const contribution = ((room && room.contributions) || []).find((item) => item.missionKey === mission && item.userId === userId);
+    const nextDraft = buildDraftFromContribution(contribution);
+    this.cacheMissionDraft(mission, nextDraft, false);
+    this.setData({
+      editorDraft: cloneDraft(nextDraft),
+      completedClassName: nextDraft.completed ? 'complete-check-active' : '',
     });
   },
 
@@ -144,32 +280,25 @@ Page({
   },
 
   handleNoteInput(event) {
-    this.setData({
-      editorDraft: {
-        ...this.data.editorDraft,
-        noteText: event.detail.value || '',
-      },
+    this.setEditorDraft({
+      ...this.data.editorDraft,
+      noteText: event.detail.value || '',
     });
   },
 
   toggleCompleted() {
-    this.setData({
-      editorDraft: {
-        ...this.data.editorDraft,
-        completed: !this.data.editorDraft.completed,
-      },
-      completedClassName: !this.data.editorDraft.completed ? 'complete-check-active' : '',
+    this.setEditorDraft({
+      ...this.data.editorDraft,
+      completed: !this.data.editorDraft.completed,
     });
   },
 
   async choosePhoto() {
     try {
       const result = await chooseImage(6);
-      this.setData({
-        editorDraft: {
-          ...this.data.editorDraft,
-          photoList: [...(this.data.editorDraft.photoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
-        },
+      this.setEditorDraft({
+        ...this.data.editorDraft,
+        photoList: [...(this.data.editorDraft.photoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
       });
     } catch (error) {
       wx.showToast({ title: '图片选择失败', icon: 'none' });
@@ -179,11 +308,9 @@ Page({
   async chooseVideo() {
     try {
       const result = await chooseVideo(1);
-      this.setData({
-        editorDraft: {
-          ...this.data.editorDraft,
-          videoList: [...(this.data.editorDraft.videoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
-        },
+      this.setEditorDraft({
+        ...this.data.editorDraft,
+        videoList: [...(this.data.editorDraft.videoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
       });
     } catch (error) {
       wx.showToast({ title: '视频选择失败', icon: 'none' });
@@ -211,21 +338,21 @@ Page({
     const index = Number(event.currentTarget.dataset.index);
     const photoList = [...(this.data.editorDraft.photoList || [])];
     photoList.splice(index, 1);
-    this.setData({ editorDraft: { ...this.data.editorDraft, photoList } });
+    this.setEditorDraft({ ...this.data.editorDraft, photoList });
   },
 
   removeVideo(event) {
     const index = Number(event.currentTarget.dataset.index);
     const videoList = [...(this.data.editorDraft.videoList || [])];
     videoList.splice(index, 1);
-    this.setData({ editorDraft: { ...this.data.editorDraft, videoList } });
+    this.setEditorDraft({ ...this.data.editorDraft, videoList });
   },
 
   removeAudio(event) {
     const index = Number(event.currentTarget.dataset.index);
     const audioList = [...(this.data.editorDraft.audioList || [])];
     audioList.splice(index, 1);
-    this.setData({ editorDraft: { ...this.data.editorDraft, audioList } });
+    this.setEditorDraft({ ...this.data.editorDraft, audioList });
   },
 
   uploadAsset(filePath, kind) {
@@ -258,15 +385,18 @@ Page({
       });
       const room = result.room || this.data.room;
       const missionViews = withMissionSelection(groupMissionViews(room || {}), this.data.activeMission);
+      const syncedDraft = {
+        ...this.data.editorDraft,
+        photoList,
+        videoList,
+        audioList,
+      };
+      this.cacheMissionDraft(this.data.activeMission, syncedDraft, false);
       this.setData({
         room,
         missionViews,
-        editorDraft: {
-          ...this.data.editorDraft,
-          photoList,
-          videoList,
-          audioList,
-        },
+        editorDraft: syncedDraft,
+        completedClassName: syncedDraft.completed ? 'complete-check-active' : '',
       });
       wx.showToast({ title: '已同步到团队', icon: 'success' });
     } catch (error) {
@@ -295,7 +425,7 @@ Page({
     wx.showLoading({ title: '正在汇总' });
     try {
       await finishTeamWalk({ roomId: this.data.roomId });
-      wx.redirectTo({ url: `/pages/team-detail/team-detail?roomId=${encodeURIComponent(this.data.roomId)}` });
+      this.goHistoryWithFinishNotice();
     } catch (error) {
       wx.showToast({ title: '结束失败', icon: 'none' });
     } finally {

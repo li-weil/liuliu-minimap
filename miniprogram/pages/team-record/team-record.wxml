@@ -8,7 +8,6 @@
         <view class="meta-pill">{{roomMissionProgressLabel}}</view>
       </view>
       <view class="team-hero-title">{{room.themeTitle}}</view>
-      <view class="team-hero-copy">{{room.locationName}} · {{roomLocationContextLabel}}</view>
       <view class="member-strip">
         <view wx:for="{{room.members}}" wx:key="userId" class="member-chip">{{item.nickName}}</view>
       </view>
@@ -32,7 +31,7 @@
 
     <view class="section-card team-block">
       <view class="section-title">我的提交</view>
-      <textarea class="text-area" placeholder="给这个任务补一句记录，队友也会看到。" value="{{editorDraft.noteText}}" bindinput="handleNoteInput" />
+      <textarea class="text-area" placeholder="和队友分享你的记录" value="{{editorDraft.noteText}}" bindinput="handleNoteInput" />
       <view class="editor-actions">
         <button class="ghost-btn" bindtap="choosePhoto">加图片</button>
         <button class="ghost-btn" bindtap="chooseVideo">加视频</button>

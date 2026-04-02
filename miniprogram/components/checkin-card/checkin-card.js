@@ -201,6 +201,10 @@ Component({
       type: Object,
       value: null,
     },
+    entries: {
+      type: Array,
+      value: [],
+    },
     locationName: {
       type: String,
       value: '',
@@ -268,6 +272,7 @@ Component({
         noteText: this.data.assets && this.data.assets.noteText ? this.data.assets.noteText : '',
         companionNote: this.data.assets && this.data.assets.companionNote ? this.data.assets.companionNote : '',
         photoList: this.data.assets && Array.isArray(this.data.assets.photoList) ? this.data.assets.photoList : [],
+        entries: Array.isArray(this.data.entries) ? this.data.entries : [],
         locationName: this.data.locationName || '',
         themeTitle: this.data.themeTitle || '',
         dateLabel: this.data.dateLabel || '',
@@ -682,14 +687,62 @@ Component({
       ctx.restore();
     },
 
-    drawDialogueSection(width, userLayout, companionLayout) {
+    normalizePhotoSources(photoList) {
+      return Array.isArray(photoList)
+        ? photoList
+            .map((item) => {
+              if (typeof item === 'string') {
+                return item;
+              }
+              return item && item.tempFilePath ? item.tempFilePath : '';
+            })
+            .filter(Boolean)
+        : [];
+    },
+
+    buildRenderEntries() {
+      const providedEntries = Array.isArray(this.data.entries) ? this.data.entries : [];
+      if (providedEntries.length) {
+        return providedEntries.map((entry, index) => {
+          const authorName = String(
+            (entry && (entry.authorName || entry.nickName || entry.name)) || `队友 ${index + 1}`
+          ).trim() || `队友 ${index + 1}`;
+          return {
+            authorName,
+            authorShort: authorName.slice(0, 1) || '友',
+            userLabel: String((entry && entry.userLabel) || `${authorName} 的记录`).trim() || `${authorName} 的记录`,
+            catLabel: String((entry && entry.catLabel) || '66 的记录').trim() || '66 的记录',
+            noteText: String((entry && entry.noteText) || '').trim(),
+            companionNote: String((entry && entry.companionNote) || '').trim(),
+            photoSources: this.normalizePhotoSources(entry && entry.photoList),
+          };
+        });
+      }
+
+      const assets = this.data.assets || {};
+      return [{
+        authorName: '我',
+        authorShort: '我',
+        userLabel: '我的记录',
+        catLabel: '66 的记录',
+        noteText: String(assets.noteText || '').trim(),
+        companionNote: String(assets.companionNote || '').trim(),
+        photoSources: this.normalizePhotoSources(assets.photoList),
+      }];
+    },
+
+    drawDialogueSection(width, startY, userLayout, companionLayout, options = {}) {
       const ctx = this.ctx;
-      let y = HEADER_HEIGHT + 24;
+      let y = startY;
+      const userLabel = String(options.userLabel || '我的记录');
+      const userSign = String(options.userSign || '我');
+      const catLabel = String(options.catLabel || '66 的记录');
+      const catSign = String(options.catSign || '66');
 
       const sections = [
         {
-          label: '我的记录',
-          sign: '我',
+          label: userLabel,
+          sign: userSign,
           layout: userLayout,
           align: 'left',
           width: 212,
@@ -699,8 +752,8 @@ Component({
           textColor: '#46372d',
         },
         {
-          label: '66 的记录',
-          sign: '66',
+          label: catLabel,
+          sign: catSign,
           layout: companionLayout,
           align: 'right',
           width: 214,
@@ -761,6 +814,22 @@ Component({
       });
 
       return y;
+    },
+
+    drawEntryDivider(width, top) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.setLineDash([6, 8]);
+      ctx.strokeStyle = 'rgba(145, 111, 79, 0.24)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(SIDE_PADDING + 10, top);
+      ctx.lineTo(width - SIDE_PADDING - 10, top);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      this.drawPaw(width / 2 - 10, top + 6, 0.34, 'rgba(142, 107, 71, 0.14)');
+      this.drawSparkle(width / 2 + 16, top - 4, 3, 'rgba(194, 93, 57, 0.2)');
+      ctx.restore();
     },
 
     drawPhoto(width, photoTop, photoHeight, photoImage) {
@@ -881,19 +950,8 @@ Component({
       this.renderToken = token;
       this.setData({ isRendering: true });
 
-      const assets = this.data.assets || {};
-      const userNote = String(assets.noteText || '').trim() || String(this.data.placeholderText || '').trim();
-      const companionNote = String(assets.companionNote || '').trim() || '66 轻轻跟在一旁，把你停下来注视的那一刻也记在了心里。';
-      const photoSources = Array.isArray(assets.photoList)
-        ? assets.photoList
-            .map((item) => {
-              if (typeof item === 'string') {
-                return item;
-              }
-              return item && item.tempFilePath ? item.tempFilePath : '';
-            })
-            .filter(Boolean)
-        : [];
+      const placeholderText = String(this.data.placeholderText || '').trim();
+      const renderEntries = this.buildRenderEntries();
       const width = this.canvasWidth || CARD_WIDTH;
       const contentWidth = width - SIDE_PADDING * 2;
 
@@ -901,42 +959,59 @@ Component({
       this.postmarkImage = await this.loadCanvasImage(POSTMARK).catch(() => null);
       this.barcodeImage = await this.loadCanvasImage(BARCODE).catch(() => null);
       this.catHeadImage = await this.loadCanvasImage(CAT_HEAD).catch(() => null);
-      const loadedPhotos = await Promise.all(photoSources.map((src) => this.loadCanvasImage(src).catch(() => null)));
-      const photoLayouts = loadedPhotos
-        .filter(Boolean)
-        .map((photoImage) => {
-          const imageRatio = photoImage.width / photoImage.height;
-          return {
-            photoImage,
-            height: clamp(contentWidth / imageRatio, 150, 280),
-          };
-        })
-        .slice(0, 2);
+      const entryLayouts = await Promise.all(renderEntries.map(async (entry) => {
+        const userNote = String(entry.noteText || '').trim() || placeholderText;
+        const companionNote = String(entry.companionNote || '').trim() || '66 轻轻跟在一旁，把你停下来注视的那一刻也记在了心里。';
+        const loadedPhotos = await Promise.all(
+          (entry.photoSources || []).map((src) => this.loadCanvasImage(src).catch(() => null))
+        );
+        const photoLayouts = loadedPhotos
+          .filter(Boolean)
+          .map((photoImage) => {
+            const imageRatio = photoImage.width / photoImage.height;
+            return {
+              photoImage,
+              height: clamp(contentWidth / imageRatio, 150, 280),
+            };
+          })
+          .slice(0, 2);
 
-      const userLayout = layoutParagraph(this.ctx, userNote, {
-        maxWidth: 212 - BUBBLE_PADDING_X * 2,
-        preferredSize: 15,
-        minSize: 12,
-        maxLines: 6,
-        family: '"ZCOOL XiaoWei", "KaiTi", "STKaiti", serif',
-        lineHeightRatio: 1.78,
-      });
-      const companionLayout = layoutParagraph(this.ctx, companionNote, {
-        maxWidth: 214 - BUBBLE_PADDING_X * 2,
-        preferredSize: 14,
-        minSize: 11,
-        maxLines: 8,
-        family: '"ZCOOL XiaoWei", "KaiTi", "STKaiti", serif',
-        lineHeightRatio: 1.84,
-      });
-      const dialogueHeight =
-        (Math.max(userLayout.lines.length, 1) * userLayout.lineHeight + BUBBLE_PADDING_Y * 2 + 22 + 34) +
-        (Math.max(companionLayout.lines.length, 1) * companionLayout.lineHeight + BUBBLE_PADDING_Y * 2 + 22 + 34);
-      const photoBlockHeight = photoLayouts.length
-        ? photoLayouts.reduce((total, item) => total + item.height, 0) + (photoLayouts.length - 1) * PHOTO_GAP + 18
-        : 0;
+        const userLayout = layoutParagraph(this.ctx, userNote, {
+          maxWidth: 212 - BUBBLE_PADDING_X * 2,
+          preferredSize: 15,
+          minSize: 12,
+          maxLines: 6,
+          family: '"ZCOOL XiaoWei", "KaiTi", "STKaiti", serif',
+          lineHeightRatio: 1.78,
+        });
+        const companionLayout = layoutParagraph(this.ctx, companionNote, {
+          maxWidth: 214 - BUBBLE_PADDING_X * 2,
+          preferredSize: 14,
+          minSize: 11,
+          maxLines: 8,
+          family: '"ZCOOL XiaoWei", "KaiTi", "STKaiti", serif',
+          lineHeightRatio: 1.84,
+        });
+        const dialogueHeight =
+          (Math.max(userLayout.lines.length, 1) * userLayout.lineHeight + BUBBLE_PADDING_Y * 2 + 22 + 34) +
+          (Math.max(companionLayout.lines.length, 1) * companionLayout.lineHeight + BUBBLE_PADDING_Y * 2 + 22 + 34);
+        const photoBlockHeight = photoLayouts.length
+          ? photoLayouts.reduce((total, item) => total + item.height, 0) + (photoLayouts.length - 1) * PHOTO_GAP + 18
+          : 0;
 
-      this.cardHeight = HEADER_HEIGHT + 18 + dialogueHeight + photoBlockHeight + 62;
+        return {
+          ...entry,
+          userLayout,
+          companionLayout,
+          photoLayouts,
+          blockHeight: dialogueHeight + photoBlockHeight,
+        };
+      }));
+
+      const entryGap = entryLayouts.length > 1 ? 30 : 0;
+      const totalBodyHeight = entryLayouts.reduce((total, entry) => total + entry.blockHeight, 0)
+        + Math.max(0, entryLayouts.length - 1) * entryGap;
+      this.cardHeight = HEADER_HEIGHT + 18 + totalBodyHeight + 62;
 
       const dpr = this.dpr || 2;
       this.canvasNode.width = width * dpr;
@@ -947,16 +1022,29 @@ Component({
       const accentColor = this.data.accentColor || '#c96f4a';
       this.drawPaperBackground(width, this.cardHeight);
       this.drawHeader(width, accentColor);
-      let nextTop = this.drawDialogueSection(width, userLayout, companionLayout);
+      let nextTop = HEADER_HEIGHT + 24;
+      entryLayouts.forEach((entry, index) => {
+        nextTop = this.drawDialogueSection(width, nextTop, entry.userLayout, entry.companionLayout, {
+          userLabel: entry.userLabel,
+          userSign: entry.authorShort,
+          catLabel: entry.catLabel,
+          catSign: '66',
+        });
 
-      if (photoLayouts.length) {
-        this.ctx.save();
-        this.ctx.fillStyle = '#8e6b47';
-        this.ctx.font = 'bold 11px sans-serif';
-        this.ctx.fillText('沿途看到的样子', SIDE_PADDING, nextTop - 6);
-        this.ctx.restore();
-        nextTop = this.drawPhotos(width, nextTop + 8, photoLayouts);
-      }
+        if (entry.photoLayouts.length) {
+          this.ctx.save();
+          this.ctx.fillStyle = '#8e6b47';
+          this.ctx.font = 'bold 11px sans-serif';
+          this.ctx.fillText(`${entry.authorName} 拍下的样子`, SIDE_PADDING, nextTop - 6);
+          this.ctx.restore();
+          nextTop = this.drawPhotos(width, nextTop + 8, entry.photoLayouts) + 18;
+        }
+
+        if (index < entryLayouts.length - 1) {
+          this.drawEntryDivider(width, nextTop + 2);
+          nextTop += entryGap;
+        }
+      });
 
       this.drawFooter(width, formatCardDate(this.data.dateLabel));
 

@@ -1,5 +1,5 @@
 const app = getApp();
-const { createWalk } = require('../../services/walk');
+const { createWalk, getWalkDetail } = require('../../services/walk');
 const { requestUpload } = require('../../services/api');
 const { getCurrentLocation } = require('../../utils/location');
 const { chooseImage, chooseVideo } = require('../../utils/media');
@@ -109,6 +109,32 @@ function buildRouteStats(routePoints, trackStartedAt, trackStoppedAt, isTracking
   };
 }
 
+function mergeRouteStatsWithDraft(draft, isTracking) {
+  const computed = buildRouteStats(
+    draft && draft.routePoints,
+    draft && (draft.trackStartedAt || draft.startedAt),
+    draft && draft.trackStoppedAt,
+    isTracking
+  );
+  const stored = draft && draft.routeStats ? draft.routeStats : null;
+  if (!stored) {
+    return computed;
+  }
+
+  const durationMs = isTracking ? computed.durationMs : Math.max(Number(stored.durationMs || 0), Number(computed.durationMs || 0));
+  const distanceMeters = isTracking ? computed.distanceMeters : Math.max(Number(stored.distanceMeters || 0), Number(computed.distanceMeters || 0));
+  const pointCount = isTracking ? computed.pointCount : Math.max(Number(stored.pointCount || 0), Number(computed.pointCount || 0));
+
+  return {
+    ...computed,
+    durationMs,
+    pointCount,
+    distanceMeters,
+    durationLabel: formatDuration(durationMs),
+    distanceLabel: formatDistance(distanceMeters),
+  };
+}
+
 function normalizeMapRoutePoints(routePoints) {
   return (Array.isArray(routePoints) ? routePoints : [])
     .map((point) => ({
@@ -201,6 +227,45 @@ function decorateSticker(sticker) {
       ? sticker.poemColumns
       : splitPoemColumns(poemLines),
   };
+}
+
+function buildDraftFromWalk(walk) {
+  if (!walk) {
+    return null;
+  }
+  return syncDraftAggregates({
+    walkId: walk.id || walk._id || '',
+    status: walk.status || 'active',
+    locationName: walk.locationName || '当前位置',
+    locationContext: walk.locationContext || '城市街道',
+    locationAddress: walk.locationAddress || '',
+    latitude: walk.latitude || null,
+    longitude: walk.longitude || null,
+    routePoints: Array.isArray(walk.routePoints) ? walk.routePoints : [],
+    completedMissions: Array.isArray(walk.completedMissions) ? walk.completedMissions : [],
+    missionReviews: walk.missionReviews || {},
+    missionAssetMap: walk.missionAssetMap || {},
+    selectedMission: (walk.themeSnapshot && walk.themeSnapshot.missions && walk.themeSnapshot.missions[0]) || '',
+    noteText: walk.noteText || '',
+    photoList: Array.isArray(walk.photoList) ? walk.photoList : [],
+    videoList: Array.isArray(walk.videoList) ? walk.videoList : [],
+    audioList: Array.isArray(walk.audioList) ? walk.audioList : [],
+    isPublic: !!walk.isPublic,
+    startedAt: walk.startedAt || walk.createdAt || null,
+    endedAt: walk.endedAt || null,
+    trackStartedAt: walk.trackStartedAt || walk.startedAt || null,
+    trackStoppedAt: walk.trackStoppedAt || walk.endedAt || null,
+    routeStats: walk.routeStats || {
+      durationMs: 0,
+      pointCount: 0,
+      distanceMeters: 0,
+    },
+    sticker: walk.sticker || null,
+    walkMode: walk.walkMode || 'pure',
+    generationSource: walk.generationSource || 'preset',
+    season: walk.season || '',
+    generationContext: walk.generationContext || {},
+  });
 }
 
 function downloadFile(url) {
@@ -371,7 +436,8 @@ Page({
     mapPolyline: [],
   },
 
-  onLoad() {
+  async onLoad(query) {
+    this.currentWalkId = query && (query.id || query.walkId) ? (query.id || query.walkId) : '';
     if (wx.getRecorderManager) {
       recorderManager = wx.getRecorderManager();
       recorderManager.onStop((result) => {
@@ -382,7 +448,7 @@ Page({
         const mission = this.recordingMission || this.getActiveMissionKey();
         let draft = { ...app.globalData.walkDraft };
         draft = this.attachMissionAsset(draft, mission, 'audioList', nextAudio);
-        app.setWalkDraft(syncDraftAggregates(draft));
+        this.setDraft(draft);
         this.setData({ isRecordingAudio: false, recordingMission: '' });
         this.recordingMission = '';
         this.refreshState();
@@ -399,6 +465,9 @@ Page({
     this.trackingMode = '';
     this.recordingMission = '';
     this.generatedMissionCardMap = {};
+    if (this.currentWalkId) {
+      await this.restoreWalkContext(this.currentWalkId);
+    }
   },
 
   onShow() {
@@ -412,15 +481,48 @@ Page({
     }
   },
 
+  async restoreWalkContext(walkId) {
+    const cachedDraft = app.getWalkDraft(walkId);
+    if (cachedDraft) {
+      app.activateWalkDraft(walkId);
+      this.currentWalkId = walkId;
+    }
+
+    try {
+      const result = await getWalkDetail({ id: walkId });
+      const walk = result && result.walk ? result.walk : null;
+      if (!walk) {
+        return;
+      }
+      if (walk.status === 'finished') {
+        wx.showToast({ title: '这次漫步已经结束', icon: 'none' });
+        setTimeout(() => {
+          wx.redirectTo({ url: `/pages/walk-detail/walk-detail?id=${encodeURIComponent(walkId)}&source=history` });
+        }, 300);
+        return;
+      }
+      const remoteDraft = buildDraftFromWalk(walk);
+      const nextDraft = cachedDraft
+        ? syncDraftAggregates({
+            ...remoteDraft,
+            ...cachedDraft,
+            walkId,
+            status: walk.status || cachedDraft.status || 'active',
+          })
+        : remoteDraft;
+      app.globalData.currentTheme = walk.themeSnapshot || app.globalData.currentTheme;
+      app.setWalkDraft(nextDraft, walkId);
+      this.currentWalkId = walkId;
+    } catch (error) {
+      wx.showToast({ title: '恢复进行中漫步失败', icon: 'none' });
+    }
+  },
+
   refreshState() {
     const theme = app.globalData.currentTheme;
     const draft = syncDraftAggregates(app.globalData.walkDraft);
-    const routeStats = buildRouteStats(
-      draft.routePoints,
-      draft.trackStartedAt || draft.startedAt,
-      draft.trackStoppedAt,
-      this.data.isTracking
-    );
+    this.currentWalkId = draft.walkId || this.currentWalkId || '';
+    const routeStats = mergeRouteStatsWithDraft(draft, this.data.isTracking);
     const themeKey = buildThemeKey(theme, draft);
     let nextDraft = draft;
     if (draft.sticker && draft.sticker.themeKey && draft.sticker.themeKey !== themeKey) {
@@ -428,7 +530,7 @@ Page({
         ...draft,
         sticker: null,
       };
-      app.setWalkDraft(nextDraft);
+      this.setDraft(nextDraft);
     }
     this.setData({
       activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || SUMMARY_MISSION_KEY),
@@ -444,7 +546,11 @@ Page({
   },
 
   setDraft(nextDraft) {
-    app.setWalkDraft(syncDraftAggregates(nextDraft));
+    const walkId = this.currentWalkId || (nextDraft && nextDraft.walkId) || app.globalData.activeWalkId || '';
+    app.setWalkDraft(syncDraftAggregates({
+      ...(nextDraft || {}),
+      walkId,
+    }), walkId);
     this.refreshState();
   },
 
@@ -1009,17 +1115,12 @@ Page({
       trackStartedAt: this.data.draft.trackStartedAt || now,
       trackStoppedAt: null,
     };
-    app.setWalkDraft(draft);
+    this.setDraft(draft);
     this.setData({
       isTracking: true,
       isMapOpen: true,
       draft,
-      routeStats: buildRouteStats(
-        draft.routePoints,
-        draft.trackStartedAt || draft.startedAt,
-        draft.trackStoppedAt,
-        true
-      ),
+      routeStats: mergeRouteStatsWithDraft(draft, true),
       mapPolyline: buildMapPolyline(draft.routePoints),
     });
     try {
@@ -1064,16 +1165,11 @@ Page({
       ...app.globalData.walkDraft,
       trackStoppedAt: stoppedAt,
     };
-    app.setWalkDraft(draft);
+    this.setDraft(draft);
     this.setData({
       isTracking: false,
       draft,
-      routeStats: buildRouteStats(
-        draft.routePoints,
-        draft.trackStartedAt || draft.startedAt,
-        stoppedAt,
-        false
-      ),
+      routeStats: mergeRouteStatsWithDraft(draft, false),
       mapPolyline: buildMapPolyline(draft.routePoints),
     });
   },
@@ -1235,12 +1331,17 @@ Page({
         this.data.draft.trackStoppedAt || Date.now(),
         false
       );
+      const walkId = this.currentWalkId || this.data.draft.walkId || '';
+      const endedAt = this.data.draft.trackStoppedAt || Date.now();
       const result = await createWalk({
+        id: walkId,
         themeSnapshot: this.data.theme,
         themeTitle: this.data.theme.title,
         locationName: this.data.draft.locationName,
         locationContext: this.data.draft.locationContext,
         locationAddress: this.data.draft.locationAddress,
+        latitude: this.data.draft.latitude,
+        longitude: this.data.draft.longitude,
         routePoints: this.data.draft.routePoints,
         missionsCompleted: this.data.draft.completedMissions,
         missionReviews: this.data.draft.missionReviews,
@@ -1255,16 +1356,19 @@ Page({
         season: this.data.draft.season || '',
         generationContext: this.data.draft.generationContext || {},
         trackStartedAt: this.data.draft.trackStartedAt || this.data.draft.startedAt,
-        trackStoppedAt: this.data.draft.trackStoppedAt || Date.now(),
+        trackStoppedAt: endedAt,
+        startedAt: this.data.draft.startedAt,
+        endedAt,
         routeStats: {
           durationMs: routeStats.durationMs,
           pointCount: routeStats.pointCount,
           distanceMeters: routeStats.distanceMeters,
         },
         sticker: this.data.draft.sticker || null,
+        status: 'finished',
       });
       this.stopTracking();
-      app.clearWalkDraft();
+      app.clearWalkDraft(walkId);
       app.globalData.currentTheme = null;
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => {

@@ -10,7 +10,7 @@
   - `miniprogram/pages/history/history.js`
 
 ## 2. 背景与目标
-当前足迹页已具备“纪念卡册”能力，成就模块仍为占位状态。现有素材已在 `D:\成就素材` 准备完成，目标是把成就系统以最小可用版本接入小程序，形成“可回看、可累计、可解锁”的长期激励机制。
+当前足迹页已具备“纪念卡册”能力，成就模块已进入 V1 接入阶段。现有素材已整理到 `D:\achievements`，目标是把成就系统以最小可用版本接入小程序，形成“可回看、可累计、可解锁”的长期激励机制。
 
 V1 目标：
 - 在足迹页“成就”标签展示成就墙（已解锁/未解锁/进度）。
@@ -36,7 +36,7 @@ V1 目标：
 - 作为连续使用用户，我希望过去的漫步记录能够自动回算成就，不需要重新打卡。
 - 作为新用户，我希望在第一次触发成就时有明确反馈，感受到成长。
 
-## 5. 成就清单（来自 `D:\成就素材`）
+## 5. 成就清单（来自 `D:\achievements`）
 V1 使用如下 8 个成就素材，统一采用透明背景 PNG 版本：
 
 1. `几何大师：解锁形状漫步`
@@ -114,14 +114,18 @@ V1 使用如下 8 个成就素材，统一采用透明背景 PNG 版本：
 - 仅对包含季节字段的新记录执行季节成就判定。
 
 ## 8. 交互与页面方案（历史页-成就 Tab）
-当前成就 Tab 为占位文案，V1 改为成就墙：
+当前成就 Tab 在 V1 中采用“紧凑勋章墙 + 成就详情页”：
 
-- 顶部摘要：
-  - 已解锁数量：`X/8`
-  - 完成度：`X/8` 百分比
+- 足迹页顶部：
+  - 展示“当前佩戴”成就
+  - 包含小勋章图、成就标题、状态文案
 - 成就列表：
-  - 已解锁：彩色素材图 + “已解锁”标记 + 解锁时间（可选）
-  - 未解锁：灰度遮罩 + 进度文案（如 `3/5`）
+  - 使用紧凑排列的勋章墙
+  - 每个成就只展示勋章、标题、进度
+  - 不使用单独的大卡片外框
+- 成就详情页：
+  - 点击勋章进入详情页
+  - 展示大勋章、说明、进度、达成路径、分享入口
 - 排序：
   - 默认按 `sort` 固定顺序展示（便于用户建立记忆）
 - 首次解锁反馈：
@@ -129,27 +133,30 @@ V1 使用如下 8 个成就素材，统一采用透明背景 PNG 版本：
 
 ## 9. 素材接入规范
 ## 9.1 素材来源
-- 来源目录：`D:\成就素材`
+- 来源目录：`D:\achievements`
 - 成就展示图优先使用透明背景 PNG。
-- V1 接入方式：上传到微信云后台，小程序端通过稳定 HTTPS 图片地址引用，不把素材直接打进项目包。
+- V1 接入方式：上传到微信云后台，小程序端直接使用真实 `cloud://fileID` 引用，不把素材直接打进项目包。
 
 ## 9.2 资源入库建议
 - 云端目录建议：`achievements/`
 - 文件命名建议（ASCII）：
-  - `shape-master.png`
-  - `cat-marathon-5km.png`
-  - `no-photo-5-walks.png`
-  - `ten-locations.png`
-  - `spring-first-walk.png`
-  - `summer-first-walk.png`
-  - `autumn-first-walk.png`
-  - `winter-first-walk.png`
+  - `shape_master.png`
+  - `cat_marathon.png`
+  - `no_photo_five_walks.png`
+  - `ten_locations.png`
+  - `spring_first_walk.png`
+  - `summer_first_walk.png`
+  - `autumn_first_walk.png`
+  - `winter_first_walk.png`
 - 前端配置填写位置：
   - `miniprogram/utils/achievement-assets.js`
 - 当前推荐填写：
-  - 微信云后台提供的稳定 HTTPS 图片地址
+  - 微信云后台返回的真实 `cloud://fileID`
+- 文件权限要求：
+  - 成就图需要设置为“所有用户可读”
 - 当前不建议：
-  - 在页面层临时把 `cloud://` 转换为展示地址后直接用于生产
+  - 手动拼接 fileID 路径后直接假定文件存在
+  - 使用临时签名 HTTPS 地址作为长期正式配置
 
 ## 9.3 性能建议
 - 单图建议优先压缩 PNG 体积，控制在视觉可接受范围内。
@@ -164,11 +171,14 @@ V1 使用如下 8 个成就素材，统一采用透明背景 PNG 版本：
 ## 10.2 代码改造点
 - `miniprogram/pages/history/history.js`
   - 拉取记录后追加成就计算逻辑。
-  - 增加 `achievements`、`achievementSummary` 状态。
+  - 增加 `achievements`、`achievementSummary`、`featuredAchievement` 状态。
 - `miniprogram/pages/history/history.wxml`
-  - 成就占位区替换为成就墙 UI。
+  - 成就占位区替换为紧凑勋章墙 UI。
+  - 顶部增加“当前佩戴”勋章展示区。
 - `miniprogram/pages/history/history.wxss`
-  - 新增成就卡样式（解锁/未解锁态）。
+  - 新增紧凑勋章墙、顶部佩戴区样式。
+- 新增 `miniprogram/pages/achievement-detail/*`
+  - 成就详情页展示与分享入口。
 - 新增 `miniprogram/services/achievement.js`
   - 纯函数：输入 walks，输出 achievement 结果。
 - 新增 `miniprogram/utils/achievements.js`
@@ -199,7 +209,7 @@ V1 使用如下 8 个成就素材，统一采用透明背景 PNG 版本：
 
 ## 13. 里程碑建议
 1. PRD 评审通过（当前文档）。
-2. 素材入库与压缩。
+2. 素材英文命名整理并上传到云存储。
 3. 成就计算服务接入。
-4. 成就页 UI 接入与联调。
-5. 真机回归与上线。
+4. 紧凑勋章墙与成就详情页联调。
+5. 云文件权限、真机渲染回归与上线。

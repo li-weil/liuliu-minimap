@@ -2,6 +2,10 @@
   margin-top: 20rpx;
 }
 
+.walk-resume-btn {
+  margin-top: 22rpx;
+}
+
 .mission-group {
   margin-bottom: 12rpx;
 }

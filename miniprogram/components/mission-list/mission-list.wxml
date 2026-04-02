@@ -4,9 +4,11 @@
       <view wx:if="{{!card.isSupplemental}}" class="mission-toggle {{card.completed ? 'mission-toggle-done' : ''}}" catchtap="toggleMission" data-mission="{{card.mission}}">
         <view wx:if="{{card.completed}}" class="mission-toggle-inner"></view>
       </view>
-      <view wx:else class="mission-tag">总结与补充</view>
+      <view wx:else class="mission-toggle mission-toggle-static"></view>
       <view class="mission-copy {{card.completed ? 'mission-copy-done' : ''}}">
-        {{card.label}}
+        <text wx:if="{{card.isSupplemental}}" class="mission-copy-prefix">总结与补充</text>
+        <text wx:if="{{card.isSupplemental}}"> · </text>
+        <text>{{card.label}}</text>
       </view>
     </view>
 

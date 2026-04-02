@@ -8,7 +8,7 @@
     </view>
     <view class="join-title">{{room.themeTitle}}</view>
     <view class="join-subtitle">{{room.locationName}} · {{roomLocationContextLabel}}</view>
-    <view class="join-copy">队友已经把这次漫步主题准备好了。加入后，你会和他们看到同一套任务，一起留下共同记录。</view>
+    <view class="join-copy">加入伙伴，完成同一套任务，一起留下共同记录</view>
 
     <view class="section-card join-section">
       <view class="section-title">任务预览</view>

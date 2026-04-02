@@ -37,6 +37,11 @@
   background: #6c6a49;
 }
 
+.mission-toggle-static {
+  border-color: #d8ccbb;
+  background: #fff;
+}
+
 .mission-tag {
   flex-shrink: 0;
   padding: 8rpx 16rpx;
@@ -52,6 +57,10 @@
   font-size: 28rpx;
   line-height: 1.7;
   color: #2f2b24;
+}
+
+.mission-copy-prefix {
+  font-weight: 600;
 }
 
 .mission-copy-done {

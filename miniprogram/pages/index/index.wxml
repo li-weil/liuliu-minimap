@@ -16,7 +16,7 @@
       <view class="{{journeyMode === 'solo' ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="journeyMode" data-value="solo">单人</view>
       <view class="{{journeyMode === 'team' ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="journeyMode" data-value="team">同行</view>
     </view>
-    <view class="helper-copy">{{journeyMode === 'team' ? '同行模式会把当前主题和地点打包成一个房间，邀请队友一起出发。' : '单人模式会直接进入记录页，围绕今天的主题开始漫步。'}}</view>
+    <view class="helper-copy">{{journeyMode === 'team' ? '同行模式会创建一个房间，邀请伙伴一起出发。' : '单人模式会直接进入记录页，围绕今天的主题开始漫步。'}}</view>
 
     <view class="search-panel">
       <input class="search-input" placeholder="搜索地点或街区" value="{{searchKeyword}}" bindinput="handleSearchInput" confirm-type="search" bindconfirm="searchLocation" />
@@ -162,7 +162,7 @@
       <view class="pill-row selection-row">
         <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
       </view>
-      <view class="helper-copy">AI 会综合天气、季节、状态、偏好和你选定的主题方向来生成内容</view>
+      <view class="helper-copy">AI 会综合天气、季节、状态、偏好和你选定的主题方向来生成内容；如果不选主题，就会随机给你一个方向</view>
 
       <button class="primary-btn full-width-btn advanced-generate-btn" bindtap="handleGenerateTheme" loading="{{isGenerating}}">AI 生成</button>
     </view>

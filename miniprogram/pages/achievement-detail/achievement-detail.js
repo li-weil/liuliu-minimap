@@ -73,10 +73,10 @@ Page({
       ]);
       const records = [...(soloResult.records || []), ...(teamResult.records || [])];
       const achievementResult = computeAchievements(records);
-      const achievement = (achievementResult.achievements || []).find((item) => item.id === this.achievementId) || null;
+      const resolvedAchievement = (achievementResult.achievements || []).find((item) => item.id === this.achievementId) || null;
       this.setData({
-        achievement,
-        shareTitle: achievement ? `${achievement.title}｜我的城市漫步成就` : '我的城市漫步成就',
+        achievement: resolvedAchievement,
+        shareTitle: resolvedAchievement ? `${resolvedAchievement.title}｜我的城市漫步成就` : '我的城市漫步成就',
       });
     } catch (error) {
       wx.showToast({ title: '成就加载失败', icon: 'none' });
