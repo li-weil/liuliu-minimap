@@ -1,0 +1,71 @@
+<view class="page-shell">
+  <view wx:if="{{loading}}" class="empty-copy">正在整理团队结果...</view>
+
+  <view wx:elif="{{room}}">
+    <view class="theme-card detail-hero">
+      <view class="meta-row detail-meta">
+        <view class="meta-pill">同行</view>
+        <view class="meta-pill">{{statusLabel}}</view>
+        <view class="meta-pill">{{room.createdAtLabel}}</view>
+      </view>
+      <view class="detail-title">{{room.themeTitle}}</view>
+      <view class="detail-copy">{{room.locationName}} · {{locationContextLabel}}</view>
+      <view wx:if="{{room.noteText}}" class="detail-summary">{{room.noteText}}</view>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">团队概览</view>
+      <view class="meta-row">
+        <view class="meta-pill">{{room.teamStats.memberCount}} 人同行</view>
+        <view class="meta-pill">{{room.teamStats.completedMissionCount}} / {{room.teamStats.totalMissionCount}} 个任务已完成</view>
+        <view class="meta-pill">{{room.teamStats.contributionCount}} 份任务记录</view>
+      </view>
+      <view class="meta-row" style="margin-top: 14rpx;">
+        <view class="meta-pill">{{room.teamStats.photoCount}} 张图片</view>
+        <view class="meta-pill">{{room.teamStats.videoCount}} 段视频</view>
+        <view class="meta-pill">{{room.teamStats.audioCount}} 段录音</view>
+      </view>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">成员</view>
+      <view class="member-list">
+        <view wx:for="{{room.members}}" wx:key="userId" class="member-item">
+          <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="member-avatar member-avatar-fallback">友</view>
+          <view class="member-name">{{item.nickName}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">任务回顾</view>
+      <view wx:for="{{missionGroups}}" wx:key="mission" class="mission-group">
+        <view class="mission-title">{{item.mission}}</view>
+        <view class="mission-state">{{item.completedLabel}}</view>
+        <view wx:if="{{item.contributions.length}}">
+          <view wx:for="{{item.contributions}}" wx:key="id" class="contribution-card">
+            <view class="contribution-author">{{item.nickName}}</view>
+            <view wx:if="{{item.noteText}}" class="contribution-note">{{item.noteText}}</view>
+            <view class="meta-row">
+              <view wx:if="{{item.photoList.length}}" class="meta-pill">{{item.photoList.length}} 张图</view>
+              <view wx:if="{{item.videoList.length}}" class="meta-pill">{{item.videoList.length}} 段视频</view>
+              <view wx:if="{{item.audioList.length}}" class="meta-pill">{{item.audioList.length}} 段录音</view>
+            </view>
+          </view>
+        </view>
+        <view wx:else class="empty-copy detail-empty">这个任务下还没有团队记录。</view>
+      </view>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">团队动态</view>
+      <view wx:if="{{room.activities.length}}">
+        <view wx:for="{{room.activities}}" wx:key="id" class="activity-item">{{item.content}}</view>
+      </view>
+      <view wx:else class="empty-copy detail-empty">这次同行漫步还没有动态记录。</view>
+    </view>
+  </view>
+
+  <view wx:else class="empty-copy">没有找到这场同行漫步。</view>
+</view>

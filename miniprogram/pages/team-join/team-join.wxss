@@ -1,0 +1,30 @@
+.join-hero,
+.join-section {
+  padding: 28rpx;
+}
+
+.join-title {
+  font-size: 42rpx;
+  font-weight: 600;
+  margin-bottom: 14rpx;
+}
+
+.join-subtitle,
+.join-copy,
+.join-mission {
+  font-size: 24rpx;
+  line-height: 1.7;
+  color: #6f6a5f;
+}
+
+.join-copy {
+  margin: 12rpx 0 24rpx;
+}
+
+.join-section {
+  margin-bottom: 24rpx;
+}
+
+.join-mission {
+  margin-bottom: 10rpx;
+}

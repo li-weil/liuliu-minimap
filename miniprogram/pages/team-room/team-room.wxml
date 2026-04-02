@@ -1,0 +1,56 @@
+<view class="page-shell">
+  <view wx:if="{{loading}}" class="empty-copy">正在整理同行房间...</view>
+
+  <view wx:elif="{{room}}">
+    <view class="hero-card room-hero">
+      <view class="meta-row room-meta">
+        <view class="meta-pill">{{roomModeLabel}}</view>
+        <view class="meta-pill">{{roomStatusLabel}}</view>
+        <view class="meta-pill">{{roomMemberCountLabel}}</view>
+      </view>
+      <view class="room-title">{{room.themeTitle}}</view>
+      <view class="room-subtitle">{{room.locationName}} · {{roomLocationContextLabel}}</view>
+      <view class="room-copy">{{statusCopy}}</view>
+    </view>
+
+    <view class="section-card room-section">
+      <view class="section-title">成员</view>
+      <view class="member-list">
+        <view wx:for="{{room.members}}" wx:key="userId" class="member-item">
+          <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="member-avatar member-avatar-fallback">友</view>
+          <view class="member-name">{{item.nickName}}</view>
+          <view wx:if="{{item.role === 'owner'}}" class="member-tag">房主</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card room-section">
+      <view class="section-title">共同任务</view>
+      <view class="mission-list">
+        <view wx:for="{{room.themeSnapshot.missions}}" wx:key="index" class="mission-item">{{index + 1}}. {{item}}</view>
+      </view>
+    </view>
+
+    <view class="section-card room-section">
+      <view class="section-title">最近动态</view>
+      <view wx:if="{{room.activities.length}}">
+        <view wx:for="{{room.activities}}" wx:key="id" class="activity-item">
+          <view class="activity-copy">{{item.content}}</view>
+        </view>
+      </view>
+      <view wx:else class="empty-copy room-empty">等队友加入后，这里会出现房间动态。</view>
+    </view>
+
+    <view class="action-stack">
+      <button wx:if="{{room.status === 'waiting'}}" class="ghost-btn" open-type="share">邀请队友</button>
+      <button wx:if="{{room.status === 'waiting' && room.memberRole === 'owner'}}" class="primary-btn" bindtap="handleStart">一起出发</button>
+      <button wx:if="{{room.status === 'active'}}" class="primary-btn" bindtap="goRecord">进入团队记录页</button>
+      <button wx:if="{{room.status === 'active' && room.memberRole === 'owner'}}" class="secondary-btn" bindtap="handleFinish">结束同行漫步</button>
+      <button wx:if="{{room.status === 'finished'}}" class="primary-btn" bindtap="goDetail">查看团队结果</button>
+      <button wx:if="{{room.status === 'waiting'}}" class="danger-btn" bindtap="handleLeave">{{leaveButtonLabel}}</button>
+    </view>
+  </view>
+
+  <view wx:else class="empty-copy">没有找到这个同行房间。</view>
+</view>

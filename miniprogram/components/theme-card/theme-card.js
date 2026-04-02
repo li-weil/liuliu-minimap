@@ -12,6 +12,14 @@ Component({
       type: Object,
       value: null,
     },
+    startMain: {
+      type: String,
+      value: '开始这次漫步',
+    },
+    startSub: {
+      type: String,
+      value: '带着这份线索，走进今天的城市片刻',
+    },
   },
 
   methods: {

@@ -11,6 +11,13 @@
       </view>
     </view>
 
+    <view class="field-label section-label">出发方式</view>
+    <view class="pill-row selection-row">
+      <view class="{{journeyMode === 'solo' ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="journeyMode" data-value="solo">单人</view>
+      <view class="{{journeyMode === 'team' ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="journeyMode" data-value="team">同行</view>
+    </view>
+    <view class="helper-copy">{{journeyMode === 'team' ? '同行模式会把当前主题和地点打包成一个房间，邀请队友一起出发。' : '单人模式会直接进入记录页，围绕今天的主题开始漫步。'}}</view>
+
     <view class="search-panel">
       <input class="search-input" placeholder="搜索地点或街区" value="{{searchKeyword}}" bindinput="handleSearchInput" confirm-type="search" bindconfirm="searchLocation" />
       <button class="ghost-btn search-btn" bindtap="searchLocation" loading="{{loadingSearch}}">搜索</button>
@@ -19,6 +26,7 @@
     <view class="meta-row hero-meta">
       <view class="meta-pill">{{locationName}}</view>
       <view class="meta-pill">{{walkMode === 'advanced' ? '3 个任务' : '1 个任务'}}</view>
+      <view class="meta-pill">{{journeyMode === 'team' ? '同行模式' : '单人模式'}}</view>
     </view>
 
     <view class="hero-actions">
@@ -117,7 +125,14 @@
     </view>
 
     <view class="display-card-shell">
-      <theme-card theme="{{currentTheme}}" modeLabel="纯粹模式" displaySummary="{{displaySummary}}" bind:start="handleStartWalk" />
+      <theme-card
+        theme="{{currentTheme}}"
+        modeLabel="纯粹模式"
+        displaySummary="{{displaySummary}}"
+        startMain="{{journeyMode === 'team' ? '发起同行漫步' : '开始这次漫步'}}"
+        startSub="{{journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻'}}"
+        bind:start="handleStartWalk"
+      />
     </view>
   </view>
 
@@ -153,7 +168,14 @@
     </view>
 
     <view class="display-card-shell">
-      <theme-card theme="{{currentTheme}}" modeLabel="进阶模式" displaySummary="{{displaySummary}}" bind:start="handleStartWalk" />
+      <theme-card
+        theme="{{currentTheme}}"
+        modeLabel="进阶模式"
+        displaySummary="{{displaySummary}}"
+        startMain="{{journeyMode === 'team' ? '发起同行漫步' : '开始这次漫步'}}"
+        startSub="{{journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻'}}"
+        bind:start="handleStartWalk"
+      />
     </view>
   </view>
 </view>

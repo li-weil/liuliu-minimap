@@ -14,8 +14,8 @@
       <view class="mission-text">{{item}}</view>
     </view>
     <button class="primary-btn theme-start-btn" bindtap="handleStart">
-      <view class="theme-start-main">开始这次漫步</view>
-      <view class="theme-start-sub">带着这份线索，走进今天的城市片刻</view>
+      <view class="theme-start-main">{{startMain}}</view>
+      <view class="theme-start-sub">{{startSub}}</view>
     </button>
   </view>
 </view>

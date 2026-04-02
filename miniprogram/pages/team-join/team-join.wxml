@@ -1,0 +1,23 @@
+<view class="page-shell">
+  <view wx:if="{{loading}}" class="empty-copy">正在确认这场同行漫步...</view>
+
+  <view wx:elif="{{room}}" class="hero-card join-hero">
+    <view class="meta-row" style="margin-bottom: 18rpx;">
+      <view class="meta-pill">{{roomModeLabel}}</view>
+      <view class="meta-pill">{{roomMemberCountLabel}}</view>
+    </view>
+    <view class="join-title">{{room.themeTitle}}</view>
+    <view class="join-subtitle">{{room.locationName}} · {{roomLocationContextLabel}}</view>
+    <view class="join-copy">队友已经把这次漫步主题准备好了。加入后，你会和他们看到同一套任务，一起留下共同记录。</view>
+
+    <view class="section-card join-section">
+      <view class="section-title">任务预览</view>
+      <view wx:for="{{room.themeSnapshot.missions}}" wx:key="index" class="join-mission">{{index + 1}}. {{item}}</view>
+    </view>
+
+    <button wx:if="{{room.status === 'waiting'}}" class="primary-btn" bindtap="handleJoin" loading="{{joining}}">加入同行房间</button>
+    <view wx:else class="empty-copy">这个房间已经开始或结束了，暂时不能再加入。</view>
+  </view>
+
+  <view wx:else class="empty-copy">没有找到这场同行漫步。</view>
+</view>

@@ -10,7 +10,10 @@ Component({
 
   methods: {
     openDetail() {
-      this.triggerEvent('open', { id: this.properties.walk && this.properties.walk._id });
+      this.triggerEvent('open', {
+        id: this.properties.walk && (this.properties.walk.id || this.properties.walk._id),
+        recordType: this.properties.walk && this.properties.walk.recordType ? this.properties.walk.recordType : 'solo',
+      });
     },
 
     formatTime(value) {

@@ -4,7 +4,7 @@ const { inferExtension } = require('../utils/media');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'publishWalkShare', 'deleteWalk']
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'generateCompanionNote', 'publishWalkShare', 'deleteWalk']
     : []
 );
 
@@ -73,6 +73,7 @@ function normalizeWalkRecord(item) {
   return {
     _id: recordId,
     id: recordId,
+    userId: item.userId || '',
     themeTitle: item.themeTitle || themeSnapshot.title || '',
     themeCategory: item.themeCategory || themeSnapshot.category || '',
     locationName: item.locationName || '未知地点',
@@ -101,6 +102,7 @@ function normalizeWalkRecord(item) {
     missionReviews: item.missionReviews || {},
     missionAssetMap,
     isPublic: !!item.isPublic,
+    canDelete: !!recordId && !!item.userId,
     walkMode: item.walkMode || 'pure',
     generationSource: item.generationSource || 'unknown',
     themeSnapshot: {
@@ -112,6 +114,136 @@ function normalizeWalkRecord(item) {
         ? themeSnapshot.missions
         : missionList,
     },
+  };
+}
+
+function normalizeTeamMember(item) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  return {
+    userId: item.userId || '',
+    nickName: item.nickName || item.nickname || '微信用户',
+    avatarUrl: item.avatarUrl || '',
+    role: item.role || 'member',
+    status: item.status || 'joined',
+    joinedAt: item.joinedAt || item.createdAt || Date.now(),
+  };
+}
+
+function normalizeTeamContribution(item) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  return {
+    id: item._id || item.id || '',
+    roomId: item.roomId || '',
+    missionKey: item.missionKey || '',
+    missionLabel: item.missionLabel || item.missionKey || '',
+    userId: item.userId || '',
+    nickName: item.nickName || '微信用户',
+    avatarUrl: item.avatarUrl || '',
+    noteText: item.noteText || '',
+    photoList: Array.isArray(item.photoList) ? item.photoList.filter(Boolean) : [],
+    videoList: Array.isArray(item.videoList) ? item.videoList.filter(Boolean) : [],
+    audioList: Array.isArray(item.audioList) ? item.audioList.filter(Boolean) : [],
+    completed: !!item.completed,
+    createdAt: item.createdAt || Date.now(),
+    updatedAt: item.updatedAt || item.createdAt || Date.now(),
+  };
+}
+
+function normalizeTeamActivity(item) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  return {
+    id: item._id || item.id || '',
+    roomId: item.roomId || '',
+    type: item.type || 'unknown',
+    userId: item.userId || '',
+    nickName: item.nickName || '队友',
+    avatarUrl: item.avatarUrl || '',
+    content: item.content || '',
+    payload: item.payload || {},
+    createdAt: item.createdAt || Date.now(),
+  };
+}
+
+function buildTeamRouteStats(room = {}) {
+  const startedAt = room.startedAt || null;
+  const endedAt = room.endedAt || null;
+  const durationMs = startedAt && endedAt && endedAt >= startedAt ? endedAt - startedAt : 0;
+  return {
+    durationMs,
+    pointCount: 0,
+    distanceMeters: 0,
+    durationLabel: formatDuration(durationMs),
+    distanceLabel: formatDistance(0),
+    startedLabel: formatTrackTime(startedAt),
+    stoppedLabel: endedAt ? formatTrackTime(endedAt) : (room.status === 'active' ? '进行中' : '未记录'),
+  };
+}
+
+function normalizeTeamWalkRecord(item) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const themeSnapshot = item.themeSnapshot || {};
+  const members = Array.isArray(item.members)
+    ? item.members.map(normalizeTeamMember).filter(Boolean)
+    : [];
+  const contributions = Array.isArray(item.contributions)
+    ? item.contributions.map(normalizeTeamContribution).filter(Boolean)
+    : [];
+  const activities = Array.isArray(item.activities)
+    ? item.activities.map(normalizeTeamActivity).filter(Boolean)
+    : [];
+  const teamStats = item.teamStats || {};
+
+  return {
+    _id: item._id || item.id || '',
+    id: item._id || item.id || '',
+    recordType: 'team',
+    ownerUserId: item.ownerUserId || '',
+    themeTitle: item.themeTitle || themeSnapshot.title || '同行漫步',
+    themeCategory: item.themeCategory || themeSnapshot.category || '',
+    locationName: item.locationName || '未知地点',
+    locationContext: item.locationContext || '',
+    locationAddress: item.locationAddress || '',
+    noteText: item.teamSummary || item.summary || '',
+    createdAt: item.createdAt || Date.now(),
+    status: item.status || 'waiting',
+    walkMode: item.walkMode || 'pure',
+    coverImage: item.coverImage || '',
+    startedAt: item.startedAt || null,
+    endedAt: item.endedAt || null,
+    routeStats: buildTeamRouteStats(item),
+    teamStats: {
+      memberCount: teamStats.memberCount || item.memberCount || members.length,
+      contributionCount: teamStats.contributionCount || contributions.length,
+      completedMissionCount: teamStats.completedMissionCount || 0,
+      totalMissionCount: teamStats.totalMissionCount || ((themeSnapshot.missions || []).length),
+      photoCount: teamStats.photoCount || 0,
+      videoCount: teamStats.videoCount || 0,
+      audioCount: teamStats.audioCount || 0,
+    },
+    themeSnapshot: {
+      ...themeSnapshot,
+      title: item.themeTitle || themeSnapshot.title || '同行漫步',
+      category: item.themeCategory || themeSnapshot.category || '',
+      missions: Array.isArray(themeSnapshot.missions) ? themeSnapshot.missions : [],
+    },
+    members,
+    contributions,
+    activities,
+    canDelete: false,
+    isPublic: false,
+    memberRole: item.memberRole || '',
   };
 }
 
@@ -223,6 +355,9 @@ const ENDPOINTS = {
     cloudName: 'generateSticker',
   },
   generateStickerImage: {
+    cloudName: 'generateSticker',
+  },
+  generateCompanionNote: {
     cloudName: 'generateSticker',
   },
   createWalk: {
@@ -357,6 +492,74 @@ const ENDPOINTS = {
         reason: (data && data.reason) || '',
       }),
     },
+  },
+  createTeamRoom: {
+    cloudName: 'createTeamRoom',
+    normalizeCloudResponse: (data) => ({
+      roomId: data && data.roomId ? data.roomId : '',
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+    }),
+  },
+  getTeamRoomDetail: {
+    cloudName: 'getTeamRoomDetail',
+    normalizeCloudResponse: (data) => ({
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+    }),
+  },
+  joinTeamRoom: {
+    cloudName: 'joinTeamRoom',
+    normalizeCloudResponse: (data) => ({
+      joined: !!(data && data.joined),
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+    }),
+  },
+  leaveTeamRoom: {
+    cloudName: 'leaveTeamRoom',
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+      reason: data && data.reason ? data.reason : '',
+    }),
+  },
+  startTeamWalk: {
+    cloudName: 'startTeamWalk',
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+    }),
+  },
+  submitTeamContribution: {
+    cloudName: 'submitTeamContribution',
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      contribution: data && data.contribution ? normalizeTeamContribution(data.contribution) : null,
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+    }),
+  },
+  listTeamActivities: {
+    cloudName: 'listTeamActivities',
+    normalizeCloudResponse: (data) => ({
+      activities: Array.isArray(data && data.activities) ? data.activities.map(normalizeTeamActivity).filter(Boolean) : [],
+    }),
+  },
+  finishTeamWalk: {
+    cloudName: 'finishTeamWalk',
+    normalizeCloudResponse: (data) => ({
+      ok: !!(data && data.ok),
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+    }),
+  },
+  getTeamWalkDetail: {
+    cloudName: 'getTeamWalkDetail',
+    normalizeCloudResponse: (data) => ({
+      room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
+    }),
+  },
+  listMyTeamWalks: {
+    cloudName: 'listMyTeamWalks',
+    normalizeCloudResponse: (data) => ({
+      records: Array.isArray(data && data.records) ? data.records.map(normalizeTeamWalkRecord).filter(Boolean) : [],
+    }),
   },
   uploadMedia: {
     cloudName: '',

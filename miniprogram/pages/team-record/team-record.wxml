@@ -1,0 +1,88 @@
+<view class="page-shell">
+  <view wx:if="{{loading}}" class="empty-copy">正在进入团队记录页...</view>
+
+  <view wx:elif="{{room}}">
+    <view class="theme-card team-hero">
+      <view class="meta-row" style="margin-bottom: 16rpx;">
+        <view class="meta-pill">{{roomMemberCountLabel}}</view>
+        <view class="meta-pill">{{roomMissionProgressLabel}}</view>
+      </view>
+      <view class="team-hero-title">{{room.themeTitle}}</view>
+      <view class="team-hero-copy">{{room.locationName}} · {{roomLocationContextLabel}}</view>
+      <view class="member-strip">
+        <view wx:for="{{room.members}}" wx:key="userId" class="member-chip">{{item.nickName}}</view>
+      </view>
+    </view>
+
+    <view class="section-card team-block">
+      <view class="section-title">团队任务进度</view>
+      <view class="mission-tabs">
+        <view
+          wx:for="{{missionViews}}"
+          wx:key="mission"
+          class="mission-tab {{item.tabClassName}}"
+          bindtap="selectMission"
+          data-mission="{{item.mission}}"
+        >
+          <view class="mission-tab-title">{{item.mission}}</view>
+          <view class="mission-tab-meta">{{item.teamCompletedLabel}} · {{item.memberCount}} 人参与</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card team-block">
+      <view class="section-title">我的提交</view>
+      <textarea class="text-area" placeholder="给这个任务补一句记录，队友也会看到。" value="{{editorDraft.noteText}}" bindinput="handleNoteInput" />
+      <view class="editor-actions">
+        <button class="ghost-btn" bindtap="choosePhoto">加图片</button>
+        <button class="ghost-btn" bindtap="chooseVideo">加视频</button>
+        <button class="ghost-btn" bindtap="toggleAudioRecording">{{audioButtonLabel}}</button>
+      </view>
+      <view class="meta-row" style="margin-top: 16rpx;">
+        <view class="meta-pill">{{editorDraft.photoList.length}} 张图片</view>
+        <view class="meta-pill">{{editorDraft.videoList.length}} 段视频</view>
+        <view class="meta-pill">{{editorDraft.audioList.length}} 段录音</view>
+      </view>
+      <view class="asset-list" wx:if="{{editorDraft.photoList.length}}">
+        <view wx:for="{{editorDraft.photoList}}" wx:key="index" class="asset-item">
+          <image class="asset-thumb" src="{{item}}" mode="aspectFill" />
+          <view class="asset-remove" bindtap="removePhoto" data-index="{{index}}">删除</view>
+        </view>
+      </view>
+      <view class="asset-list" wx:if="{{editorDraft.videoList.length}}">
+        <view wx:for="{{editorDraft.videoList}}" wx:key="index" class="asset-item">
+          <view class="asset-file">视频 {{index + 1}}</view>
+          <view class="asset-remove" bindtap="removeVideo" data-index="{{index}}">删除</view>
+        </view>
+      </view>
+      <view class="asset-list" wx:if="{{editorDraft.audioList.length}}">
+        <view wx:for="{{editorDraft.audioList}}" wx:key="index" class="asset-item">
+          <view class="asset-file">录音 {{index + 1}}</view>
+          <view class="asset-remove" bindtap="removeAudio" data-index="{{index}}">删除</view>
+        </view>
+      </view>
+      <view class="complete-row" bindtap="toggleCompleted">
+        <view class="complete-check {{completedClassName}}"></view>
+        <view class="complete-copy">这条任务我已经完成了</view>
+      </view>
+      <button class="primary-btn" bindtap="handleSubmit" loading="{{saving}}">同步给团队</button>
+    </view>
+
+    <view class="section-card team-block">
+      <view class="section-title">团队动态</view>
+      <view wx:if="{{room.activities.length}}">
+        <view wx:for="{{room.activities}}" wx:key="id" class="activity-item">
+          <view class="activity-copy">{{item.content}}</view>
+        </view>
+      </view>
+      <view wx:else class="empty-copy team-empty">队友开始更新任务后，这里会出现实时动态。</view>
+    </view>
+
+    <view class="action-stack">
+      <button class="ghost-btn" bindtap="goRoom">返回房间页</button>
+      <button wx:if="{{room.memberRole === 'owner'}}" class="secondary-btn" bindtap="handleFinish">结束同行漫步</button>
+    </view>
+  </view>
+
+  <view wx:else class="empty-copy">没有找到这个团队房间。</view>
+</view>

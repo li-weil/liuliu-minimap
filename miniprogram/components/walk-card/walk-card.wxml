@@ -1,11 +1,15 @@
 <view wx:if="{{walk}}" class="walk-card" style="padding: 28rpx; margin-bottom: 20rpx;" bindtap="openDetail">
   <view style="display: flex; justify-content: space-between; gap: 20rpx; margin-bottom: 16rpx;">
     <view style="font-size: 32rpx; font-weight: 600; flex: 1;">{{walk.themeTitle}}</view>
-    <view class="meta-pill">{{walk.isPublic ? '公开' : '私密'}}</view>
+    <view class="meta-row">
+      <view class="meta-pill">{{walk.recordType === 'team' ? '同行' : (walk.isPublic ? '公开' : '私密')}}</view>
+      <view wx:if="{{walk.recordType === 'team'}}" class="meta-pill">{{walk.status === 'finished' ? '已结束' : (walk.status === 'active' ? '进行中' : '待出发')}}</view>
+    </view>
   </view>
   <view class="meta-row" style="margin-bottom: 16rpx;">
     <view class="meta-pill">{{walk.locationName || '未知地点'}}</view>
-    <view class="meta-pill">{{walk.routeStats.distanceLabel || '0 m'}}</view>
+    <view wx:if="{{walk.recordType === 'team'}}" class="meta-pill">{{walk.teamStats.memberCount || 0}} 人同行</view>
+    <view wx:else class="meta-pill">{{walk.routeStats.distanceLabel || '0 m'}}</view>
     <view class="meta-pill">{{walk.routeStats.durationLabel || '0秒'}}</view>
   </view>
   <view wx:if="{{walk.noteText}}" style="color: #6f6a5f; line-height: 1.6; margin-bottom: 16rpx;">{{walk.noteText}}</view>

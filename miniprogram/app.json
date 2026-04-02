@@ -1,6 +1,10 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/team-join/team-join",
+    "pages/team-room/team-room",
+    "pages/team-record/team-record",
+    "pages/team-detail/team-detail",
     "pages/record/record",
     "pages/walk-detail/walk-detail",
     "pages/history/history",
@@ -16,9 +20,6 @@
   "permission": {
     "scope.userLocation": {
       "desc": "用于获取当前位置、选点探索和记录漫步轨迹"
-    },
-    "scope.userLocationBackground": {
-      "desc": "用于在切到后台或锁屏后继续记录漫步轨迹"
     }
   },
   "requiredPrivateInfos": [

@@ -11,8 +11,10 @@ const {
 const { explainLocationError, getCurrentLocation } = require('../../utils/location');
 const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
 const { fetchNearbyPois, searchLocations } = require('../../services/map');
+const { createTeamRoom } = require('../../services/team');
 const { generateCombinedTheme, generateRandomTheme, generateTheme, getLocationContext } = require('../../services/theme');
 const { getBackendProvider } = require('../../services/api');
+const { isManualLogoutSuppressed } = require('../../services/user');
 
 function normalizeMissionText(mission) {
   if (typeof mission === 'string') {
@@ -241,6 +243,7 @@ Page({
     mapCircles: [],
     isMapDragging: false,
     walkMode: 'pure',
+    journeyMode: 'solo',
     isGenerating: false,
     searchKeyword: '',
     searchResults: [],
@@ -716,28 +719,95 @@ Page({
       return;
     }
 
+    if (this.data.journeyMode === 'team') {
+      this.handleCreateTeamRoom();
+      return;
+    }
+
     app.globalData.currentTheme = this.data.currentTheme;
     const draft = {
       ...app.globalData.walkDraft,
       completedMissions: [],
+      missionAssetMap: {},
+      missionReviews: {},
       startedAt: Date.now(),
+      trackStartedAt: null,
+      trackStoppedAt: null,
       locationName: this.data.locationName,
       locationContext: this.data.locationContext,
       locationAddress: this.data.locationAddress,
       latitude: this.data.latitude,
       longitude: this.data.longitude,
-      missionReviews: {},
       selectedMission: this.data.currentTheme.missions[0] || '',
       noteText: '',
       photoList: [],
       videoList: [],
       audioList: [],
       routePoints: [],
+      routeStats: {
+        durationMs: 0,
+        pointCount: 0,
+        distanceMeters: 0,
+      },
+      sticker: null,
       walkMode: this.data.walkMode,
       generationSource: this.data.currentThemeSource,
       isPublic: false,
     };
     app.setWalkDraft(draft);
     wx.navigateTo({ url: '/pages/record/record' });
+  },
+
+  async handleCreateTeamRoom() {
+    if (!this.data.currentTheme) {
+      wx.showToast({ title: '先生成一个主题', icon: 'none' });
+      return;
+    }
+
+    await app.ensureUserReady();
+    if (!app.globalData.user) {
+      const pausedLogin = isManualLogoutSuppressed();
+      wx.showModal({
+        title: pausedLogin ? '先恢复登录' : '先完善资料',
+        content: pausedLogin
+          ? '你刚刚主动退出过账号，去个人页点一次登录后，就能发起同行漫步。'
+          : '发起同行漫步前，需要先在个人页设置一次头像和昵称。',
+        confirmText: pausedLogin ? '去恢复' : '去设置',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({ url: '/pages/profile/profile' });
+          }
+        },
+      });
+      return;
+    }
+
+    wx.showLoading({ title: '创建房间' });
+    try {
+      const result = await createTeamRoom({
+        themeSnapshot: this.data.currentTheme,
+        themeTitle: this.data.currentTheme.title,
+        locationName: this.data.locationName,
+        locationContext: this.data.locationContext,
+        locationAddress: this.data.locationAddress,
+        latitude: this.data.latitude,
+        longitude: this.data.longitude,
+        walkMode: this.data.walkMode,
+      });
+      const roomId = result && result.roomId ? result.roomId : (result && result.room && result.room.id ? result.room.id : '');
+      if (!roomId) {
+        throw new Error('missing_room_id');
+      }
+      wx.navigateTo({ url: `/pages/team-room/team-room?roomId=${encodeURIComponent(roomId)}` });
+    } catch (error) {
+      wx.showModal({
+        title: '创建房间失败',
+        content: extractErrorMessage(error, '创建同行房间失败'),
+        showCancel: false,
+        confirmText: '知道了',
+      });
+    } finally {
+      wx.hideLoading();
+    }
   },
 });
