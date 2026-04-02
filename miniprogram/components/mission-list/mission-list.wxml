@@ -97,7 +97,7 @@
       </view>
 
       <button class="mission-verify-btn" bindtap="generateCard" data-mission="{{card.mission}}" loading="{{generatingMissionCard === card.mission}}" disabled="{{generatingMissionCard === card.mission}}">
-        {{generatingMissionCard === card.mission ? '66 正在整理卡片...' : (card.cardVersion ? '重新生成卡片' : '生成卡片')}}
+        {{generatingMissionCard === card.mission ? '66 正在记录...' : (card.cardVersion ? '重新生成卡片' : '生成卡片')}}
       </button>
     </view>
   </view>

@@ -1,8 +1,40 @@
+.history-page {
+  background:
+    radial-gradient(circle at top right, rgba(255, 236, 208, 0.75), transparent 28%),
+    linear-gradient(180deg, #fbf8f2 0%, #f4efe6 100%);
+}
+
 .history-hero,
 .history-tabs,
 .history-placeholder {
   padding: 28rpx;
   margin-bottom: 24rpx;
+}
+
+.hero-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.featured-chip {
+  min-width: 180rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(135deg, rgba(255, 244, 223, 0.96), rgba(244, 227, 196, 0.96));
+}
+
+.featured-chip-label {
+  font-size: 20rpx;
+  color: #8d7b5d;
+}
+
+.featured-chip-title {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #4f4232;
 }
 
 .mode-switch {
@@ -22,4 +54,105 @@
 .mode-chip-active {
   background: #5a5a40;
   color: #fff;
+}
+
+.achievement-board {
+  padding: 8rpx 4rpx 0;
+}
+
+.achievement-summary-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 12rpx 10rpx 20rpx;
+}
+
+.achievement-summary-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #322a1f;
+}
+
+.achievement-summary-subtitle {
+  margin-top: 8rpx;
+  color: #7e7667;
+  font-size: 22rpx;
+}
+
+.achievement-summary-meta {
+  text-align: right;
+}
+
+.achievement-summary-count {
+  font-size: 54rpx;
+  line-height: 1;
+  font-weight: 700;
+  color: #4c3f2f;
+}
+
+.achievement-summary-label {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8c816e;
+}
+
+.achievement-grid-compact {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 34rpx;
+  column-gap: 2%;
+}
+
+.achievement-badge-item {
+  width: 32%;
+  text-align: center;
+}
+
+.achievement-badge-shell {
+  position: relative;
+  width: 100%;
+  height: 220rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.achievement-badge-shell-off {
+  filter: grayscale(1);
+  opacity: 0.56;
+}
+
+.achievement-badge-image {
+  width: 92%;
+  height: 92%;
+  display: block;
+}
+
+.achievement-badge-placeholder {
+  border-radius: 32rpx;
+  background:
+    radial-gradient(circle at top right, rgba(255, 241, 220, 0.96), transparent 42%),
+    linear-gradient(135deg, #f0e0c7, #d9c2a0);
+  color: #5b4b37;
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.44);
+}
+
+.achievement-badge-placeholder-glyph {
+  font-size: 42rpx;
+  font-weight: 600;
+}
+
+.achievement-badge-title {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  line-height: 1.35;
+  color: #352d23;
+  min-height: 70rpx;
+}
+
+.achievement-badge-progress {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #8b816f;
 }

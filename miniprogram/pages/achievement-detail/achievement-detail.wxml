@@ -1,0 +1,54 @@
+<view class="page-shell achievement-detail-page">
+  <view wx:if="{{loading}}" class="empty-copy">正在整理这枚成就...</view>
+
+  <view wx:elif="{{achievement}}" class="detail-shell">
+    <view class="detail-hero">
+      <image
+        wx:if="{{achievement.asset}}"
+        class="detail-badge-image"
+        src="{{achievement.asset}}"
+        mode="aspectFit"
+        binderror="handleImageError"
+      />
+      <view wx:else class="detail-badge-image detail-badge-placeholder">
+        <view class="detail-badge-placeholder-glyph">{{achievement.progressLabel}}</view>
+      </view>
+    </view>
+
+    <view class="detail-copy">
+      <view class="detail-title-row">
+        <view class="detail-title">{{achievement.title}}</view>
+        <view class="detail-status {{achievement.unlocked ? 'detail-status-on' : ''}}">
+          {{achievement.unlocked ? '已获得' : '进行中'}}
+        </view>
+      </view>
+      <view class="detail-desc">{{achievement.description}}</view>
+      <view class="detail-meta">
+        <view class="detail-meta-item">已完成：<text class="detail-meta-strong">{{achievement.progressValueLabel}}</text></view>
+        <view class="detail-meta-item">目标：<text class="detail-meta-strong">{{achievement.targetValueLabel}}</text></view>
+      </view>
+      <view wx:if="{{achievement.unlockedAtLabel}}" class="detail-time">{{achievement.unlockedAtLabel}} 获得该成就</view>
+      <view wx:else class="detail-time">继续完成这项挑战，就会点亮这枚勋章</view>
+    </view>
+
+    <view class="detail-progress-board">
+      <view class="detail-progress-title">达成路径</view>
+      <view class="detail-progress-track">
+        <view wx:for="{{achievement.milestones}}" wx:key="index" class="detail-progress-node">
+          <view class="detail-progress-badge {{item.reached ? 'detail-progress-badge-on' : ''}} {{item.current ? 'detail-progress-badge-current' : ''}}">
+            <image wx:if="{{achievement.asset}}" class="detail-progress-image" src="{{achievement.asset}}" mode="aspectFit" />
+            <view wx:else class="detail-progress-glyph">{{achievement.progressLabel}}</view>
+          </view>
+          <view class="detail-progress-label">{{item.label}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="detail-actions">
+      <button class="ghost-btn detail-action-btn" bindtap="handleSetFeatured">
+        {{featuredAchievementId === achievement.id ? '当前展示中' : '设为展示成就'}}
+      </button>
+      <button class="primary-btn detail-action-btn" open-type="share">炫耀一下</button>
+    </view>
+  </view>
+</view>

@@ -109,6 +109,27 @@ function buildRouteStats(routePoints, trackStartedAt, trackStoppedAt, isTracking
   };
 }
 
+function normalizeMapRoutePoints(routePoints) {
+  return (Array.isArray(routePoints) ? routePoints : [])
+    .map((point) => ({
+      latitude: Number(point && point.latitude),
+      longitude: Number(point && point.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+}
+
+function buildMapPolyline(routePoints) {
+  const points = normalizeMapRoutePoints(routePoints);
+  if (points.length < 2) {
+    return [];
+  }
+  return [{
+    points,
+    color: '#5a5a40',
+    width: 4,
+  }];
+}
+
 function splitPoemLines(poem) {
   const normalized = String(poem || '').replace(/[。！？]+$/g, '');
   const lines = normalized
@@ -347,6 +368,7 @@ Page({
       startedLabel: '未开始',
       stoppedLabel: '未开始',
     },
+    mapPolyline: [],
   },
 
   onLoad() {
@@ -417,6 +439,7 @@ Page({
         sticker: decorateSticker(nextDraft.sticker),
       },
       routeStats,
+      mapPolyline: buildMapPolyline(nextDraft.routePoints),
     });
   },
 
@@ -997,6 +1020,7 @@ Page({
         draft.trackStoppedAt,
         true
       ),
+      mapPolyline: buildMapPolyline(draft.routePoints),
     });
     try {
       const mode = await this.startRealtimeTracking();
@@ -1050,6 +1074,7 @@ Page({
         stoppedAt,
         false
       ),
+      mapPolyline: buildMapPolyline(draft.routePoints),
     });
   },
 
@@ -1227,6 +1252,8 @@ Page({
         isPublic: false,
         walkMode: this.data.draft.walkMode,
         generationSource: this.data.draft.generationSource,
+        season: this.data.draft.season || '',
+        generationContext: this.data.draft.generationContext || {},
         trackStartedAt: this.data.draft.trackStartedAt || this.data.draft.startedAt,
         trackStoppedAt: this.data.draft.trackStoppedAt || Date.now(),
         routeStats: {

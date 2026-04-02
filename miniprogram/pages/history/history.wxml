@@ -1,7 +1,15 @@
-<view class="page-shell">
+<view class="page-shell history-page">
   <view class="hero-card history-hero">
-    <view class="section-title">足迹</view>
-    <view class="section-subtitle">{{user ? '这里会按当前登录账户整理你的漫步记录。' : (loginState === 'paused' ? '你刚刚主动退出过账号，恢复登录后就能继续查看这位用户的漫步历史。' : '第一次使用时完善一次资料，之后就会自动带出属于你的漫步历史。')}}</view>
+    <view class="hero-topline">
+      <view>
+        <view class="section-title">足迹</view>
+        <view class="section-subtitle">{{user ? '你的漫步纪念与成就会按当前登录账户自动整理。' : (loginState === 'paused' ? '你刚刚主动退出过账号，恢复登录后就能继续查看这位用户的漫步历史。' : '第一次使用时完善一次资料，之后就会自动带出属于你的漫步历史。')}}</view>
+      </view>
+      <view wx:if="{{featuredAchievement}}" class="featured-chip">
+        <view class="featured-chip-label">当前佩戴</view>
+        <view class="featured-chip-title">{{featuredAchievement.title}}</view>
+      </view>
+    </view>
   </view>
 
   <view wx:if="{{!user}}" class="section-card history-placeholder">
@@ -28,8 +36,44 @@
     </view>
   </view>
 
-  <view wx:elif="{{user}}" class="section-card history-placeholder">
-    <view class="section-title">成就</view>
-    <view class="section-subtitle">成就模块先留空，后续再按触发条件接入。</view>
+  <view wx:elif="{{user}}" class="achievement-board">
+    <view class="achievement-summary-row">
+      <view>
+        <view class="achievement-summary-title">最近获得的成就</view>
+        <view class="achievement-summary-subtitle">点击勋章查看详情、进度和分享入口</view>
+      </view>
+      <view class="achievement-summary-meta">
+        <view class="achievement-summary-count">{{achievementSummary.unlockedCount}}</view>
+        <view class="achievement-summary-label">总成就 {{achievementSummary.totalCount || 8}} 枚</view>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="empty-copy">正在整理你的成就进度...</view>
+
+    <view wx:else class="achievement-grid-compact">
+      <view
+        wx:for="{{achievements}}"
+        wx:key="id"
+        class="achievement-badge-item"
+        bindtap="openAchievementDetail"
+        data-id="{{item.id}}"
+      >
+        <view class="achievement-badge-shell {{item.unlocked ? 'achievement-badge-shell-on' : 'achievement-badge-shell-off'}}">
+          <image
+            wx:if="{{item.assetUrl}}"
+            class="achievement-badge-image"
+            src="{{item.assetUrl}}"
+            mode="aspectFit"
+            binderror="handleAchievementImageError"
+            data-id="{{item.id}}"
+          />
+          <view wx:else class="achievement-badge-image achievement-badge-placeholder">
+            <view class="achievement-badge-placeholder-glyph">{{item.progressLabel}}</view>
+          </view>
+        </view>
+        <view class="achievement-badge-title">{{item.title}}</view>
+        <view class="achievement-badge-progress">{{item.progressText}}</view>
+      </view>
+    </view>
   </view>
 </view>

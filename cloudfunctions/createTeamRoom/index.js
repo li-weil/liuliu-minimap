@@ -41,6 +41,8 @@ exports.main = async (event) => {
     locationAddress: event.locationAddress || '',
     latitude: event.latitude !== undefined ? event.latitude : null,
     longitude: event.longitude !== undefined ? event.longitude : null,
+    season: event.season || '',
+    generationContext: event.generationContext || {},
     memberCount: 1,
     teamStats: {
       memberCount: 1,

@@ -1,5 +1,5 @@
 module.exports = {
-  cloudEnvId: 'cloud1-5gcsu5su6821beaf',
+  cloudEnvId: 'cloud1-2gdui7md5af99e5c',
   apiBaseUrl: '',
   apiPrefix: '/api/v1',
   requestTimeout: 15000,

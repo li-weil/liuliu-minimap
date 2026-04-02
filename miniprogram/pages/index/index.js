@@ -84,6 +84,19 @@ function buildSelectedThemeCategories(selected) {
   return (selected || []).map((item) => (String(item).includes('漫步') ? String(item) : `${item}漫步`));
 }
 
+function buildGenerationContext(pageData) {
+  if (!pageData || pageData.walkMode !== 'advanced') {
+    return {};
+  }
+
+  return {
+    weather: pageData.weather || '',
+    season: pageData.season || '',
+    mood: pageData.mood || '',
+    preference: pageData.preference || '',
+  };
+}
+
 function buildSearchResultViews(results) {
   function pickTypeLabels(type) {
     return String(type || '')
@@ -725,6 +738,7 @@ Page({
     }
 
     app.globalData.currentTheme = this.data.currentTheme;
+    const generationContext = buildGenerationContext(this.data);
     const draft = {
       ...app.globalData.walkDraft,
       completedMissions: [],
@@ -752,6 +766,8 @@ Page({
       sticker: null,
       walkMode: this.data.walkMode,
       generationSource: this.data.currentThemeSource,
+      season: generationContext.season || '',
+      generationContext,
       isPublic: false,
     };
     app.setWalkDraft(draft);
@@ -784,6 +800,7 @@ Page({
 
     wx.showLoading({ title: '创建房间' });
     try {
+      const generationContext = buildGenerationContext(this.data);
       const result = await createTeamRoom({
         themeSnapshot: this.data.currentTheme,
         themeTitle: this.data.currentTheme.title,
@@ -793,6 +810,8 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
+        season: generationContext.season || '',
+        generationContext,
       });
       const roomId = result && result.roomId ? result.roomId : (result && result.room && result.room.id ? result.room.id : '');
       if (!roomId) {

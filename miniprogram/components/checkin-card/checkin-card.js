@@ -1,7 +1,7 @@
-const PAPER_TEXTURE = '/assets/images/checkin-card/paper-texture.png';
-const POSTMARK = '/assets/images/checkin-card/postmark-generated.png';
-const BARCODE = '/assets/images/checkin-card/barcode-generated.png';
-const CAT_HEAD = '/assets/images/checkin-card/cat-head-realistic.png';
+const PAPER_TEXTURE = 'assets/images/checkin-card/paper-texture.png';
+const POSTMARK = 'assets/images/checkin-card/postmark-generated.png';
+const BARCODE = 'assets/images/checkin-card/barcode-generated.png';
+const CAT_HEAD = 'assets/images/checkin-card/cat-head-realistic.png';
 const { ensureCanvasCompatibleImage } = require('../../utils/media');
 
 const CARD_WIDTH = 327;

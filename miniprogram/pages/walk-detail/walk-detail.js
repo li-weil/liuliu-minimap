@@ -233,6 +233,36 @@ function buildMissionItems(walk) {
   }));
 }
 
+function normalizeMapRoutePoints(routePoints) {
+  return (Array.isArray(routePoints) ? routePoints : [])
+    .map((point) => ({
+      latitude: Number(point && point.latitude),
+      longitude: Number(point && point.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+}
+
+function buildMapPolyline(routePoints) {
+  const points = normalizeMapRoutePoints(routePoints);
+  if (points.length < 2) {
+    return [];
+  }
+  return [{
+    points,
+    color: '#5a5a40',
+    width: 4,
+  }];
+}
+
+function getMapCenter(routePoints) {
+  const points = normalizeMapRoutePoints(routePoints);
+  const fallback = {
+    latitude: 39.908823,
+    longitude: 116.39747,
+  };
+  return points.length ? points[points.length - 1] : fallback;
+}
+
 Page({
   data: {
     loading: true,
@@ -257,6 +287,9 @@ Page({
     },
     isPublishingShare: false,
     isDeletingWalk: false,
+    mapCenterLatitude: 39.908823,
+    mapCenterLongitude: 116.39747,
+    mapPolyline: [],
   },
 
   onLoad(query) {
@@ -291,9 +324,13 @@ Page({
             canDelete: queryCanDelete(result.walk, this.data.source),
           }
         : null;
+      const mapCenter = getMapCenter(walk && walk.routePoints);
       this.setData({
         walk,
         activeMission: walk && walk.missionItems && walk.missionItems.length ? walk.missionItems[0].mission : '',
+        mapCenterLatitude: mapCenter.latitude,
+        mapCenterLongitude: mapCenter.longitude,
+        mapPolyline: buildMapPolyline(walk && walk.routePoints),
       }, () => {
         this.prepareMissionCard();
       });

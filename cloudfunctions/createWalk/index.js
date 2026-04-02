@@ -33,6 +33,8 @@ exports.main = async (event) => {
     isPublic: !!event.isPublic,
     walkMode: event.walkMode || 'pure',
     generationSource: event.generationSource || 'unknown',
+    season: event.season || '',
+    generationContext: event.generationContext || {},
     createdAt: Date.now(),
   };
 

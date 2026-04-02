@@ -7,6 +7,7 @@
     "pages/team-detail/team-detail",
     "pages/record/record",
     "pages/walk-detail/walk-detail",
+    "pages/achievement-detail/achievement-detail",
     "pages/history/history",
     "pages/profile/profile"
   ],

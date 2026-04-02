@@ -1,33 +1,7 @@
 {
   "libVersion": "3.15.0",
-  "condition": {
-    "miniprogram": {
-      "list": [
-        {
-          "name": "pages/index/index",
-          "pathName": "pages/index/index",
-          "query": "",
-          "scene": null,
-          "launchMode": "default"
-        },
-        {
-          "name": "pages/map-debug/map-debug",
-          "pathName": "pages/map-debug/map-debug",
-          "query": "",
-          "launchMode": "default",
-          "scene": null
-        },
-        {
-          "name": "pages/map-debug/map-debug",
-          "pathName": "pages/map-debug/map-debug",
-          "query": "",
-          "launchMode": "default",
-          "scene": null
-        }
-      ]
-    }
-  },
-  "projectname": "liuliu-minimap",
+  "condition": {},
+  "projectname": "liuliu-miniapp",
   "setting": {
     "urlCheck": false,
     "coverView": true,

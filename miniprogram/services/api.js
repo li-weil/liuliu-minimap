@@ -70,6 +70,7 @@ function normalizeWalkRecord(item) {
   const distanceMeters = routeStats.distanceMeters || 0;
   const trackStartedAt = item.trackStartedAt || null;
   const trackStoppedAt = item.trackStoppedAt || null;
+  const generationContext = item.generationContext || {};
   return {
     _id: recordId,
     id: recordId,
@@ -105,6 +106,8 @@ function normalizeWalkRecord(item) {
     canDelete: !!recordId && !!item.userId,
     walkMode: item.walkMode || 'pure',
     generationSource: item.generationSource || 'unknown',
+    season: item.season || generationContext.season || '',
+    generationContext,
     themeSnapshot: {
       ...themeSnapshot,
       title: item.themeTitle || themeSnapshot.title || '',
@@ -204,6 +207,7 @@ function normalizeTeamWalkRecord(item) {
     ? item.activities.map(normalizeTeamActivity).filter(Boolean)
     : [];
   const teamStats = item.teamStats || {};
+  const generationContext = item.generationContext || {};
 
   return {
     _id: item._id || item.id || '',
@@ -244,6 +248,8 @@ function normalizeTeamWalkRecord(item) {
     canDelete: false,
     isPublic: false,
     memberRole: item.memberRole || '',
+    season: item.season || generationContext.season || '',
+    generationContext,
   };
 }
 
@@ -404,6 +410,8 @@ const ENDPOINTS = {
           missionAssetMap,
           walkMode: data.walkMode || 'pure',
           generationSource: data.generationSource || 'unknown',
+          season: data.season || '',
+          generationContext: data.generationContext || {},
           trackStartedAt: data.trackStartedAt || null,
           trackStoppedAt: data.trackStoppedAt || null,
           routeStats: data.routeStats || null,
