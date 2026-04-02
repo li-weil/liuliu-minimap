@@ -1,0 +1,36 @@
+<view class="page-shell feedback-page">
+  <view class="section-card feedback-card">
+    <view class="section-title">举报 / 反馈</view>
+    <view class="feedback-copy">如果你在{{sceneLabel}}中看到不当内容、误导信息或让人不舒服的互动，可以在这里提交，我们会尽快处理。</view>
+
+    <view class="section-subtitle">问题类型</view>
+    <view class="category-list">
+      <view
+        wx:for="{{categoryOptions}}"
+        wx:key="key"
+        class="category-chip {{activeCategory === item.key ? 'category-chip-active' : ''}}"
+        bindtap="handleCategoryTap"
+        data-category="{{item.key}}"
+      >
+        {{item.label}}
+      </view>
+    </view>
+
+    <view class="section-subtitle">问题描述</view>
+    <textarea
+      class="feedback-textarea"
+      maxlength="500"
+      placeholder="请描述你看到的内容、任务、成员或具体问题，我们会用于审核与处理。"
+      value="{{message}}"
+      bindinput="handleMessageInput"
+    />
+
+    <view class="feedback-meta">当前场景：{{sceneLabel}}</view>
+    <view class="feedback-meta">房间编号：{{roomId || '未关联房间'}}</view>
+    <view wx:if="{{targetNickName}}" class="feedback-meta">涉及成员：{{targetNickName}}</view>
+
+    <button class="primary-btn feedback-submit" bindtap="handleSubmit" loading="{{submitting}}" disabled="{{submitting}}">
+      提交举报 / 反馈
+    </button>
+  </view>
+</view>

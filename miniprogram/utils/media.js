@@ -1,9 +1,19 @@
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'heic', 'heif'];
 const CANVAS_FRIENDLY_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'bmp'];
 
-function chooseMedia(options) {
+function chooseImageNative(options) {
   return new Promise((resolve, reject) => {
-    wx.chooseMedia({
+    wx.chooseImage({
+      ...options,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+function chooseVideoNative(options) {
+  return new Promise((resolve, reject) => {
+    wx.chooseVideo({
       ...options,
       success: resolve,
       fail: reject,
@@ -97,9 +107,8 @@ async function ensureCanvasCompatibleImage(src) {
 }
 
 async function chooseImage(count = 9) {
-  const result = await chooseMedia({
+  const result = await chooseImageNative({
     count,
-    mediaType: ['image'],
     sourceType: ['camera', 'album'],
     sizeType: ['compressed'],
   });
@@ -113,13 +122,22 @@ async function chooseImage(count = 9) {
 }
 
 function chooseVideo(count = 1) {
-  return chooseMedia({
-      count,
-      mediaType: ['video'],
-      sourceType: ['camera', 'album'],
-      maxDuration: 60,
-      camera: 'back',
-  });
+  return chooseVideoNative({
+    sourceType: ['camera', 'album'],
+    maxDuration: 60,
+    camera: 'back',
+  }).then((result) => ({
+    ...result,
+    tempFiles: result && result.tempFilePath
+      ? [{
+          tempFilePath: result.tempFilePath,
+          duration: result.duration || 0,
+          size: result.size || 0,
+          width: result.width || 0,
+          height: result.height || 0,
+        }]
+      : [],
+  }));
 }
 
 module.exports = {

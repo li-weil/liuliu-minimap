@@ -3,12 +3,97 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const TEXT_RISK_PATTERN = /(?:加微|加v|vx|v信|微信号|qq|扣扣|色情网|裸聊|约炮|招嫖|嫖娼|赌博|博彩|彩票|刷单|返利|代开发票|办证|毒品|冰毒|海洛因|枪支|炸药)/i;
+const CONTENT_MAX_LENGTH = 300;
+
+function normalizeText(value, maxLength = CONTENT_MAX_LENGTH) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function isContentSecurityRejected(error) {
+  const message = String((error && error.message) || (error && error.errMsg) || '').toLowerCase();
+  return (
+    message.includes('risky') ||
+    message.includes('content violate') ||
+    message.includes('content security') ||
+    message.includes('msgseccheck') ||
+    message.includes('errcode: 87014') ||
+    message.includes('errcode:87014')
+  );
+}
+
+function shouldSkipCloudSecurity(error) {
+  const message = String((error && error.message) || (error && error.errMsg) || '').toLowerCase();
+  return (
+    message.includes('msgseccheck is not a function') ||
+    message.includes('openapi') ||
+    message.includes('api unsupported') ||
+    message.includes('invalid scope') ||
+    message.includes('not available')
+  );
+}
+
+async function ensureSafeTextContent(content, label) {
+  const normalized = normalizeText(content);
+  if (!normalized) {
+    return '';
+  }
+  if (TEXT_RISK_PATTERN.test(normalized)) {
+    throw new Error(`${label}_risky`);
+  }
+
+  if (
+    cloud.openapi &&
+    cloud.openapi.security &&
+    typeof cloud.openapi.security.msgSecCheck === 'function'
+  ) {
+    try {
+      await cloud.openapi.security.msgSecCheck({ content: normalized });
+    } catch (error) {
+      if (isContentSecurityRejected(error)) {
+        throw new Error(`${label}_risky`);
+      }
+      if (!shouldSkipCloudSecurity(error)) {
+        throw error;
+      }
+    }
+  }
+
+  return normalized;
+}
+
+function normalizeMediaList(list) {
+  return Array.isArray(list) ? list.filter(Boolean) : [];
+}
+
+function buildMediaAuditStatus(list) {
+  return normalizeMediaList(list).length ? 'approved' : 'approved';
+}
+
+function sanitizeContributionForDisplay(item) {
+  const photoList = normalizeMediaList(item && item.photoList);
+  const videoList = normalizeMediaList(item && item.videoList);
+  const audioList = normalizeMediaList(item && item.audioList);
+  return {
+    ...item,
+    noteText: item && item.textAuditStatus === 'approved' ? item.noteText || '' : '',
+    photoList,
+    photoCount: item && item.photoCount !== undefined ? item.photoCount : photoList.length,
+    photoAuditStatus: item && item.photoAuditStatus ? item.photoAuditStatus : (photoList.length ? 'pending' : 'approved'),
+    videoList,
+    videoCount: item && item.videoCount !== undefined ? item.videoCount : videoList.length,
+    videoAuditStatus: item && item.videoAuditStatus ? item.videoAuditStatus : (videoList.length ? 'pending' : 'approved'),
+    audioList,
+    audioCount: item && item.audioCount !== undefined ? item.audioCount : audioList.length,
+    audioAuditStatus: item && item.audioAuditStatus ? item.audioAuditStatus : (audioList.length ? 'pending' : 'approved'),
+  };
+}
 
 function countMedia(contributions) {
   return (contributions || []).reduce((result, item) => {
-    result.photoCount += Array.isArray(item.photoList) ? item.photoList.length : 0;
-    result.videoCount += Array.isArray(item.videoList) ? item.videoList.length : 0;
-    result.audioCount += Array.isArray(item.audioList) ? item.audioList.length : 0;
+    result.photoCount += item.photoAuditStatus === 'approved' && Array.isArray(item.photoList) ? item.photoList.length : 0;
+    result.videoCount += item.videoAuditStatus === 'approved' && Array.isArray(item.videoList) ? item.videoList.length : 0;
+    result.audioCount += item.audioAuditStatus === 'approved' && Array.isArray(item.audioList) ? item.audioList.length : 0;
     return result;
   }, {
     photoCount: 0,
@@ -45,7 +130,7 @@ async function getRoomBundle(roomId, openid) {
     _id: roomId,
     ...room,
     members: membersResult.data || [],
-    contributions: contributionsResult.data || [],
+    contributions: (contributionsResult.data || []).map((item) => sanitizeContributionForDisplay(item)),
     activities: activitiesResult.data || [],
     memberRole: member ? member.role : '',
   };
@@ -80,17 +165,29 @@ exports.main = async (event) => {
   const contributionsCollection = db.collection('teamWalkContributions');
   const existingResult = await contributionsCollection.where({ roomId, userId: openid, missionKey: event.missionKey }).limit(1).get();
   const existing = existingResult.data && existingResult.data[0] ? existingResult.data[0] : null;
+  const safeNickName = await ensureSafeTextContent(member.nickName || '微信用户', 'nickname');
+  const safeNoteText = await ensureSafeTextContent(event.noteText || '', 'note_text');
+  const photoList = normalizeMediaList(event.photoList);
+  const videoList = normalizeMediaList(event.videoList);
+  const audioList = normalizeMediaList(event.audioList);
   const nextPayload = {
     roomId,
     missionKey: event.missionKey,
     missionLabel: event.missionLabel || event.missionKey,
     userId: openid,
-    nickName: member.nickName || '微信用户',
+    nickName: safeNickName || '微信用户',
     avatarUrl: member.avatarUrl || '',
-    noteText: event.noteText || '',
-    photoList: Array.isArray(event.photoList) ? event.photoList.filter(Boolean) : [],
-    videoList: Array.isArray(event.videoList) ? event.videoList.filter(Boolean) : [],
-    audioList: Array.isArray(event.audioList) ? event.audioList.filter(Boolean) : [],
+    noteText: safeNoteText,
+    textAuditStatus: 'approved',
+    photoList,
+    photoCount: photoList.length,
+    photoAuditStatus: buildMediaAuditStatus(photoList),
+    videoList,
+    videoCount: videoList.length,
+    videoAuditStatus: buildMediaAuditStatus(videoList),
+    audioList,
+    audioCount: audioList.length,
+    audioAuditStatus: buildMediaAuditStatus(audioList),
     completed: !!event.completed,
     createdAt: existing ? existing.createdAt || now : now,
     updatedAt: now,
@@ -118,11 +215,11 @@ exports.main = async (event) => {
       roomId,
       type: 'mission_updated',
       userId: openid,
-      nickName: member.nickName || '队友',
+      nickName: safeNickName || '队友',
       avatarUrl: member.avatarUrl || '',
       content: nextPayload.completed
-        ? `${member.nickName || '队友'} 完成了「${nextPayload.missionLabel}」`
-        : `${member.nickName || '队友'} 更新了「${nextPayload.missionLabel}」的记录`,
+        ? `${safeNickName || '队友'} 完成了「${nextPayload.missionLabel}」`
+        : `${safeNickName || '队友'} 更新了「${nextPayload.missionLabel}」的记录`,
       payload: {
         missionKey: nextPayload.missionKey,
         missionLabel: nextPayload.missionLabel,
@@ -134,10 +231,10 @@ exports.main = async (event) => {
 
   return {
     ok: true,
-    contribution: {
+    contribution: sanitizeContributionForDisplay({
       _id: contributionId,
       ...nextPayload,
-    },
+    }),
     room: await getRoomBundle(roomId, openid),
   };
 };

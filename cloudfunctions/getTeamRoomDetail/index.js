@@ -4,6 +4,25 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 
+function sanitizeContributionForDisplay(item) {
+  const photoList = Array.isArray(item && item.photoList) ? item.photoList.filter(Boolean) : [];
+  const videoList = Array.isArray(item && item.videoList) ? item.videoList.filter(Boolean) : [];
+  const audioList = Array.isArray(item && item.audioList) ? item.audioList.filter(Boolean) : [];
+  return {
+    ...item,
+    noteText: item && item.textAuditStatus === 'approved' ? item.noteText || '' : '',
+    photoList,
+    photoCount: item && item.photoCount !== undefined ? item.photoCount : photoList.length,
+    photoAuditStatus: item && item.photoAuditStatus ? item.photoAuditStatus : (photoList.length ? 'pending' : 'approved'),
+    videoList,
+    videoCount: item && item.videoCount !== undefined ? item.videoCount : videoList.length,
+    videoAuditStatus: item && item.videoAuditStatus ? item.videoAuditStatus : (videoList.length ? 'pending' : 'approved'),
+    audioList,
+    audioCount: item && item.audioCount !== undefined ? item.audioCount : audioList.length,
+    audioAuditStatus: item && item.audioAuditStatus ? item.audioAuditStatus : (audioList.length ? 'pending' : 'approved'),
+  };
+}
+
 async function getRoomBundle(roomId, openid) {
   const roomDoc = await db.collection('teamWalkRooms').doc(roomId).get();
   const room = roomDoc.data;
@@ -32,7 +51,7 @@ async function getRoomBundle(roomId, openid) {
     _id: roomId,
     ...room,
     members: memberDocs,
-    contributions: contributionsResult.data || [],
+    contributions: (contributionsResult.data || []).map((item) => sanitizeContributionForDisplay(item)),
     activities: activitiesResult.data || [],
     memberRole: member ? member.role : '',
   };

@@ -4,6 +4,25 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 
+function sanitizeContributionForDisplay(item) {
+  const photoList = Array.isArray(item && item.photoList) ? item.photoList.filter(Boolean) : [];
+  const videoList = Array.isArray(item && item.videoList) ? item.videoList.filter(Boolean) : [];
+  const audioList = Array.isArray(item && item.audioList) ? item.audioList.filter(Boolean) : [];
+  return {
+    ...item,
+    noteText: item && item.textAuditStatus === 'approved' ? item.noteText || '' : '',
+    photoList,
+    photoCount: item && item.photoCount !== undefined ? item.photoCount : photoList.length,
+    photoAuditStatus: item && item.photoAuditStatus ? item.photoAuditStatus : (photoList.length ? 'pending' : 'approved'),
+    videoList,
+    videoCount: item && item.videoCount !== undefined ? item.videoCount : videoList.length,
+    videoAuditStatus: item && item.videoAuditStatus ? item.videoAuditStatus : (videoList.length ? 'pending' : 'approved'),
+    audioList,
+    audioCount: item && item.audioCount !== undefined ? item.audioCount : audioList.length,
+    audioAuditStatus: item && item.audioAuditStatus ? item.audioAuditStatus : (audioList.length ? 'pending' : 'approved'),
+  };
+}
+
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
   const roomId = event.roomId || event.id;
@@ -30,7 +49,7 @@ exports.main = async (event) => {
       _id: roomId,
       ...room,
       members: membersResult.data || [],
-      contributions: contributionsResult.data || [],
+      contributions: (contributionsResult.data || []).map(sanitizeContributionForDisplay),
       activities: activitiesResult.data || [],
       memberRole: member.role || '',
     },

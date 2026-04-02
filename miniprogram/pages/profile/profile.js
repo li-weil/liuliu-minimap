@@ -9,6 +9,17 @@ const {
   resolvePrivacyAuthorization,
 } = require('../../utils/privacy');
 
+function explainProfileSaveFailure(error, fallbackTitle) {
+  const message = String((error && error.message) || (error && error.errMsg) || '').toLowerCase();
+  if (message.includes('nickname_required')) {
+    return '先填写昵称';
+  }
+  if (message.includes('nickname_risky')) {
+    return '昵称未通过安全校验，请换一个试试';
+  }
+  return fallbackTitle;
+}
+
 Page({
   data: {
     user: null,
@@ -184,10 +195,7 @@ Page({
         wx.showToast({ title: '未同意隐私说明，暂时无法保存资料', icon: 'none' });
         return;
       }
-      wx.showToast({
-        title: error && error.message === 'nickname_required' ? '先填写昵称' : '登录失败',
-        icon: 'none',
-      });
+      wx.showToast({ title: explainProfileSaveFailure(error, '登录失败'), icon: 'none' });
     } finally {
       this.setData({ syncing: false });
     }
@@ -241,10 +249,7 @@ Page({
         wx.showToast({ title: '未同意隐私说明，暂时无法保存资料', icon: 'none' });
         return;
       }
-      wx.showToast({
-        title: error && error.message === 'nickname_required' ? '先填写昵称' : '保存失败',
-        icon: 'none',
-      });
+      wx.showToast({ title: explainProfileSaveFailure(error, '保存失败'), icon: 'none' });
     } finally {
       this.setData({ syncing: false });
     }

@@ -403,6 +403,36 @@ function explainAlbumSaveError(error) {
   return `保存失败：${errMsg}`.slice(0, 30);
 }
 
+function explainMediaSelectionError(error, mediaType) {
+  const rawErrMsg = String((error && error.errMsg) || (error && error.message) || '').trim();
+  const errMsg = rawErrMsg.toLowerCase();
+  if (!errMsg) {
+    return `${mediaType}选择失败`;
+  }
+  if (errMsg.includes('cancel')) {
+    return '';
+  }
+  if (errMsg.includes('auth deny') || errMsg.includes('permission')) {
+    return mediaType === '图片' ? '请在系统设置里允许访问相册或相机' : '请在系统设置里允许访问相机和相册';
+  }
+  if (errMsg.includes('camera')) {
+    return '相机暂时不可用，请检查系统权限';
+  }
+  return `${mediaType}选择失败：${rawErrMsg}`;
+}
+
+function explainRecorderError(error) {
+  const rawErrMsg = String((error && error.errMsg) || (error && error.message) || '').trim();
+  const errMsg = rawErrMsg.toLowerCase();
+  if (!errMsg) {
+    return '录音启动失败';
+  }
+  if (errMsg.includes('auth deny') || errMsg.includes('permission') || errMsg.includes('record')) {
+    return '请在系统设置里允许麦克风权限';
+  }
+  return `录音失败：${rawErrMsg}`;
+}
+
 Page({
   data: {
     activeMission: '',
@@ -461,10 +491,15 @@ Page({
         this.recordingMission = '';
         this.refreshState();
       });
-      recorderManager.onError(() => {
+      recorderManager.onError((error) => {
         this.setData({ isRecordingAudio: false, recordingMission: '' });
         this.recordingMission = '';
-        wx.showToast({ title: '录音失败', icon: 'none' });
+        wx.showModal({
+          title: '录音失败',
+          content: explainRecorderError(error),
+          showCancel: false,
+          confirmText: '知道了',
+        });
       });
     }
     this.handleRealtimeLocationChange = (location) => {
@@ -927,10 +962,16 @@ Page({
         wx.showToast({ title: '未同意隐私说明，暂时无法选图', icon: 'none' });
         return;
       }
-      if (error && error.errMsg && error.errMsg.includes('cancel')) {
+      const message = explainMediaSelectionError(error, '图片');
+      if (!message) {
         return;
       }
-      wx.showToast({ title: '选择图片失败', icon: 'none' });
+      wx.showModal({
+        title: '图片选择失败',
+        content: message,
+        showCancel: false,
+        confirmText: '知道了',
+      });
     }
   },
 
@@ -957,10 +998,16 @@ Page({
         wx.showToast({ title: '未同意隐私说明，暂时无法选视频', icon: 'none' });
         return;
       }
-      if (error && error.errMsg && error.errMsg.includes('cancel')) {
+      const message = explainMediaSelectionError(error, '视频');
+      if (!message) {
         return;
       }
-      wx.showToast({ title: '选择视频失败', icon: 'none' });
+      wx.showModal({
+        title: '视频选择失败',
+        content: message,
+        showCancel: false,
+        confirmText: '知道了',
+      });
     }
   },
 
@@ -994,7 +1041,12 @@ Page({
         wx.showToast({ title: '未同意隐私说明，暂时无法录音', icon: 'none' });
         return;
       }
-      wx.showToast({ title: '录音启动失败', icon: 'none' });
+      wx.showModal({
+        title: '录音失败',
+        content: explainRecorderError(error),
+        showCancel: false,
+        confirmText: '知道了',
+      });
     }
   },
 

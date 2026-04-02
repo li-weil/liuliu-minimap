@@ -612,7 +612,7 @@ Page({
       return;
     }
     if (this.data.walk.isPublic) {
-      wx.showToast({ title: '已可分享，点右侧按钮发送', icon: 'none' });
+      wx.showToast({ title: '已可分享给好友', icon: 'none' });
       return;
     }
     this.setData({ isPublishingShare: true });
@@ -627,7 +627,7 @@ Page({
           },
         });
       }
-      wx.showToast({ title: '已发布，可分享给好友', icon: 'success' });
+      wx.showToast({ title: '已设为可分享给好友', icon: 'success' });
     } catch (error) {
       wx.showToast({ title: '发布分享失败', icon: 'none' });
     } finally {

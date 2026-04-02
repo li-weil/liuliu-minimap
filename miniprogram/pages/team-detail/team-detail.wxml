@@ -74,7 +74,6 @@
                   </view>
 
                   <view class="mission-detail-note">{{item.noteTextDisplay}}</view>
-
                   <view class="mission-media-group">
                     <view class="section-subtitle">图片记录</view>
                     <view wx:if="{{item.photoList.length}}" class="photo-grid">
@@ -108,6 +107,18 @@
                     </view>
                     <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传录音。</view>
                   </view>
+
+                  <button
+                    class="ghost-btn"
+                    bindtap="openFeedback"
+                    data-scene="team-detail"
+                    data-contribution-id="{{item.id}}"
+                    data-mission-key="{{missionItem.mission}}"
+                    data-target-user-id="{{item.userId}}"
+                    data-target-nick-name="{{item.nickName}}"
+                  >
+                    举报 / 反馈这条记录
+                  </button>
                 </view>
               </view>
               <view wx:else class="empty-copy detail-empty">这个任务下还没有团队记录。</view>
@@ -145,6 +156,7 @@
     <button class="danger-action-btn" bindtap="handleDeleteTeamWalk" loading="{{isDeleting}}" disabled="{{isDeleting}}">
       删除这条同行记录
     </button>
+    <button class="ghost-btn detail-feedback-btn" bindtap="openFeedback" data-scene="team-detail">举报 / 反馈</button>
   </view>
 
   <view wx:else class="empty-copy">没有找到这场同行漫步。</view>

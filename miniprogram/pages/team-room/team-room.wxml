@@ -48,6 +48,7 @@
       <button wx:if="{{room.status === 'active'}}" class="primary-btn" bindtap="goRecord">进入团队记录页</button>
       <button wx:if="{{room.status === 'active' && room.memberRole === 'owner'}}" class="secondary-btn" bindtap="handleFinish">结束同行漫步</button>
       <button wx:if="{{room.status === 'finished'}}" class="primary-btn" bindtap="goDetail">查看团队结果</button>
+      <button class="ghost-btn" bindtap="openFeedback">举报 / 反馈</button>
       <button wx:if="{{room.status === 'waiting'}}" class="danger-btn" bindtap="handleLeave">{{leaveButtonLabel}}</button>
     </view>
   </view>

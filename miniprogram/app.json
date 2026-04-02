@@ -5,6 +5,7 @@
     "pages/team-room/team-room",
     "pages/team-record/team-record",
     "pages/team-detail/team-detail",
+    "pages/feedback/feedback",
     "pages/record/record",
     "pages/walk-detail/walk-detail",
     "pages/achievement-detail/achievement-detail",

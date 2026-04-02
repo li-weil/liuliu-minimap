@@ -162,6 +162,15 @@ Page({
     wx.navigateTo({ url: `/pages/team-detail/team-detail?roomId=${encodeURIComponent(this.data.roomId)}` });
   },
 
+  openFeedback() {
+    if (!this.data.roomId) {
+      return;
+    }
+    wx.navigateTo({
+      url: `/pages/feedback/feedback?sourceType=team&scene=team-room&sceneLabel=${encodeURIComponent('同行房间')}&roomId=${encodeURIComponent(this.data.roomId)}`,
+    });
+  },
+
   async handleLeave() {
     const room = this.data.room;
     if (!room) {

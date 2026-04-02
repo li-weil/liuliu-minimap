@@ -111,11 +111,17 @@
   margin: 8rpx 32rpx 0;
   min-height: 92rpx;
   border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   background: #f7e7e1;
   color: #b04933;
   border: 1rpx solid #efc9bf;
   font-size: 28rpx;
   font-weight: 600;
+  line-height: 1.4;
+  box-sizing: border-box;
 }
 
 .sticker-detail-card {

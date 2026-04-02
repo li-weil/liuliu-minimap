@@ -43,8 +43,14 @@ function buildMissionGroups(room) {
         noteText: String(item.noteText || '').trim(),
         noteTextDisplay: String(item.noteText || '').trim() || '这位同行者这次主要用图片和声音留下了记录。',
         photoList: normalizeMediaList(item.photoList),
+        photoCount: Number(item.photoCount || 0),
+        photoAuditStatus: item.photoAuditStatus || 'approved',
         videoList: normalizeMediaList(item.videoList),
+        videoCount: Number(item.videoCount || 0),
+        videoAuditStatus: item.videoAuditStatus || 'approved',
         audioList: normalizeMediaList(item.audioList),
+        audioCount: Number(item.audioCount || 0),
+        audioAuditStatus: item.audioAuditStatus || 'approved',
         completed: !!item.completed,
         companionNote: String(item.companionNote || '').trim(),
         createdAt: item.createdAt || 0,
@@ -527,6 +533,34 @@ Page({
     }
     wx.navigateTo({
       url: `/pages/team-record/team-record?roomId=${encodeURIComponent(this.data.roomId)}`,
+    });
+  },
+
+  openFeedback(event) {
+    if (!this.data.roomId) {
+      return;
+    }
+    const dataset = event && event.currentTarget ? event.currentTarget.dataset || {} : {};
+    const params = [
+      'sourceType=team',
+      `scene=${encodeURIComponent(dataset.scene || 'team-detail')}`,
+      `sceneLabel=${encodeURIComponent('团队结果')}`,
+      `roomId=${encodeURIComponent(this.data.roomId)}`,
+    ];
+    if (dataset.contributionId) {
+      params.push(`contributionId=${encodeURIComponent(dataset.contributionId)}`);
+    }
+    if (dataset.missionKey) {
+      params.push(`missionKey=${encodeURIComponent(dataset.missionKey)}`);
+    }
+    if (dataset.targetUserId) {
+      params.push(`targetUserId=${encodeURIComponent(dataset.targetUserId)}`);
+    }
+    if (dataset.targetNickName) {
+      params.push(`targetNickName=${encodeURIComponent(dataset.targetNickName)}`);
+    }
+    wx.navigateTo({
+      url: `/pages/feedback/feedback?${params.join('&')}`,
     });
   },
 

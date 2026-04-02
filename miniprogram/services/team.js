@@ -24,6 +24,10 @@ function submitTeamContribution(payload = {}) {
   return callApi('submitTeamContribution', payload);
 }
 
+function submitContentFeedback(payload = {}) {
+  return callApi('submitContentFeedback', payload);
+}
+
 function listTeamActivities(payload = {}) {
   return callApi('listTeamActivities', payload);
 }
@@ -55,5 +59,6 @@ module.exports = {
   listMyTeamWalks,
   listTeamActivities,
   startTeamWalk,
+  submitContentFeedback,
   submitTeamContribution,
 };
