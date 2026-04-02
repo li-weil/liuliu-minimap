@@ -110,3 +110,14 @@
 </view>
 
 <view wx:else class="page-shell empty-copy">还没有属于今天的漫步主题，先去探索页挑一段想走的城市情绪吧</view>
+
+<privacy-consent
+  visible="{{privacyPopup.visible}}"
+  title="{{privacyPopup.title}}"
+  content="{{privacyPopup.content}}"
+  buttonText="{{privacyPopup.buttonText}}"
+  contractName="{{privacyPopup.contractName}}"
+  bind:agree="handlePrivacyAgree"
+  bind:close="handlePrivacyReject"
+  bind:opencontract="handleOpenPrivacyContract"
+/>

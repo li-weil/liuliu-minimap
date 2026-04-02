@@ -1,6 +1,13 @@
 const { generateCompanionNote } = require('../../services/sticker');
 const { deleteTeamWalk, getTeamWalkDetail } = require('../../services/team');
 const { formatDate } = require('../../utils/format');
+const {
+  createDefaultPrivacyPopup,
+  ensurePrivacyAuthorization,
+  openPrivacyContract,
+  rejectPrivacyAuthorization,
+  resolvePrivacyAuthorization,
+} = require('../../utils/privacy');
 
 function normalizeMediaItem(item) {
   if (typeof item === 'string') {
@@ -253,6 +260,7 @@ Page({
       imageSrc: '',
     },
     isDeleting: false,
+    privacyPopup: createDefaultPrivacyPopup(),
   },
 
   onLoad(query) {
@@ -479,6 +487,10 @@ Page({
 
   async handleSaveMissionCardToAlbum() {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '保存到相册前说明',
+        content: '保存到本地时会使用相册相关能力，仅用于把这张团队打卡卡片存到你的设备相册中。',
+      });
       await ensureAlbumPermission();
       const filePath = await this.resolveMissionCardFilePath();
       if (!filePath) {
@@ -487,6 +499,10 @@ Page({
       await saveImageToAlbum(filePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法保存', icon: 'none' });
+        return;
+      }
       wx.showModal({
         title: '保存卡片失败',
         content: explainAlbumSaveError(error),
@@ -574,4 +590,18 @@ Page({
   },
 
   noop() {},
+
+  handlePrivacyAgree() {
+    resolvePrivacyAuthorization(this);
+  },
+
+  handlePrivacyReject() {
+    rejectPrivacyAuthorization(this);
+  },
+
+  handleOpenPrivacyContract() {
+    openPrivacyContract().catch(() => {
+      wx.showToast({ title: '暂时无法打开隐私指引', icon: 'none' });
+    });
+  },
 });

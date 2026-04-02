@@ -84,4 +84,15 @@
   </view>
 
   <view wx:else class="empty-copy">没有找到这个团队房间。</view>
+
+  <privacy-consent
+    visible="{{privacyPopup.visible}}"
+    title="{{privacyPopup.title}}"
+    content="{{privacyPopup.content}}"
+    buttonText="{{privacyPopup.buttonText}}"
+    contractName="{{privacyPopup.contractName}}"
+    bind:agree="handlePrivacyAgree"
+    bind:close="handlePrivacyReject"
+    bind:opencontract="handleOpenPrivacyContract"
+  />
 </view>

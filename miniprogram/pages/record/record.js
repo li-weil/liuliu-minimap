@@ -6,6 +6,13 @@ const { chooseImage, chooseVideo } = require('../../utils/media');
 const { verifyMission } = require('../../services/theme');
 const { generateCompanionNote, generateStickerPlan, generateStickerImage } = require('../../services/sticker');
 const { isManualLogoutSuppressed } = require('../../services/user');
+const {
+  createDefaultPrivacyPopup,
+  ensurePrivacyAuthorization,
+  openPrivacyContract,
+  rejectPrivacyAuthorization,
+  resolvePrivacyAuthorization,
+} = require('../../utils/privacy');
 
 let recorderManager = null;
 let routeTimer = null;
@@ -434,6 +441,7 @@ Page({
       stoppedLabel: '未开始',
     },
     mapPolyline: [],
+    privacyPopup: createDefaultPrivacyPopup(),
   },
 
   async onLoad(query) {
@@ -851,11 +859,19 @@ Page({
       return;
     }
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '保存到相册前说明',
+        content: '保存到本地时会使用相册相关能力，仅用于把这张打卡卡片存到你的设备相册中。',
+      });
       await ensureAlbumPermission();
       const filePath = await this.resolveMissionCardFilePath();
       await saveImageToAlbum(filePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法保存', icon: 'none' });
+        return;
+      }
       wx.showModal({
         title: '保存卡片失败',
         content: explainAlbumSaveError(error),
@@ -894,6 +910,10 @@ Page({
 
   async choosePhoto(mission = '') {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '上传图片前说明',
+        content: '选择图片仅用于当前任务打卡和漫步记录保存，不会在你未操作时自动读取相册。',
+      });
       const result = await chooseImage(9);
       const photoPaths = (result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean);
       const targetMission = mission || this.getActiveMissionKey();
@@ -903,6 +923,10 @@ Page({
       });
       this.setDraft(draft);
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法选图', icon: 'none' });
+        return;
+      }
       if (error && error.errMsg && error.errMsg.includes('cancel')) {
         return;
       }
@@ -912,6 +936,10 @@ Page({
 
   async chooseVideo(mission = '') {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '上传视频前说明',
+        content: '选择或拍摄视频仅用于当前任务打卡和漫步记录保存，不会在你未操作时自动启用。',
+      });
       const result = await chooseVideo(3);
       const selectedVideos = (result.tempFiles || []).map((item) => ({
         tempFilePath: item.tempFilePath,
@@ -925,6 +953,10 @@ Page({
       });
       this.setDraft(draft);
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法选视频', icon: 'none' });
+        return;
+      }
       if (error && error.errMsg && error.errMsg.includes('cancel')) {
         return;
       }
@@ -932,7 +964,7 @@ Page({
     }
   },
 
-  toggleAudioRecording(mission = '') {
+  async toggleAudioRecording(mission = '') {
     if (!recorderManager) {
       wx.showToast({ title: '当前环境不支持录音', icon: 'none' });
       return;
@@ -943,15 +975,27 @@ Page({
       return;
     }
 
-    this.recordingMission = mission || this.getActiveMissionKey();
-    recorderManager.start({
-      duration: 60000,
-      sampleRate: 44100,
-      numberOfChannels: 1,
-      encodeBitRate: 192000,
-      format: 'mp3',
-    });
-    this.setData({ isRecordingAudio: true, recordingMission: this.recordingMission });
+    try {
+      await ensurePrivacyAuthorization(this, {
+        title: '录音前说明',
+        content: '录音仅在你主动点击后开始，用于当前任务打卡补充，不会在后台自动录制。',
+      });
+      this.recordingMission = mission || this.getActiveMissionKey();
+      recorderManager.start({
+        duration: 60000,
+        sampleRate: 44100,
+        numberOfChannels: 1,
+        encodeBitRate: 192000,
+        format: 'mp3',
+      });
+      this.setData({ isRecordingAudio: true, recordingMission: this.recordingMission });
+    } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法录音', icon: 'none' });
+        return;
+      }
+      wx.showToast({ title: '录音启动失败', icon: 'none' });
+    }
   },
 
   async verifyActiveMission() {
@@ -1106,6 +1150,20 @@ Page({
   async toggleTracking() {
     if (this.data.isTracking) {
       this.stopTracking();
+      return;
+    }
+
+    try {
+      await ensurePrivacyAuthorization(this, {
+        title: '开启轨迹前说明',
+        content: '轨迹追踪会在你停留当前页面时使用前台实时定位，仅用于记录这次漫步路线，不涉及后台持续定位。',
+      });
+    } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法记录轨迹', icon: 'none' });
+        return;
+      }
+      wx.showToast({ title: '暂时无法开启轨迹追踪', icon: 'none' });
       return;
     }
 
@@ -1405,6 +1463,10 @@ Page({
 
   async handleSaveStickerToAlbum() {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '保存到相册前说明',
+        content: '保存贴纸到本地时会使用相册相关能力，仅用于把这张贴纸存到你的设备相册中。',
+      });
       const imageUrl = await this.resolveStickerUrl();
       if (!imageUrl) {
         throw new Error('missing_sticker_image');
@@ -1416,6 +1478,10 @@ Page({
       await saveImageToAlbum(download.tempFilePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法保存', icon: 'none' });
+        return;
+      }
       const errMsg = String((error && error.errMsg) || (error && error.message) || '');
       if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
         wx.showModal({
@@ -1436,6 +1502,20 @@ Page({
 
   handleShareStickerFromRecord() {
     wx.showToast({ title: '先保存漫步，再去详情页分享', icon: 'none' });
+  },
+
+  handlePrivacyAgree() {
+    resolvePrivacyAuthorization(this);
+  },
+
+  handlePrivacyReject() {
+    rejectPrivacyAuthorization(this);
+  },
+
+  handleOpenPrivacyContract() {
+    openPrivacyContract().catch(() => {
+      wx.showToast({ title: '暂时无法打开隐私指引', icon: 'none' });
+    });
   },
 
   async handleGenerateSticker() {

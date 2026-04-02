@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "探索",
   "usingComponents": {
-    "theme-card": "/components/theme-card/theme-card"
+    "theme-card": "/components/theme-card/theme-card",
+    "privacy-consent": "/components/privacy-consent/privacy-consent"
   }
 }

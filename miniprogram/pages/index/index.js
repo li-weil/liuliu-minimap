@@ -16,6 +16,13 @@ const { generateCombinedTheme, generateRandomTheme, generateTheme, getLocationCo
 const { createWalk } = require('../../services/walk');
 const { getBackendProvider } = require('../../services/api');
 const { isManualLogoutSuppressed } = require('../../services/user');
+const {
+  createDefaultPrivacyPopup,
+  ensurePrivacyAuthorization,
+  openPrivacyContract,
+  rejectPrivacyAuthorization,
+  resolvePrivacyAuthorization,
+} = require('../../utils/privacy');
 
 function normalizeMissionText(mission) {
   if (typeof mission === 'string') {
@@ -275,6 +282,7 @@ Page({
     nearbyExpanded: false,
     loadingNearbyPlaces: false,
     supportsNearbyPois: false,
+    privacyPopup: createDefaultPrivacyPopup(),
   },
 
   onLoad() {
@@ -478,10 +486,18 @@ Page({
 
   async useCurrentLocation() {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '开启定位前说明',
+        content: '定位将用于获取当前位置、设定探索点，并为这次漫步生成更贴近当前位置的主题内容。',
+      });
       wx.showLoading({ title: '定位中' });
       const result = await getCurrentLocation();
       await this.enrichLocation(result);
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法定位', icon: 'none' });
+        return;
+      }
       wx.showToast({ title: explainLocationError(error, '定位'), icon: 'none', duration: 2500 });
     } finally {
       wx.hideLoading();
@@ -693,14 +709,12 @@ Page({
   },
 
   async handleSelectedThemeGenerate() {
-    if (this.data.combineSelections.length < 1) {
-      wx.showToast({ title: '请先选择 1-2 个主题', icon: 'none' });
-      return;
-    }
-
     this.setData({ isCombining: true });
     try {
-      const result = this.data.combineSelections.length === 1
+      const selections = this.data.combineSelections.length
+        ? this.data.combineSelections
+        : [pickRandomThemeCategory(this.data.randomCategories)];
+      const result = selections.length === 1
         ? await generateTheme({
           mood: this.data.mood,
           weather: this.data.weather,
@@ -711,10 +725,10 @@ Page({
           latitude: this.data.latitude,
           longitude: this.data.longitude,
           walkMode: this.data.walkMode,
-          selectedThemes: buildSelectedThemeCategories(this.data.combineSelections),
+          selectedThemes: buildSelectedThemeCategories(selections),
         })
         : await generateCombinedTheme({
-          categories: this.data.combineSelections,
+          categories: selections,
           locationName: this.data.locationName,
           locationContext: this.data.locationContext,
           latitude: this.data.latitude,
@@ -726,7 +740,7 @@ Page({
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(
         currentTheme,
-        result.source || (this.data.combineSelections.length === 1 ? 'rag-fallback' : 'combined-fallback')
+        result.source || (selections.length === 1 ? 'rag-fallback' : 'combined-fallback')
       );
     } catch (error) {
       wx.showModal({
@@ -908,5 +922,19 @@ Page({
     } finally {
       wx.hideLoading();
     }
+  },
+
+  handlePrivacyAgree() {
+    resolvePrivacyAuthorization(this);
+  },
+
+  handlePrivacyReject() {
+    rejectPrivacyAuthorization(this);
+  },
+
+  handleOpenPrivacyContract() {
+    openPrivacyContract().catch(() => {
+      wx.showToast({ title: '暂时无法打开隐私指引', icon: 'none' });
+    });
   },
 });

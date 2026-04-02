@@ -1,6 +1,13 @@
 const { getWalkDetail, publishWalkShare, deleteWalk } = require('../../services/walk');
 const { generateCompanionNote } = require('../../services/sticker');
 const { formatDate } = require('../../utils/format');
+const {
+  createDefaultPrivacyPopup,
+  ensurePrivacyAuthorization,
+  openPrivacyContract,
+  rejectPrivacyAuthorization,
+  resolvePrivacyAuthorization,
+} = require('../../utils/privacy');
 
 const SUMMARY_MISSION_KEY = '__summary__';
 const SUMMARY_MISSION_LABEL = '花些时间回顾一路的采撷';
@@ -294,6 +301,7 @@ Page({
     mapCenterLatitude: 39.908823,
     mapCenterLongitude: 116.39747,
     mapPolyline: [],
+    privacyPopup: createDefaultPrivacyPopup(),
   },
 
   onLoad(query) {
@@ -516,6 +524,10 @@ Page({
 
   async handleSaveMissionCardToAlbum() {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '保存到相册前说明',
+        content: '保存到本地时会使用相册相关能力，仅用于把这张打卡卡片存到你的设备相册中。',
+      });
       await ensureAlbumPermission();
       const filePath = await this.resolveMissionCardFilePath();
       if (!filePath) {
@@ -524,6 +536,10 @@ Page({
       await saveImageToAlbum(filePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法保存', icon: 'none' });
+        return;
+      }
       wx.showModal({
         title: '保存卡片失败',
         content: explainAlbumSaveError(error),
@@ -553,6 +569,10 @@ Page({
 
   async handleSaveStickerToAlbum() {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '保存到相册前说明',
+        content: '保存贴纸到本地时会使用相册相关能力，仅用于把这张贴纸存到你的设备相册中。',
+      });
       const imageUrl = await this.resolveStickerUrl();
       if (!imageUrl) {
         throw new Error('missing_sticker_image');
@@ -564,6 +584,10 @@ Page({
       await saveImageToAlbum(download.tempFilePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法保存', icon: 'none' });
+        return;
+      }
       const errMsg = String((error && error.errMsg) || (error && error.message) || '');
       if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
         wx.showModal({
@@ -682,4 +706,18 @@ async handleDeleteWalk() {
   },
 
   noop() {},
+
+  handlePrivacyAgree() {
+    resolvePrivacyAuthorization(this);
+  },
+
+  handlePrivacyReject() {
+    rejectPrivacyAuthorization(this);
+  },
+
+  handleOpenPrivacyContract() {
+    openPrivacyContract().catch(() => {
+      wx.showToast({ title: '暂时无法打开隐私指引', icon: 'none' });
+    });
+  },
 });

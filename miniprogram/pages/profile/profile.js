@@ -1,6 +1,13 @@
 const app = getApp();
 const { requestUpload } = require('../../services/api');
 const { clearUserStorage, fetchCurrentUser, markManualLogout, syncUser } = require('../../services/user');
+const {
+  createDefaultPrivacyPopup,
+  ensurePrivacyAuthorization,
+  openPrivacyContract,
+  rejectPrivacyAuthorization,
+  resolvePrivacyAuthorization,
+} = require('../../utils/privacy');
 
 Page({
   data: {
@@ -11,6 +18,7 @@ Page({
     draftAvatarUrl: '',
     pageMode: 'login',
     detectedUser: null,
+    privacyPopup: createDefaultPrivacyPopup(),
   },
 
   async onShow() {
@@ -143,6 +151,10 @@ Page({
   async handleRegister() {
     this.setData({ syncing: true });
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '保存资料前说明',
+        content: '昵称与头像将用于保存你的个人足迹，并在同行模式中向受邀队友展示你的身份。',
+      });
       const nickName = (this.data.draftNickName || '').trim();
       const avatarUrl = await this.ensurePersistedAvatar(this.data.draftAvatarUrl || '');
       if (!nickName) {
@@ -168,6 +180,10 @@ Page({
         this.resumePendingNavigation();
       }, 80);
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法保存资料', icon: 'none' });
+        return;
+      }
       wx.showToast({
         title: error && error.message === 'nickname_required' ? '先填写昵称' : '登录失败',
         icon: 'none',
@@ -198,6 +214,10 @@ Page({
   async handleSaveProfile() {
     this.setData({ syncing: true });
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '保存资料前说明',
+        content: '昵称与头像将用于保存你的个人足迹，并在同行模式中向受邀队友展示你的身份。',
+      });
       const nickName = (this.data.draftNickName || '').trim();
       const avatarUrl = await this.ensurePersistedAvatar(this.data.draftAvatarUrl || '');
       if (!nickName) {
@@ -217,6 +237,10 @@ Page({
       });
       wx.showToast({ title: '资料已更新', icon: 'success' });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法保存资料', icon: 'none' });
+        return;
+      }
       wx.showToast({
         title: error && error.message === 'nickname_required' ? '先填写昵称' : '保存失败',
         icon: 'none',
@@ -270,5 +294,19 @@ Page({
   clearDraft() {
     app.clearWalkDraft();
     wx.showToast({ title: '草稿已清空', icon: 'success' });
+  },
+
+  handlePrivacyAgree() {
+    resolvePrivacyAuthorization(this);
+  },
+
+  handlePrivacyReject() {
+    rejectPrivacyAuthorization(this);
+  },
+
+  handleOpenPrivacyContract() {
+    openPrivacyContract().catch(() => {
+      wx.showToast({ title: '暂时无法打开隐私指引', icon: 'none' });
+    });
   },
 });

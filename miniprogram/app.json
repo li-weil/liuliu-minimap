@@ -11,6 +11,7 @@
     "pages/history/history",
     "pages/profile/profile"
   ],
+  "__usePrivacyCheck__": true,
   "window": {
     "navigationBarTitleText": "城市漫步者",
     "navigationBarBackgroundColor": "#f5f2ed",

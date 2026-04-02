@@ -2,6 +2,13 @@ const app = getApp();
 const { requestUpload } = require('../../services/api');
 const { finishTeamWalk, getTeamRoomDetail, submitTeamContribution } = require('../../services/team');
 const { chooseImage, chooseVideo } = require('../../utils/media');
+const {
+  createDefaultPrivacyPopup,
+  ensurePrivacyAuthorization,
+  openPrivacyContract,
+  rejectPrivacyAuthorization,
+  resolvePrivacyAuthorization,
+} = require('../../utils/privacy');
 
 let recorderManager = null;
 let roomPollingTimer = null;
@@ -80,6 +87,7 @@ Page({
     audioButtonLabel: '录音',
     completedClassName: '',
     isLeavingForHistory: false,
+    privacyPopup: createDefaultPrivacyPopup(),
   },
 
   onLoad(query) {
@@ -295,29 +303,45 @@ Page({
 
   async choosePhoto() {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '上传图片前说明',
+        content: '选择图片仅用于当前团队任务记录保存，不会在你未操作时自动读取相册。',
+      });
       const result = await chooseImage(6);
       this.setEditorDraft({
         ...this.data.editorDraft,
         photoList: [...(this.data.editorDraft.photoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
       });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法选图', icon: 'none' });
+        return;
+      }
       wx.showToast({ title: '图片选择失败', icon: 'none' });
     }
   },
 
   async chooseVideo() {
     try {
+      await ensurePrivacyAuthorization(this, {
+        title: '上传视频前说明',
+        content: '选择或拍摄视频仅用于当前团队任务记录保存，不会在你未操作时自动启用。',
+      });
       const result = await chooseVideo(1);
       this.setEditorDraft({
         ...this.data.editorDraft,
         videoList: [...(this.data.editorDraft.videoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
       });
     } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法选视频', icon: 'none' });
+        return;
+      }
       wx.showToast({ title: '视频选择失败', icon: 'none' });
     }
   },
 
-  toggleAudioRecording() {
+  async toggleAudioRecording() {
     if (!recorderManager) {
       wx.showToast({ title: '当前环境不支持录音', icon: 'none' });
       return;
@@ -327,11 +351,23 @@ Page({
       recorderManager.stop();
       return;
     }
-    this.setData({ isRecordingAudio: true, audioButtonLabel: '结束录音' });
-    recorderManager.start({
-      duration: 60000,
-      format: 'mp3',
-    });
+    try {
+      await ensurePrivacyAuthorization(this, {
+        title: '录音前说明',
+        content: '录音仅在你主动点击后开始，用于当前团队任务记录补充，不会在后台自动录制。',
+      });
+      this.setData({ isRecordingAudio: true, audioButtonLabel: '结束录音' });
+      recorderManager.start({
+        duration: 60000,
+        format: 'mp3',
+      });
+    } catch (error) {
+      if (error && error.message === 'privacy_authorization_denied') {
+        wx.showToast({ title: '未同意隐私说明，暂时无法录音', icon: 'none' });
+        return;
+      }
+      wx.showToast({ title: '录音启动失败', icon: 'none' });
+    }
   },
 
   removePhoto(event) {
@@ -435,5 +471,19 @@ Page({
 
   goRoom() {
     wx.navigateTo({ url: `/pages/team-room/team-room?roomId=${encodeURIComponent(this.data.roomId)}` });
+  },
+
+  handlePrivacyAgree() {
+    resolvePrivacyAuthorization(this);
+  },
+
+  handlePrivacyReject() {
+    rejectPrivacyAuthorization(this);
+  },
+
+  handleOpenPrivacyContract() {
+    openPrivacyContract().catch(() => {
+      wx.showToast({ title: '暂时无法打开隐私指引', icon: 'none' });
+    });
   },
 });

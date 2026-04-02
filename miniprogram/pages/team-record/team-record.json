@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "团队记录"
+  "navigationBarTitleText": "团队记录",
+  "usingComponents": {
+    "privacy-consent": "/components/privacy-consent/privacy-consent"
+  }
 }

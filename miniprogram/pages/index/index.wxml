@@ -162,7 +162,7 @@
       <view class="pill-row selection-row">
         <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
       </view>
-      <view class="helper-copy">AI 会综合天气、季节、状态、偏好和你选定的主题方向来生成内容；如果不选主题，就会随机给你一个方向</view>
+      <view class="helper-copy">AI 会综合天气、季节、状态、偏好和你选定的主题方向来生成任务内容</view>
 
       <button class="primary-btn full-width-btn advanced-generate-btn" bindtap="handleGenerateTheme" loading="{{isGenerating}}">AI 生成</button>
     </view>
@@ -178,4 +178,15 @@
       />
     </view>
   </view>
+
+  <privacy-consent
+    visible="{{privacyPopup.visible}}"
+    title="{{privacyPopup.title}}"
+    content="{{privacyPopup.content}}"
+    buttonText="{{privacyPopup.buttonText}}"
+    contractName="{{privacyPopup.contractName}}"
+    bind:agree="handlePrivacyAgree"
+    bind:close="handlePrivacyReject"
+    bind:opencontract="handleOpenPrivacyContract"
+  />
 </view>

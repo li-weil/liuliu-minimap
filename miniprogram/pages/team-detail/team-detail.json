@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "团队结果",
   "usingComponents": {
-    "checkin-card": "/components/checkin-card/checkin-card"
+    "checkin-card": "/components/checkin-card/checkin-card",
+    "privacy-consent": "/components/privacy-consent/privacy-consent"
   }
 }
