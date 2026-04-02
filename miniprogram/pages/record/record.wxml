@@ -27,6 +27,7 @@
   </view>
 
   <button class="map-switch-btn" bindtap="toggleTracking">{{isTracking ? '停止追踪' : '开启轨迹追踪'}}</button>
+  <view class="track-mode-tip">{{isTracking ? '当前使用前台实时定位：请尽量保持小程序停留在前台，切到后台后连续轨迹可能中断。' : '轨迹追踪当前使用前台实时定位，开启后请尽量保持小程序停留在前台。'}}</view>
 
   <view class="section-card section-block track-stats-block">
     <view class="section-title">轨迹信息</view>

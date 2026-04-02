@@ -26,11 +26,7 @@
   "requiredPrivateInfos": [
     "getLocation",
     "onLocationChange",
-    "startLocationUpdate",
-    "startLocationUpdateBackground"
-  ],
-  "requiredBackgroundModes": [
-    "location"
+    "startLocationUpdate"
   ],
   "tabBar": {
     "color": "#6f6a5f",

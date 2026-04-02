@@ -1126,15 +1126,15 @@ Page({
     try {
       const mode = await this.startRealtimeTracking();
       this.trackingMode = mode;
-      wx.showToast({ title: mode === 'background' ? '后台定位已开启' : '前台实时定位已开启', icon: 'none' });
+      wx.showToast({ title: '前台实时定位已开启，请尽量保持当前页', icon: 'none' });
     } catch (error) {
       try {
         await this.startPollingTracking();
         this.trackingMode = 'polling';
-        const reason = this.lastTrackingFailureReason || '持续定位未成功开启';
+        const reason = this.lastTrackingFailureReason || '前台实时定位未成功开启';
         wx.showModal({
           title: '已切换为间隔记录',
-          content: reason,
+          content: `${reason}。当前会改为间隔取点，离开前台或定位受限时，轨迹连续性可能变弱。`,
           showCancel: false,
           confirmText: '知道了',
         });
@@ -1175,49 +1175,29 @@ Page({
   },
 
   startRealtimeTracking() {
-    if (!wx.onLocationChange || (!wx.startLocationUpdate && !wx.startLocationUpdateBackground)) {
+    if (!wx.onLocationChange || !wx.startLocationUpdate) {
       this.lastTrackingFailureReason = '当前环境不支持持续定位';
       return Promise.reject(new Error('location_update_not_supported'));
     }
 
     return getCurrentLocation().then((initialLocation) => new Promise((resolve, reject) => {
-      const bindRealtimeListener = (mode) => {
-        this.trackingMode = mode;
+      const bindRealtimeListener = () => {
+        this.trackingMode = 'foreground';
         if (wx.offLocationChange && this.handleRealtimeLocationChange) {
           wx.offLocationChange(this.handleRealtimeLocationChange);
         }
         wx.onLocationChange(this.handleRealtimeLocationChange);
         this.appendTrackPoint(initialLocation);
-        resolve(mode);
+        resolve('foreground');
       };
 
-      const startForeground = () => {
-        if (!wx.startLocationUpdate) {
-          this.lastTrackingFailureReason = '前台实时定位不可用';
-          reject(new Error('location_update_not_supported'));
-          return;
-        }
-        wx.startLocationUpdate({
-          success: () => bindRealtimeListener('foreground'),
-          fail: (error) => {
-            this.lastTrackingFailureReason = `前台失败 ${((error && error.errMsg) || '').replace(/^.*fail:?/, '').trim() || '未知原因'}`;
-            reject(error);
-          },
-        });
-      };
-
-      if (!wx.startLocationUpdateBackground) {
-        startForeground();
-        return;
-      }
-
-      wx.startLocationUpdateBackground({
+      wx.startLocationUpdate({
         success: () => {
-          bindRealtimeListener('background');
+          bindRealtimeListener();
         },
         fail: (error) => {
-          this.lastTrackingFailureReason = `后台失败 ${((error && error.errMsg) || '').replace(/^.*fail:?/, '').trim() || '未知原因'}`;
-          startForeground();
+          this.lastTrackingFailureReason = `前台失败 ${((error && error.errMsg) || '').replace(/^.*fail:?/, '').trim() || '未知原因'}`;
+          reject(error);
         },
       });
     }));
