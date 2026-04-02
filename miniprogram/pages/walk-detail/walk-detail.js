@@ -1,8 +1,39 @@
 const { getWalkDetail, publishWalkShare, deleteWalk } = require('../../services/walk');
+const { generateCompanionNote } = require('../../services/sticker');
 const { formatDate } = require('../../utils/format');
 
 const SUMMARY_MISSION_KEY = '__summary__';
 const SUMMARY_MISSION_LABEL = '花些时间回顾一路的采撷';
+
+function explainDeleteFailure(error) {
+  const raw = String((error && error.message) || (error && error.errMsg) || '').toLowerCase();
+  if (!raw) {
+    return '删除失败，请稍后再试';
+  }
+  if (raw.includes('permission_denied')) {
+    return '这条记录不属于当前账号，不能删除';
+  }
+  if (raw.includes('not_found')) {
+    return '这条记录已经不存在了';
+  }
+  if (raw.includes('missing_id')) {
+    return '缺少记录编号，暂时无法删除';
+  }
+  if (raw.includes('function not found') || raw.includes('cloud function')) {
+    return '删除云函数还没部署，请先上传 deleteWalk';
+  }
+  return '删除失败，请稍后再试';
+}
+
+function queryCanDelete(walk, source) {
+  if (!walk) {
+    return false;
+  }
+  if (source === 'feed' || source === 'share') {
+    return false;
+  }
+  return !!(walk.id || walk._id);
+}
 
 function splitPoemLines(poem) {
   const normalized = String(poem || '').replace(/[。！？]+$/g, '');
@@ -45,7 +76,13 @@ function downloadFile(url) {
   return new Promise((resolve, reject) => {
     wx.downloadFile({
       url,
-      success: resolve,
+      success: (result) => {
+        if (result && result.statusCode && result.statusCode >= 400) {
+          reject(new Error(`download_status_${result.statusCode}`));
+          return;
+        }
+        resolve(result);
+      },
       fail: reject,
     });
   });
@@ -61,42 +98,129 @@ function saveImageToAlbum(filePath) {
   });
 }
 
+function getSetting() {
+  return new Promise((resolve, reject) => {
+    wx.getSetting({
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+function authorize(scope) {
+  return new Promise((resolve, reject) => {
+    wx.authorize({
+      scope,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+function openSetting() {
+  return new Promise((resolve, reject) => {
+    wx.openSetting({
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+async function ensureAlbumPermission() {
+  const setting = await getSetting();
+  const authSetting = setting && setting.authSetting ? setting.authSetting : {};
+  const albumPermission = authSetting['scope.writePhotosAlbum'];
+  if (albumPermission === true) {
+    return true;
+  }
+  if (albumPermission === false) {
+    const modalResult = await new Promise((resolve) => {
+      wx.showModal({
+        title: '需要相册权限',
+        content: '请在设置里允许保存到相册后，再试一次',
+        confirmText: '去设置',
+        success: resolve,
+      });
+    });
+    if (!modalResult || !modalResult.confirm) {
+      throw new Error('album_permission_denied');
+    }
+    const openedSetting = await openSetting();
+    const nextAuthSetting = openedSetting && openedSetting.authSetting ? openedSetting.authSetting : {};
+    if (!nextAuthSetting['scope.writePhotosAlbum']) {
+      throw new Error('album_permission_denied');
+    }
+    return true;
+  }
+
+  try {
+    await authorize('scope.writePhotosAlbum');
+    return true;
+  } catch (error) {
+    const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+    if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
+      throw new Error('album_permission_denied');
+    }
+    throw error;
+  }
+}
+
+function explainAlbumSaveError(error) {
+  const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+  if (!errMsg) {
+    return '保存卡片失败，请稍后再试';
+  }
+  if (
+    errMsg.includes('auth deny') ||
+    errMsg.includes('authorize') ||
+    errMsg.includes('album_permission_denied') ||
+    errMsg.includes('saveImageToPhotosAlbum:fail auth denied')
+  ) {
+    return '没有相册权限，请到设置里开启';
+  }
+  if (errMsg.includes('download_status_')) {
+    return `卡片下载失败：${errMsg.replace('download_status_', 'HTTP ')}`.slice(0, 30);
+  }
+  if (errMsg.includes('download_mission_card_failed') || errMsg.includes('download file:fail')) {
+    return '卡片下载失败，请稍后重试';
+  }
+  if (errMsg.includes('fail file not found')) {
+    return '卡片文件已失效，请重新生成';
+  }
+  if (errMsg.includes('saveImageToPhotosAlbum:fail')) {
+    return errMsg.replace('saveImageToPhotosAlbum:fail ', '').slice(0, 30);
+  }
+  return `保存失败：${errMsg}`.slice(0, 30);
+}
+
 function createEmptyMissionAssets() {
   return {
     photoList: [],
     videoList: [],
     audioList: [],
     noteText: '',
+    companionNote: '',
     cardImagePath: '',
   };
 }
 
 function buildMissionItems(walk) {
-  const missionKeySet = new Set();
-  const missionNames = [];
   const missionAssetMap = walk.missionAssetMap || {};
-  const pushMission = (mission, isSupplemental = false) => {
-    if (!mission || mission === SUMMARY_MISSION_KEY || missionKeySet.has(mission)) {
-      return;
-    }
-    missionKeySet.add(mission);
-    missionNames.push({
+  const themeMissions = Array.isArray(walk.themeSnapshot && walk.themeSnapshot.missions)
+    ? walk.themeSnapshot.missions.filter((mission) => !!mission && mission !== SUMMARY_MISSION_KEY)
+    : [];
+  const missionNames = [
+    ...themeMissions.map((mission) => ({
       key: mission,
       label: mission,
-      isSupplemental,
-    });
-  };
-
-  ((walk.themeSnapshot && walk.themeSnapshot.missions) || []).forEach((mission) => pushMission(mission, false));
-  (walk.completedMissions || []).forEach((mission) => pushMission(mission, false));
-  Object.keys(walk.missionReviews || {}).forEach((mission) => pushMission(mission, false));
-  Object.keys(missionAssetMap || {}).forEach((mission) => pushMission(mission, false));
-
-  missionNames.push({
-    key: SUMMARY_MISSION_KEY,
-    label: SUMMARY_MISSION_LABEL,
-    isSupplemental: true,
-  });
+      isSupplemental: false,
+    })),
+    {
+      key: SUMMARY_MISSION_KEY,
+      label: SUMMARY_MISSION_LABEL,
+      isSupplemental: true,
+    },
+  ];
   return missionNames.map((item) => ({
     mission: item.key,
     label: item.label,
@@ -164,6 +288,7 @@ Page({
             sticker: decorateSticker(result.walk.sticker),
             createdAtLabel: formatDate(result.walk.createdAt),
             missionItems: buildMissionItems(result.walk),
+            canDelete: queryCanDelete(result.walk, this.data.source),
           }
         : null;
       this.setData({
@@ -188,7 +313,7 @@ Page({
     return walk.missionItems.find((item) => item.mission === activeMission) || null;
   },
 
-  prepareMissionCard() {
+  async prepareMissionCard() {
     const missionItem = this.getActiveMissionItem();
     if (!missionItem) {
       this.setData({
@@ -206,13 +331,61 @@ Page({
       return;
     }
 
+    let nextAssets = {
+      ...createEmptyMissionAssets(),
+      ...(missionItem.assets || {}),
+    };
+    const userNoteText = String(nextAssets.noteText || '').trim();
+    const photoList = Array.isArray(nextAssets.photoList) ? nextAssets.photoList.filter(Boolean) : [];
+    if (!nextAssets.companionNote && (userNoteText || photoList.length)) {
+      try {
+        const result = await generateCompanionNote({
+          themeTitle: (this.data.walk && this.data.walk.themeTitle) || '',
+          locationName: (this.data.walk && this.data.walk.locationName) || '',
+          locationContext: (this.data.walk && this.data.walk.locationContext) || '',
+          mission: missionItem.label || missionItem.mission || '',
+          userNoteText,
+          photoList,
+        });
+        if (result && result.companionNote) {
+          nextAssets = {
+            ...nextAssets,
+            companionNote: result.companionNote,
+          };
+        }
+      } catch (error) {
+        // Ignore companion note generation failure and still render the card.
+      }
+    }
+
+    if (nextAssets.companionNote && this.data.walk && Array.isArray(this.data.walk.missionItems)) {
+      const missionItems = this.data.walk.missionItems.map((item) => (
+        item.mission === missionItem.mission
+          ? {
+              ...item,
+              assets: {
+                ...createEmptyMissionAssets(),
+                ...(item.assets || {}),
+                companionNote: nextAssets.companionNote,
+              },
+            }
+          : item
+      ));
+      this.setData({
+        walk: {
+          ...this.data.walk,
+          missionItems,
+        },
+      });
+    }
+
     this.missionCardRenderVersion += 1;
     this.setData({
       currentMissionCardSrc: '',
       isRenderingMissionCard: true,
       missionCardRenderPayload: {
         mission: missionItem.label || '打卡卡片',
-        assets: missionItem.assets || createEmptyMissionAssets(),
+        assets: nextAssets,
         locationName: (this.data.walk && this.data.walk.locationName) || '',
         themeTitle: (this.data.walk && this.data.walk.themeTitle) || '',
         dateLabel: (this.data.walk && this.data.walk.createdAtLabel) || '',
@@ -271,48 +444,50 @@ Page({
     });
   },
 
-  resolveMissionCardUrl() {
+  resolveMissionCardFilePath() {
     const src = this.data.missionCardModal && this.data.missionCardModal.imageSrc;
     if (!src) {
       return Promise.reject(new Error('missing_mission_card'));
     }
-    if (String(src).startsWith('cloud://')) {
+    const normalizedSrc = String(src);
+    if (normalizedSrc.startsWith('cloud://')) {
       return wx.cloud.getTempFileURL({ fileList: [src] }).then((result) => {
         const item = result.fileList && result.fileList[0];
-        return item && item.tempFileURL ? item.tempFileURL : '';
+        return item && item.tempFileURL ? downloadFile(item.tempFileURL) : null;
+      }).then((download) => {
+        if (!download || !download.tempFilePath) {
+          throw new Error('download_mission_card_failed');
+        }
+        return download.tempFilePath;
       });
     }
-    return Promise.resolve(src);
+    if (/^https?:\/\//i.test(normalizedSrc)) {
+      return downloadFile(normalizedSrc).then((download) => {
+        if (!download || !download.tempFilePath) {
+          throw new Error('download_mission_card_failed');
+        }
+        return download.tempFilePath;
+      });
+    }
+    return Promise.resolve(normalizedSrc);
   },
 
   async handleSaveMissionCardToAlbum() {
     try {
-      const imageUrl = await this.resolveMissionCardUrl();
-      if (!imageUrl) {
+      await ensureAlbumPermission();
+      const filePath = await this.resolveMissionCardFilePath();
+      if (!filePath) {
         throw new Error('missing_mission_card');
       }
-      const download = await downloadFile(imageUrl);
-      if (!download || !download.tempFilePath) {
-        throw new Error('download_mission_card_failed');
-      }
-      await saveImageToAlbum(download.tempFilePath);
+      await saveImageToAlbum(filePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
-      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
-      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
-        wx.showModal({
-          title: '需要相册权限',
-          content: '请在设置里允许保存到相册后，再试一次',
-          confirmText: '去设置',
-          success: (res) => {
-            if (res.confirm) {
-              wx.openSetting({});
-            }
-          },
-        });
-        return;
-      }
-      wx.showToast({ title: '保存卡片失败', icon: 'none' });
+      wx.showModal({
+        title: '保存卡片失败',
+        content: explainAlbumSaveError(error),
+        showCancel: false,
+        confirmText: '知道了',
+      });
     }
   },
 
@@ -397,7 +572,7 @@ Page({
   async handleDeleteWalk() {
     const walk = this.data.walk;
     const id = walk && (walk.id || walk._id);
-    if (!id || this.data.isDeletingWalk) {
+    if (!id || this.data.isDeletingWalk || !(walk && walk.canDelete)) {
       return;
     }
 
@@ -432,7 +607,7 @@ Page({
         });
       }, 400);
     } catch (error) {
-      wx.showToast({ title: '删除失败', icon: 'none' });
+      wx.showToast({ title: explainDeleteFailure(error), icon: 'none', duration: 2500 });
     } finally {
       this.setData({ isDeletingWalk: false });
     }

@@ -1,18 +1,50 @@
 const PAPER_TEXTURE = '/assets/images/checkin-card/paper-texture.png';
 const POSTMARK = '/assets/images/checkin-card/postmark-generated.png';
 const BARCODE = '/assets/images/checkin-card/barcode-generated.png';
+const CAT_HEAD = '/assets/images/checkin-card/cat-head-realistic.png';
 const { ensureCanvasCompatibleImage } = require('../../utils/media');
 
 const CARD_WIDTH = 327;
-const SIDE_PADDING = 26;
-const TOP_DECORATION_HEIGHT = 118;
-const TEXT_TOP_GAP = 22;
-const TITLE_FONT = 24;
-const META_FONT = 11;
-const BODY_FONT = 14;
-const BODY_LINE_HEIGHT = 24;
-const BOTTOM_META_GAP = 22;
-const PHOTO_GAP = 14;
+const SIDE_PADDING = 22;
+const HEADER_HEIGHT = 148;
+const CONTENT_WIDTH = CARD_WIDTH - SIDE_PADDING * 2;
+const DIALOG_WIDTH = 222;
+const BUBBLE_PADDING_X = 16;
+const BUBBLE_PADDING_Y = 14;
+const DIALOG_LINE_HEIGHT = 22;
+const PHOTO_GAP = 12;
+
+function drawPerforationEdge(ctx, x, y, width, height, radius = 3.2, gap = 6.4) {
+  const countX = Math.max(2, Math.floor(width / gap));
+  const countY = Math.max(2, Math.floor(height / gap));
+  for (let index = 0; index <= countX; index += 1) {
+    const cx = x + (index * width) / countX;
+    ctx.beginPath();
+    ctx.arc(cx, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, y + height, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let index = 1; index < countY; index += 1) {
+    const cy = y + (index * height) / countY;
+    ctx.beginPath();
+    ctx.arc(x, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + width, cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function fillTextWithSpacing(ctx, text, x, y, spacing = 1.4) {
+  const value = String(text || '');
+  let cursor = x;
+  [...value].forEach((char) => {
+    ctx.fillText(char, cursor, y);
+    cursor += ctx.measureText(char).width + spacing;
+  });
+}
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -58,15 +90,77 @@ function splitTextToLines(ctx, text, maxWidth) {
   return lines;
 }
 
+function buildFont(size, family = 'sans-serif', weight = '') {
+  return `${weight ? `${weight} ` : ''}${size}px ${family}`;
+}
+
+function layoutParagraph(ctx, text, options = {}) {
+  const {
+    maxWidth = 180,
+    preferredSize = 14,
+    minSize = 11,
+    maxLines = 8,
+    family = 'sans-serif',
+    weight = '',
+    lineHeightRatio = 1.62,
+  } = options;
+
+  for (let size = preferredSize; size >= minSize; size -= 1) {
+    ctx.font = buildFont(size, family, weight);
+    const lines = splitTextToLines(ctx, text, maxWidth);
+    if (lines.length <= maxLines) {
+      return {
+        font: buildFont(size, family, weight),
+        fontSize: size,
+        lineHeight: Math.round(size * lineHeightRatio),
+        lines,
+      };
+    }
+  }
+
+  ctx.font = buildFont(minSize, family, weight);
+  const lines = splitTextToLines(ctx, text, maxWidth).slice(0, maxLines);
+  return {
+    font: buildFont(minSize, family, weight),
+    fontSize: minSize,
+    lineHeight: Math.round(minSize * lineHeightRatio),
+    lines,
+  };
+}
+
 function formatCardDate(rawValue) {
+  if (rawValue instanceof Date && !Number.isNaN(rawValue.getTime())) {
+    const year = rawValue.getFullYear();
+    const month = `${rawValue.getMonth() + 1}`.padStart(2, '0');
+    const day = `${rawValue.getDate()}`.padStart(2, '0');
+    return `${year}.${month}.${day}`;
+  }
+  if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+    const date = new Date(rawValue);
+    if (!Number.isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = `${date.getMonth() + 1}`.padStart(2, '0');
+      const day = `${date.getDate()}`.padStart(2, '0');
+      return `${year}.${month}.${day}`;
+    }
+  }
   if (rawValue) {
-    return String(rawValue).replace(/\//g, '.').replace(/-/g, '.');
+    const normalized = String(rawValue).trim().replace(/\//g, '.').replace(/-/g, '.');
+    const fullDateMatch = normalized.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+    if (fullDateMatch) {
+      return `${fullDateMatch[1]}.${fullDateMatch[2]}.${fullDateMatch[3]}`;
+    }
+    const monthDayMatch = normalized.match(/(\d{2})\.(\d{2})/);
+    if (monthDayMatch) {
+      const year = new Date().getFullYear();
+      return `${year}.${monthDayMatch[1]}.${monthDayMatch[2]}`;
+    }
   }
   const now = new Date();
   const year = now.getFullYear();
   const month = `${now.getMonth() + 1}`.padStart(2, '0');
   const day = `${now.getDate()}`.padStart(2, '0');
-  return `${year}.${month}${day}`;
+  return `${year}.${month}.${day}`;
 }
 
 function getImageInfo(src) {
@@ -125,7 +219,7 @@ Component({
     },
     placeholderText: {
       type: String,
-      value: '',
+      value: '今天先把这一刻留给自己。',
     },
     renderVersion: {
       type: Number,
@@ -143,14 +237,9 @@ Component({
   },
 
   observers: {
-    'renderVersion': function onRenderVersionChange(renderVersion) {
+    renderVersion(renderVersion) {
       if (renderVersion > 0) {
-        this.queueRender();
-      }
-    },
-    'mission, assets, locationName, themeTitle, dateLabel, accentColor, placeholderText, autoRender': function schedule() {
-      if (this.data.autoRender) {
-        this.queueRender();
+        this.queueRender(true);
       }
     },
   },
@@ -160,12 +249,11 @@ Component({
       this.imageCache = {};
       this.renderTimer = null;
       this.renderToken = 0;
+      this.lastRenderKey = '';
     },
-
     ready() {
       this.initCanvas();
     },
-
     detached() {
       if (this.renderTimer) {
         clearTimeout(this.renderTimer);
@@ -175,11 +263,29 @@ Component({
 
   methods: {
     queueRender() {
+      const renderKey = JSON.stringify({
+        mission: this.data.mission || '',
+        noteText: this.data.assets && this.data.assets.noteText ? this.data.assets.noteText : '',
+        companionNote: this.data.assets && this.data.assets.companionNote ? this.data.assets.companionNote : '',
+        photoList: this.data.assets && Array.isArray(this.data.assets.photoList) ? this.data.assets.photoList : [],
+        locationName: this.data.locationName || '',
+        themeTitle: this.data.themeTitle || '',
+        dateLabel: this.data.dateLabel || '',
+        accentColor: this.data.accentColor || '',
+        renderVersion: this.data.renderVersion || 0,
+      });
+      if (renderKey === this.lastRenderKey && this.data.imageSrc) {
+        return;
+      }
+      this.lastRenderKey = renderKey;
       if (this.renderTimer) {
         clearTimeout(this.renderTimer);
       }
       this.renderTimer = setTimeout(() => {
         this.renderCard().catch(() => {
+          if (this.ctx) {
+            this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+          }
           this.setData({ isRendering: false });
         });
       }, 80);
@@ -187,7 +293,9 @@ Component({
 
     initCanvas() {
       if (this.canvasReady) {
-        this.queueRender();
+        if (this.data.autoRender && this.data.renderVersion > 0) {
+          this.queueRender();
+        }
         return;
       }
       const query = this.createSelectorQuery();
@@ -201,7 +309,9 @@ Component({
         this.canvasWidth = Math.round(target.width || CARD_WIDTH);
         this.dpr = wx.getWindowInfo ? wx.getWindowInfo().pixelRatio : (wx.getSystemInfoSync().pixelRatio || 2);
         this.canvasReady = true;
-        this.queueRender();
+        if (this.data.autoRender && this.data.renderVersion > 0) {
+          this.queueRender();
+        }
       });
     },
 
@@ -245,118 +355,419 @@ Component({
     drawPaperBackground(width, height) {
       const ctx = this.ctx;
       ctx.save();
-      roundRect(ctx, 0, 0, width, height, 22);
+      roundRect(ctx, 0, 0, width, height, 24);
       ctx.clip();
 
-      const baseGradient = ctx.createLinearGradient(0, 0, 0, height);
-      baseGradient.addColorStop(0, '#f6e7c5');
-      baseGradient.addColorStop(1, '#f3d8ab');
+      const baseGradient = ctx.createLinearGradient(0, 0, width, height);
+      baseGradient.addColorStop(0, '#fff6e8');
+      baseGradient.addColorStop(0.5, '#f8e8ca');
+      baseGradient.addColorStop(1, '#f3d9ae');
       ctx.fillStyle = baseGradient;
       ctx.fillRect(0, 0, width, height);
 
-      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = 'rgba(255,255,255,0.38)';
+      ctx.fillRect(0, 0, width, 56);
+
+      ctx.globalAlpha = 0.14;
       if (this.paperTextureImage) {
         ctx.drawImage(this.paperTextureImage.image, 0, 0, width, height);
       }
       ctx.globalAlpha = 1;
-
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.fillRect(0, 0, width, 32);
       ctx.restore();
     },
 
-    drawAirmailDivider(width) {
+    drawPaw(x, y, scale, color) {
       const ctx = this.ctx;
-      const y = TOP_DECORATION_HEIGHT;
+      ctx.save();
+      ctx.fillStyle = color;
+      const dots = [
+        { x: 0, y: 0, r: 4 * scale },
+        { x: -9 * scale, y: -8 * scale, r: 2.9 * scale },
+        { x: -2 * scale, y: -13 * scale, r: 2.7 * scale },
+        { x: 5 * scale, y: -12 * scale, r: 2.7 * scale },
+        { x: 11 * scale, y: -6 * scale, r: 2.8 * scale },
+      ];
+      dots.forEach((dot) => {
+        ctx.beginPath();
+        ctx.arc(x + dot.x, y + dot.y, dot.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    },
+
+    drawSparkle(x, y, size, color) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.1;
+      [[0, -size, 0, size], [-size, 0, size, 0], [-size * 0.65, -size * 0.65, size * 0.65, size * 0.65], [-size * 0.65, size * 0.65, size * 0.65, -size * 0.65]].forEach((line) => {
+        ctx.beginPath();
+        ctx.moveTo(line[0], line[1]);
+        ctx.lineTo(line[2], line[3]);
+        ctx.stroke();
+      });
+      ctx.restore();
+    },
+
+    drawTape(x, y, width, height, rotation, color) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      roundRect(ctx, -width / 2, -height / 2, width, height, 4);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.stroke();
+      ctx.restore();
+    },
+
+    drawFishbone(x, y, color) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-14, 0);
+      ctx.lineTo(10, 0);
+      ctx.stroke();
+      [[-8, 0, -13, -5], [-1, 0, -6, -6], [-8, 0, -13, 5], [-1, 0, -6, 6]].forEach((line) => {
+        ctx.beginPath();
+        ctx.moveTo(line[0], line[1]);
+        ctx.lineTo(line[2], line[3]);
+        ctx.stroke();
+      });
+      ctx.beginPath();
+      ctx.moveTo(10, 0);
+      ctx.lineTo(16, -4);
+      ctx.lineTo(16, 4);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(-15.5, 0, 2.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    },
+
+    drawAirmailString(width) {
+      const ctx = this.ctx;
+      const y = 138;
       ctx.save();
       ctx.lineWidth = 2;
-      const colors = ['#d95a4b', '#f6f0e6', '#3767b1'];
-      for (let index = 0; index < 28; index += 1) {
-        const startX = -8 + index * 14;
-        ctx.strokeStyle = colors[index % colors.length];
+      const segments = 22;
+      for (let index = 0; index < segments; index += 1) {
+        const startX = 20 + ((width - 40) / segments) * index;
+        const endX = 20 + ((width - 40) / segments) * (index + 1);
+        ctx.strokeStyle = index % 2 === 0 ? 'rgba(203, 86, 63, 0.72)' : 'rgba(72, 118, 184, 0.72)';
         ctx.beginPath();
-        ctx.moveTo(startX, y + 6);
-        ctx.lineTo(startX + 18, y - 2);
+        ctx.moveTo(startX, y + (index % 2 === 0 ? 0 : 1.5));
+        ctx.lineTo(endX, y + (index % 2 === 0 ? 1.5 : 0));
         ctx.stroke();
       }
       ctx.restore();
+    },
+
+    drawRoutingMarks(width) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(131, 95, 62, 0.42)';
+      ctx.lineWidth = 1.2;
+      [[22, 112, 42, 112], [22, 118, 38, 118], [width - 52, 122, width - 22, 122]].forEach((line) => {
+        ctx.beginPath();
+        ctx.moveTo(line[0], line[1]);
+        ctx.lineTo(line[2], line[3]);
+        ctx.stroke();
+      });
+      ctx.restore();
+    },
+
+    drawMailBadge({ x, y, text, color = '#4e79b5', rotation = -0.18, width = 70, height = 28 }) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      roundRect(ctx, -width / 2, -height / 2, width, height, 6);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = `${color}18`;
+      ctx.fill();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 0, 1);
+      ctx.restore();
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+    },
+
+    drawAddressBlock(width) {
+      const ctx = this.ctx;
+      ctx.save();
+      const blockX = width - 134;
+      const blockY = 34;
+      roundRect(ctx, blockX, blockY, 96, 54, 10);
+      ctx.fillStyle = 'rgba(255, 249, 238, 0.42)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(147, 111, 76, 0.18)';
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(138, 105, 74, 0.26)';
+      ctx.lineWidth = 1;
+      [blockY + 17, blockY + 28, blockY + 39].forEach((lineY) => {
+        ctx.beginPath();
+        ctx.moveTo(blockX + 12, lineY);
+        ctx.lineTo(blockX + 84, lineY);
+        ctx.stroke();
+      });
+      ctx.fillStyle = 'rgba(112, 85, 59, 0.58)';
+      ctx.font = '10px monospace';
+      ctx.fillText('AIR MAIL NOTE', blockX + 12, blockY + 52);
+      ctx.restore();
+    },
+
+    drawStampWithPerforation(x, y, accentColor) {
+      const ctx = this.ctx;
+      const stampWidth = 56;
+      const stampHeight = 72;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 245, 227, 0.86)';
+      drawPerforationEdge(ctx, x, y, stampWidth, stampHeight, 2.5, 7);
+      roundRect(ctx, x, y, stampWidth, stampHeight, 4);
+      ctx.fillStyle = '#a7c7df';
+      ctx.fill();
+
+      roundRect(ctx, x + 8, y + 7, 40, 56, 4);
+      const stampGradient = ctx.createLinearGradient(x + 8, y + 7, x + 48, y + 63);
+      stampGradient.addColorStop(0, accentColor);
+      stampGradient.addColorStop(1, '#bb5131');
+      ctx.fillStyle = stampGradient;
+      ctx.fill();
+
+      ctx.fillStyle = '#fff8ef';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.fillText('POST', x + 15, y + 28);
+      ctx.font = 'bold 21px sans-serif';
+      ctx.fillText('66', x + 15, y + 50);
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText('84', x + 28, y + 64);
+      ctx.restore();
+    },
+
+    drawInkStamp({ x, y, radius = 22, color = 'rgba(195, 87, 58, 0.72)', text = 'CITY WALK' }) {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.28);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, radius - 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 0, 1);
+      ctx.restore();
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
     },
 
     drawHeader(width, accentColor) {
       const ctx = this.ctx;
       ctx.save();
 
-      roundRect(ctx, 20, 18, 58, 74, 4);
-      ctx.fillStyle = '#9fc0dc';
+      roundRect(ctx, 18, 18, width - 36, HEADER_HEIGHT - 20, 20);
+      const headerGradient = ctx.createLinearGradient(18, 18, width - 18, HEADER_HEIGHT);
+      headerGradient.addColorStop(0, 'rgba(255,255,255,0.72)');
+      headerGradient.addColorStop(1, 'rgba(255,241,214,0.46)');
+      ctx.fillStyle = headerGradient;
       ctx.fill();
+      this.drawStampWithPerforation(28, 28, accentColor);
+      this.drawAddressBlock(width);
 
-      roundRect(ctx, 29, 26, 40, 58, 2);
-      ctx.fillStyle = accentColor;
-      ctx.fill();
+      ctx.fillStyle = '#8e6b47';
+      ctx.font = '12px "ZCOOL XiaoWei", serif';
+      ctx.fillText('66 陪你记录这一站', 96, 42);
 
-      ctx.fillStyle = '#fff8eb';
-      ctx.font = 'bold 8px sans-serif';
-      ctx.fillText('POST', 36, 50);
-      ctx.font = 'bold 19px sans-serif';
-      ctx.fillText('84', 36, 76);
+      ctx.fillStyle = '#1f1b16';
+      ctx.font = 'bold 20px "ZCOOL KuaiLe", sans-serif';
+      const themeLines = splitTextToLines(ctx, this.data.themeTitle || '今日漫步', 196).slice(0, 2);
+      themeLines.forEach((line, index) => {
+        fillTextWithSpacing(ctx, line, 96, 68 + index * 24, 1.2);
+      });
+
+      ctx.fillStyle = 'rgba(74, 57, 43, 0.74)';
+      ctx.font = '12px "ZCOOL XiaoWei", serif';
+      const missionLines = splitTextToLines(ctx, this.data.mission || '打卡任务', 174).slice(0, 2);
+      ctx.fillText('任务：', 96, 116);
+      missionLines.forEach((line, index) => {
+        ctx.fillText(line, 132, 116 + index * 18);
+      });
+
+      this.drawAirmailString(width);
+      this.drawRoutingMarks(width);
+      this.drawPaw(108, 108, 0.7, 'rgba(207, 131, 91, 0.24)');
+      this.drawPaw(132, 102, 0.55, 'rgba(207, 131, 91, 0.18)');
+      this.drawSparkle(width - 26, 34, 5, 'rgba(201, 111, 74, 0.48)');
+      this.drawSparkle(width - 36, 100, 4, 'rgba(141, 106, 73, 0.32)');
+      this.drawTape(108, 24, 38, 12, -0.12, 'rgba(255, 243, 201, 0.72)');
+      this.drawTape(width - 48, 22, 42, 12, 0.1, 'rgba(255, 238, 207, 0.68)');
+      this.drawMailBadge({ x: width - 66, y: 84, text: 'LINE 66', color: '#4f80bd', rotation: -0.95, width: 76, height: 28 });
+      this.drawMailBadge({ x: width - 122, y: 54, text: 'AIR', color: '#7f69ae', rotation: -0.28, width: 48, height: 24 });
+      this.drawInkStamp({ x: 116, y: 40, radius: 21, text: 'POST' });
 
       if (this.postmarkImage) {
-        ctx.translate(width - 92, 48);
-        ctx.rotate(-0.22);
-        ctx.globalAlpha = 0.84;
-        ctx.drawImage(this.postmarkImage.image, -62, -62, 124, 124);
+        ctx.translate(width - 78, 34);
+        ctx.rotate(-0.16);
+        ctx.globalAlpha = 0.28;
+        ctx.drawImage(this.postmarkImage.image, -42, -42, 84, 84);
         ctx.globalAlpha = 1;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
 
-      ctx.strokeStyle = 'rgba(87, 53, 35, 0.14)';
-      ctx.strokeRect(14, 14, width - 28, this.cardHeight - 28);
       ctx.restore();
     },
 
-    drawTextBlocks(width, title, noteLines, locationName, themeTitle, dateText) {
+    drawCompanionAvatar(x, y, size) {
       const ctx = this.ctx;
-      const contentWidth = width - SIDE_PADDING * 2;
-      let y = TOP_DECORATION_HEIGHT + TEXT_TOP_GAP;
+      if (!this.catHeadImage) {
+        return;
+      }
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(this.catHeadImage.image, x, y, size, size);
+      ctx.restore();
 
       ctx.save();
-      ctx.fillStyle = '#1e1c18';
-      ctx.font = `700 ${TITLE_FONT}px serif`;
-      const titleLines = splitTextToLines(ctx, title, contentWidth);
-      titleLines.forEach((line, index) => {
-        ctx.fillText(line, SIDE_PADDING, y + index * 32);
+      ctx.strokeStyle = 'rgba(194, 93, 57, 0.34)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size / 2 + 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    },
+
+    drawDialogueBubble({ x, y, width, height, fill, stroke, align = 'left', tailColor }) {
+      const ctx = this.ctx;
+      ctx.save();
+      roundRect(ctx, x, y, width, height, 18);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.beginPath();
+      if (align === 'left') {
+        ctx.moveTo(x + 28, y + height);
+        ctx.lineTo(x + 22, y + height + 12);
+        ctx.lineTo(x + 42, y + height - 2);
+      } else {
+        ctx.moveTo(x + width - 28, y + height);
+        ctx.lineTo(x + width - 18, y + height + 12);
+        ctx.lineTo(x + width - 46, y + height - 2);
+      }
+      ctx.closePath();
+      ctx.fillStyle = tailColor || fill;
+      ctx.fill();
+      ctx.restore();
+    },
+
+    drawDialogueSection(width, userLayout, companionLayout) {
+      const ctx = this.ctx;
+      let y = HEADER_HEIGHT + 24;
+
+      const sections = [
+        {
+          label: '我的记录',
+          sign: '我',
+          layout: userLayout,
+          align: 'left',
+          width: 212,
+          fill: 'rgba(255, 250, 243, 0.94)',
+          stroke: 'rgba(205, 172, 132, 0.65)',
+          titleColor: '#9b6a3f',
+          textColor: '#46372d',
+        },
+        {
+          label: '66 的记录',
+          sign: '66',
+          layout: companionLayout,
+          align: 'right',
+          width: 214,
+          fill: 'rgba(255, 238, 222, 0.96)',
+          stroke: 'rgba(201, 111, 74, 0.55)',
+          titleColor: '#c25d39',
+          textColor: '#553729',
+        },
+      ];
+
+      sections.forEach((section, index) => {
+        const bubbleWidth = Math.min(section.width, width - SIDE_PADDING * 2 - 18);
+        const lineCount = Math.max(section.layout.lines.length, 1);
+        const bubbleHeight = BUBBLE_PADDING_Y * 2 + 16 + lineCount * section.layout.lineHeight + 6;
+        const bubbleX = section.align === 'left' ? SIDE_PADDING + 2 : width - SIDE_PADDING - bubbleWidth - 4;
+
+        ctx.save();
+        ctx.fillStyle = section.titleColor;
+        ctx.font = 'bold 12px "ZCOOL KuaiLe", sans-serif';
+        if (section.align === 'left') {
+          fillTextWithSpacing(ctx, `${section.sign} ${section.label}`, bubbleX + 6, y - 8, 0.8);
+        } else {
+          const labelText = `${section.label} ${section.sign}`;
+          const labelWidth = ctx.measureText(labelText).width + (labelText.length - 1) * 0.8;
+          fillTextWithSpacing(ctx, labelText, bubbleX + bubbleWidth - labelWidth - 6, y - 8, 0.8);
+        }
+        ctx.restore();
+
+        this.drawDialogueBubble({
+          x: bubbleX,
+          y,
+          width: bubbleWidth,
+          height: bubbleHeight,
+          fill: section.fill,
+          stroke: section.stroke,
+          align: section.align,
+          tailColor: section.fill,
+        });
+
+        ctx.save();
+        ctx.fillStyle = section.textColor;
+        ctx.font = section.layout.font;
+        section.layout.lines.forEach((line, lineIndex) => {
+          ctx.fillText(line, bubbleX + BUBBLE_PADDING_X, y + BUBBLE_PADDING_Y + 18 + lineIndex * section.layout.lineHeight);
+        });
+        ctx.restore();
+
+        if (index === 1) {
+          this.drawCompanionAvatar(bubbleX - 54, y + 18, 46);
+          this.drawPaw(bubbleX + bubbleWidth - 14, y - 12, 0.42, 'rgba(194, 93, 57, 0.22)');
+          this.drawSparkle(bubbleX + 18, y + bubbleHeight - 8, 3.2, 'rgba(194, 93, 57, 0.24)');
+        }
+        if (index === 0) {
+          this.drawSparkle(width / 2 - 8, y + bubbleHeight / 2, 4.5, 'rgba(194, 93, 57, 0.18)');
+          this.drawPaw(width / 2 + 14, y + bubbleHeight / 2 + 12, 0.38, 'rgba(142, 107, 71, 0.14)');
+        }
+        y += bubbleHeight + 34;
       });
-      y += titleLines.length * 32 + 18;
 
-      ctx.fillStyle = '#453b31';
-      ctx.font = `${BODY_FONT}px sans-serif`;
-      const bodyLines = noteLines.length ? noteLines : splitTextToLines(ctx, this.data.placeholderText, contentWidth);
-      bodyLines.forEach((line, index) => {
-        ctx.fillText(line, SIDE_PADDING, y + index * BODY_LINE_HEIGHT);
-      });
-      y += bodyLines.length * BODY_LINE_HEIGHT + 18;
-
-      ctx.fillStyle = 'rgba(62, 52, 42, 0.72)';
-      ctx.font = `${META_FONT}px sans-serif`;
-      ctx.fillText(themeTitle || '今日漫步任务', SIDE_PADDING, y);
-      ctx.textAlign = 'right';
-      ctx.fillText(locationName || '城市街角', width - SIDE_PADDING, y);
-      ctx.textAlign = 'left';
-      y += 12;
-
-      return {
-        photoTop: y + 14,
-        footerTop: this.cardHeight - 42,
-        dateText,
-      };
+      return y;
     },
 
     drawPhoto(width, photoTop, photoHeight, photoImage) {
       const ctx = this.ctx;
       const photoWidth = width - SIDE_PADDING * 2;
-
       ctx.save();
-      roundRect(ctx, SIDE_PADDING, photoTop, photoWidth, photoHeight, 4);
+      roundRect(ctx, SIDE_PADDING, photoTop, photoWidth, photoHeight, 16);
       ctx.clip();
 
       if (photoImage) {
@@ -378,17 +789,30 @@ Component({
         ctx.drawImage(photoImage.image, dx, dy, drawWidth, drawHeight);
       } else {
         const placeholder = ctx.createLinearGradient(SIDE_PADDING, photoTop, SIDE_PADDING, photoTop + photoHeight);
-        placeholder.addColorStop(0, '#d3dce4');
-        placeholder.addColorStop(1, '#8ea1ad');
+        placeholder.addColorStop(0, '#f1d8b0');
+        placeholder.addColorStop(1, '#d3a37a');
         ctx.fillStyle = placeholder;
         ctx.fillRect(SIDE_PADDING, photoTop, photoWidth, photoHeight);
       }
 
+      ctx.fillStyle = 'rgba(255,255,255,0.14)';
+      ctx.fillRect(SIDE_PADDING, photoTop, photoWidth, 42);
       ctx.globalAlpha = 0.14;
       if (this.paperTextureImage) {
         ctx.drawImage(this.paperTextureImage.image, SIDE_PADDING, photoTop, photoWidth, photoHeight);
       }
       ctx.globalAlpha = 1;
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 252, 246, 0.88)';
+      ctx.lineWidth = 6;
+      roundRect(ctx, SIDE_PADDING + 3, photoTop + 3, photoWidth - 6, photoHeight - 6, 14);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(145, 111, 79, 0.18)';
+      ctx.lineWidth = 1.2;
+      roundRect(ctx, SIDE_PADDING + 8, photoTop + 8, photoWidth - 16, photoHeight - 16, 10);
+      ctx.stroke();
       ctx.restore();
     },
 
@@ -396,35 +820,52 @@ Component({
       let currentTop = photoTop;
       photoLayouts.forEach((layout, index) => {
         this.drawPhoto(width, currentTop, layout.height, layout.photoImage);
+        this.drawTape(SIDE_PADDING + 34, currentTop + 16, 28, 10, -0.18, 'rgba(255, 244, 214, 0.78)');
+        this.drawTape(width - SIDE_PADDING - 34, currentTop + 18, 30, 10, 0.18, 'rgba(255, 236, 206, 0.72)');
         currentTop += layout.height;
         if (index < photoLayouts.length - 1) {
           currentTop += PHOTO_GAP;
         }
       });
+      return currentTop;
     },
 
     drawFooter(width, dateText) {
       const ctx = this.ctx;
-      const footerY = this.cardHeight - 30;
+      const footerY = this.cardHeight - 34;
 
       ctx.save();
-      roundRect(ctx, SIDE_PADDING, footerY - 12, 66, 20, 10);
-      ctx.fillStyle = 'rgba(255, 241, 214, 0.92)';
+      roundRect(ctx, SIDE_PADDING, footerY - 12, 100, 24, 12);
+      ctx.fillStyle = 'rgba(255,247,233,0.96)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(95, 75, 54, 0.25)';
+      ctx.strokeStyle = 'rgba(149, 112, 78, 0.24)';
       ctx.stroke();
-      ctx.fillStyle = '#785f42';
+      ctx.fillStyle = '#75573a';
       ctx.font = '10px monospace';
-      ctx.fillText(dateText, SIDE_PADDING + 8, footerY + 2);
+      ctx.fillText(dateText, SIDE_PADDING + 10, footerY + 4);
 
-      ctx.font = '10px sans-serif';
-      ctx.fillStyle = 'rgba(116, 93, 70, 0.7)';
-      ctx.fillText('@ 遛遛地图实验室', SIDE_PADDING, footerY + 20);
+      roundRect(ctx, width - 118, footerY - 8, 56, 20, 10);
+      ctx.fillStyle = 'rgba(255, 247, 233, 0.94)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(149, 112, 78, 0.2)';
+      ctx.stroke();
+      ctx.fillStyle = '#7e6144';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText('BY AIR', width - 105, footerY + 5);
+
+      ctx.fillStyle = 'rgba(99, 75, 54, 0.78)';
+      ctx.font = '11px "ZCOOL XiaoWei", serif';
+      ctx.fillText(this.data.locationName || '城市街角', SIDE_PADDING + 114, footerY + 3);
+      ctx.font = '11px "ZCOOL KuaiLe", sans-serif';
+      fillTextWithSpacing(ctx, '66 陪伴记录卡', SIDE_PADDING, footerY + 23, 0.7);
+      this.drawFishbone(width - 112, footerY + 10, 'rgba(193, 136, 84, 0.55)');
+      this.drawSparkle(width - 144, footerY + 2, 3.6, 'rgba(201, 111, 74, 0.32)');
+      this.drawMailBadge({ x: width - 74, y: footerY + 8, text: 'SORT', color: '#4d78b0', rotation: -0.14, width: 42, height: 18 });
 
       if (this.barcodeImage) {
         ctx.translate(width - 58, this.cardHeight - 42);
-        ctx.rotate(-0.14);
-        ctx.globalAlpha = 0.9;
+        ctx.rotate(-0.12);
+        ctx.globalAlpha = 0.72;
         ctx.drawImage(this.barcodeImage.image, -56, -20, 112, 40);
         ctx.globalAlpha = 1;
       }
@@ -441,6 +882,8 @@ Component({
       this.setData({ isRendering: true });
 
       const assets = this.data.assets || {};
+      const userNote = String(assets.noteText || '').trim() || String(this.data.placeholderText || '').trim();
+      const companionNote = String(assets.companionNote || '').trim() || '66 轻轻跟在一旁，把你停下来注视的那一刻也记在了心里。';
       const photoSources = Array.isArray(assets.photoList)
         ? assets.photoList
             .map((item) => {
@@ -451,45 +894,49 @@ Component({
             })
             .filter(Boolean)
         : [];
-      const noteText = assets.noteText || '';
       const width = this.canvasWidth || CARD_WIDTH;
+      const contentWidth = width - SIDE_PADDING * 2;
 
       this.paperTextureImage = await this.loadCanvasImage(PAPER_TEXTURE).catch(() => null);
       this.postmarkImage = await this.loadCanvasImage(POSTMARK).catch(() => null);
       this.barcodeImage = await this.loadCanvasImage(BARCODE).catch(() => null);
-      const loadedPhotos = await Promise.all(
-        photoSources.map((src) => this.loadCanvasImage(src).catch(() => null))
-      );
+      this.catHeadImage = await this.loadCanvasImage(CAT_HEAD).catch(() => null);
+      const loadedPhotos = await Promise.all(photoSources.map((src) => this.loadCanvasImage(src).catch(() => null)));
       const photoLayouts = loadedPhotos
         .filter(Boolean)
         .map((photoImage) => {
           const imageRatio = photoImage.width / photoImage.height;
           return {
             photoImage,
-            height: clamp((width - SIDE_PADDING * 2) / imageRatio, 148, 356),
+            height: clamp(contentWidth / imageRatio, 150, 280),
           };
-        });
+        })
+        .slice(0, 2);
 
-      this.ctx.font = `${BODY_FONT}px sans-serif`;
-      const contentWidth = width - SIDE_PADDING * 2;
-      const noteLines = splitTextToLines(this.ctx, noteText, contentWidth);
-      const fallbackLines = splitTextToLines(this.ctx, this.data.placeholderText, contentWidth);
-      const titleLines = splitTextToLines(this.ctx, this.data.mission || '任务卡片', contentWidth);
-      const renderedBodyLineCount = Math.max(noteLines.length || fallbackLines.length, 1);
+      const userLayout = layoutParagraph(this.ctx, userNote, {
+        maxWidth: 212 - BUBBLE_PADDING_X * 2,
+        preferredSize: 15,
+        minSize: 12,
+        maxLines: 6,
+        family: '"ZCOOL XiaoWei", "KaiTi", "STKaiti", serif',
+        lineHeightRatio: 1.78,
+      });
+      const companionLayout = layoutParagraph(this.ctx, companionNote, {
+        maxWidth: 214 - BUBBLE_PADDING_X * 2,
+        preferredSize: 14,
+        minSize: 11,
+        maxLines: 8,
+        family: '"ZCOOL XiaoWei", "KaiTi", "STKaiti", serif',
+        lineHeightRatio: 1.84,
+      });
+      const dialogueHeight =
+        (Math.max(userLayout.lines.length, 1) * userLayout.lineHeight + BUBBLE_PADDING_Y * 2 + 22 + 34) +
+        (Math.max(companionLayout.lines.length, 1) * companionLayout.lineHeight + BUBBLE_PADDING_Y * 2 + 22 + 34);
       const photoBlockHeight = photoLayouts.length
-        ? photoLayouts.reduce((total, item) => total + item.height, 0) + (photoLayouts.length - 1) * PHOTO_GAP
+        ? photoLayouts.reduce((total, item) => total + item.height, 0) + (photoLayouts.length - 1) * PHOTO_GAP + 18
         : 0;
-      this.cardHeight =
-        TOP_DECORATION_HEIGHT +
-        TEXT_TOP_GAP +
-        titleLines.length * 32 +
-        18 +
-        renderedBodyLineCount * BODY_LINE_HEIGHT +
-        18 +
-        26 +
-        photoBlockHeight +
-        BOTTOM_META_GAP +
-        44;
+
+      this.cardHeight = HEADER_HEIGHT + 18 + dialogueHeight + photoBlockHeight + 62;
 
       const dpr = this.dpr || 2;
       this.canvasNode.width = width * dpr;
@@ -500,19 +947,18 @@ Component({
       const accentColor = this.data.accentColor || '#c96f4a';
       this.drawPaperBackground(width, this.cardHeight);
       this.drawHeader(width, accentColor);
-      this.drawAirmailDivider(width);
-      const textLayout = this.drawTextBlocks(
-        width,
-        this.data.mission || '任务卡片',
-        noteLines,
-        this.data.locationName,
-        this.data.themeTitle,
-        formatCardDate(this.data.dateLabel)
-      );
+      let nextTop = this.drawDialogueSection(width, userLayout, companionLayout);
+
       if (photoLayouts.length) {
-        this.drawPhotos(width, textLayout.photoTop, photoLayouts);
+        this.ctx.save();
+        this.ctx.fillStyle = '#8e6b47';
+        this.ctx.font = 'bold 11px sans-serif';
+        this.ctx.fillText('沿途看到的样子', SIDE_PADDING, nextTop - 6);
+        this.ctx.restore();
+        nextTop = this.drawPhotos(width, nextTop + 8, photoLayouts);
       }
-      this.drawFooter(width, textLayout.dateText);
+
+      this.drawFooter(width, formatCardDate(this.data.dateLabel));
 
       if (this.renderToken !== token) {
         return;

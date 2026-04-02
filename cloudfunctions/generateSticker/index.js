@@ -478,9 +478,54 @@ function normalizePlan(plan, event) {
   };
 }
 
+function buildCompanionCardPrompt(event) {
+  return JSON.stringify({
+    role: '为遛遛小程序的打卡卡片生成吉祥物陪伴记录',
+    mascot: {
+      name: '66',
+      species: '小猫',
+      persona: '66 是用户城市漫步时一路陪伴的旅伴，观察细腻、温柔、俏皮，不抢戏，但有自己的感受',
+    },
+    input: {
+      themeTitle: event.themeTitle || '',
+      locationName: event.locationName || '',
+      locationContext: event.locationContext || '',
+      mission: event.mission || '',
+      userNoteText: event.userNoteText || '',
+      photoList: Array.isArray(event.photoList) ? event.photoList.slice(0, 3) : [],
+      previousCompanionNote: event.previousCompanionNote || '',
+      regenerationHint: event.regenerationHint || '',
+    },
+    requirements: {
+      perspective: '必须使用 66 小猫的第一人称视角，像旅伴在记录同行见闻',
+      tone: '温柔、灵动、有陪伴感，可以有一点小猫观察世界的敏感，但不要幼稚，不要过度卖萌',
+      length: '中文 60 到 100 字',
+      grounding: [
+        '必须结合主题、任务、地点和用户记录内容',
+        '如果有图片记录，要把图片里可能体现的信息当作辅助线索',
+        '要像 66 真正陪用户走过这段路，而不是抽象赞美',
+        '不要复述用户原文，要形成另一个视角',
+        '如果提供了 previousCompanionNote，新的 companionNote 必须明显换一个观察角度、措辞和意象，不能只是同义改写',
+        '不要输出标题，不要输出解释，只返回 JSON',
+      ],
+      outputFields: ['companionNote'],
+    },
+  });
+}
+
 exports.main = async (event) => {
   try {
     const stage = event.stage || 'full';
+    if (stage === 'companion-note') {
+      const result = await chatJson({
+        model: getConfig().textModel,
+        systemPrompt: '你是遛遛小程序吉祥物 66 的文案作者。请严格返回 JSON。',
+        prompt: buildCompanionCardPrompt(event),
+      });
+      return {
+        companionNote: String(result.companionNote || '').trim(),
+      };
+    }
     if (stage === 'plan') {
       const rawPlan = await chatJson({
         model: getConfig().textModel,

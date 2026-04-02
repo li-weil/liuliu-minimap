@@ -168,6 +168,28 @@
   font-weight: 600;
 }
 
+.mission-card-embed {
+  margin-top: 18rpx;
+  padding: 16rpx;
+  border-radius: 28rpx;
+  background: linear-gradient(180deg, rgba(255, 248, 237, 0.92), rgba(248, 239, 224, 0.98));
+  border: 1rpx solid #eadfce;
+}
+
+.mission-card-embed-title {
+  margin-bottom: 12rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #8b6a48;
+}
+
+.mission-card-embed-image {
+  width: 100%;
+  display: block;
+  border-radius: 24rpx;
+  box-shadow: 0 12rpx 24rpx rgba(92, 67, 37, 0.08);
+}
+
 .media-preview-block {
   margin-top: 18rpx;
 }
@@ -189,10 +211,23 @@
 
 .media-remove {
   position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  padding: 10rpx 14rpx;
-  font-size: 22rpx;
+  top: 10rpx;
+  right: 10rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(35, 28, 20, 0.82);
+  box-shadow: 0 8rpx 18rpx rgba(0, 0, 0, 0.18);
+}
+
+.media-remove-icon {
+  font-size: 30rpx;
+  line-height: 1;
+  color: #fff;
+  font-weight: 600;
 }
 
 .asset-list {
@@ -220,6 +255,26 @@
   font-size: 22rpx;
   color: #8b8377;
   margin-top: 8rpx;
+}
+
+.asset-remove-btn {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #f3d9d4 0%, #ecc6bf 100%);
+  border: 1rpx solid #e1b0a8;
+  box-shadow: 0 8rpx 16rpx rgba(123, 71, 60, 0.12);
+}
+
+.asset-remove-icon {
+  font-size: 34rpx;
+  line-height: 1;
+  color: #8b4033;
+  font-weight: 600;
 }
 
 .mission-review-card {

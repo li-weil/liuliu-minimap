@@ -64,6 +64,10 @@ Component({
       type: String,
       value: '',
     },
+    generatingMissionCard: {
+      type: String,
+      value: '',
+    },
   },
 
   observers: {
@@ -128,6 +132,15 @@ Component({
     generateCard(event) {
       const mission = event.currentTarget.dataset.mission;
       this.triggerEvent('generatecard', { mission });
+    },
+
+    openCard(event) {
+      const mission = event.currentTarget.dataset.mission;
+      const src = event.currentTarget.dataset.src || '';
+      if (!mission || !src) {
+        return;
+      }
+      this.triggerEvent('opencard', { mission, src });
     },
 
     inputMissionNote(event) {

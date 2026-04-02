@@ -2,6 +2,7 @@ const { callApi } = require('./api');
 
 const USER_STORAGE_KEY = 'citywalk_user';
 const LOGIN_STATUS_KEY = 'citywalk_login_status';
+const MANUAL_LOGOUT_KEY = 'citywalk_manual_logout';
 
 function normalizeUser(user) {
   if (!user || typeof user !== 'object') {
@@ -36,6 +37,7 @@ function persistUser(user) {
     if (normalizedUser) {
       wx.setStorageSync(USER_STORAGE_KEY, normalizedUser);
       wx.setStorageSync(LOGIN_STATUS_KEY, true);
+      wx.removeStorageSync(MANUAL_LOGOUT_KEY);
     } else {
       wx.removeStorageSync(USER_STORAGE_KEY);
     }
@@ -54,6 +56,30 @@ function clearUserStorage() {
     wx.removeStorageSync('citywalk_token_expires_in');
   } catch (error) {
     // Ignore storage cleanup failures.
+  }
+}
+
+function markManualLogout() {
+  try {
+    wx.setStorageSync(MANUAL_LOGOUT_KEY, true);
+  } catch (error) {
+    // Ignore storage failures.
+  }
+}
+
+function clearManualLogoutMark() {
+  try {
+    wx.removeStorageSync(MANUAL_LOGOUT_KEY);
+  } catch (error) {
+    // Ignore storage failures.
+  }
+}
+
+function isManualLogoutSuppressed() {
+  try {
+    return !!wx.getStorageSync(MANUAL_LOGOUT_KEY);
+  } catch (error) {
+    return false;
   }
 }
 
@@ -80,10 +106,14 @@ function syncUserProfile(payload = {}) {
 module.exports = {
   USER_STORAGE_KEY,
   LOGIN_STATUS_KEY,
+  MANUAL_LOGOUT_KEY,
+  clearManualLogoutMark,
   clearUserStorage,
   fetchCurrentUser,
   getStoredUser,
   hasLoginPreference,
+  isManualLogoutSuppressed,
+  markManualLogout,
   normalizeUser,
   persistUser,
   syncUser: syncUserProfile,

@@ -115,7 +115,7 @@
       </view>
     </view>
 
-    <button class="danger-action-btn" bindtap="handleDeleteWalk" loading="{{isDeletingWalk}}" disabled="{{isDeletingWalk}}">
+    <button wx:if="{{walk.canDelete}}" class="danger-action-btn" bindtap="handleDeleteWalk" loading="{{isDeletingWalk}}" disabled="{{isDeletingWalk}}">
       删除这条历史记录
     </button>
 

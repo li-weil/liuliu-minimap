@@ -12,18 +12,27 @@ exports.main = async (event) => {
     return { ok: false, reason: 'missing_id' };
   }
 
-  const doc = await db.collection('walkRecords').doc(id).get();
-  const walk = doc.data;
+  let walk = null;
+  try {
+    const doc = await db.collection('walkRecords').doc(id).get();
+    walk = doc.data || null;
+  } catch (error) {
+    return { ok: false, reason: 'not_found' };
+  }
 
   if (!walk) {
     return { ok: false, reason: 'not_found' };
   }
 
   if (walk.userId !== wxContext.OPENID) {
-    throw new Error('permission_denied');
+    return { ok: false, reason: 'permission_denied' };
   }
 
-  await db.collection('walkRecords').doc(id).remove();
+  try {
+    await db.collection('walkRecords').doc(id).remove();
+  } catch (error) {
+    return { ok: false, reason: 'delete_failed' };
+  }
 
   return {
     ok: true,

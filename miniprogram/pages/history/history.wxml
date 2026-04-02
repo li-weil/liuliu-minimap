@@ -1,13 +1,13 @@
 <view class="page-shell">
   <view class="hero-card history-hero">
     <view class="section-title">足迹</view>
-    <view class="section-subtitle">{{user ? '这里会按当前登录账户整理你的漫步记录。' : '登录后即可查看并管理属于你的漫步历史。'}}</view>
+    <view class="section-subtitle">{{user ? '这里会按当前登录账户整理你的漫步记录。' : (loginState === 'paused' ? '你刚刚主动退出过账号，恢复登录后就能继续查看这位用户的漫步历史。' : '第一次使用时完善一次资料，之后就会自动带出属于你的漫步历史。')}}</view>
   </view>
 
   <view wx:if="{{!user}}" class="section-card history-placeholder">
-    <view class="section-title">还没有登录</view>
-    <view class="section-subtitle">登录当前微信账户后，就能查看这位用户自己的纪念卡册和后续成就。</view>
-    <button class="primary-btn" bindtap="goToProfile">去登录</button>
+    <view class="section-title">{{loginState === 'paused' ? '已暂停自动登录' : '还没有个人资料'}}</view>
+    <view class="section-subtitle">{{loginState === 'paused' ? '去个人页点一次登录，就会重新恢复当前微信账户。' : '去个人页完成一次头像和昵称设置，之后就能自动查看这位用户自己的纪念卡册和成就。'}}</view>
+    <button class="primary-btn" bindtap="goToProfile">{{loginState === 'paused' ? '去恢复登录' : '去完善资料'}}</button>
   </view>
 
   <view wx:else class="section-card history-tabs">

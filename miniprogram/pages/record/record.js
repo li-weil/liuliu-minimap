@@ -4,7 +4,8 @@ const { requestUpload } = require('../../services/api');
 const { getCurrentLocation } = require('../../utils/location');
 const { chooseImage, chooseVideo } = require('../../utils/media');
 const { verifyMission } = require('../../services/theme');
-const { generateStickerPlan, generateStickerImage } = require('../../services/sticker');
+const { generateCompanionNote, generateStickerPlan, generateStickerImage } = require('../../services/sticker');
+const { isManualLogoutSuppressed } = require('../../services/user');
 
 let recorderManager = null;
 let routeTimer = null;
@@ -19,6 +20,7 @@ function createEmptyMissionAssets() {
     videoList: [],
     audioList: [],
     noteText: '',
+    companionNote: '',
     cardImagePath: '',
   };
 }
@@ -184,7 +186,13 @@ function downloadFile(url) {
   return new Promise((resolve, reject) => {
     wx.downloadFile({
       url,
-      success: resolve,
+      success: (result) => {
+        if (result && result.statusCode && result.statusCode >= 400) {
+          reject(new Error(`download_status_${result.statusCode}`));
+          return;
+        }
+        resolve(result);
+      },
       fail: reject,
     });
   });
@@ -198,6 +206,108 @@ function saveImageToAlbum(filePath) {
       fail: reject,
     });
   });
+}
+
+function resolveCloudFileUrl(src) {
+  return wx.cloud.getTempFileURL({ fileList: [src] }).then((result) => {
+    const item = result.fileList && result.fileList[0];
+    return item && item.tempFileURL ? item.tempFileURL : '';
+  });
+}
+
+function getSetting() {
+  return new Promise((resolve, reject) => {
+    wx.getSetting({
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+function authorize(scope) {
+  return new Promise((resolve, reject) => {
+    wx.authorize({
+      scope,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+function openSetting() {
+  return new Promise((resolve, reject) => {
+    wx.openSetting({
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
+async function ensureAlbumPermission() {
+  const setting = await getSetting();
+  const authSetting = setting && setting.authSetting ? setting.authSetting : {};
+  const albumPermission = authSetting['scope.writePhotosAlbum'];
+  if (albumPermission === true) {
+    return true;
+  }
+  if (albumPermission === false) {
+    const modalResult = await new Promise((resolve) => {
+      wx.showModal({
+        title: '需要相册权限',
+        content: '请在设置里允许保存到相册后，再试一次',
+        confirmText: '去设置',
+        success: resolve,
+      });
+    });
+    if (!modalResult || !modalResult.confirm) {
+      throw new Error('album_permission_denied');
+    }
+    const openedSetting = await openSetting();
+    const nextAuthSetting = openedSetting && openedSetting.authSetting ? openedSetting.authSetting : {};
+    if (!nextAuthSetting['scope.writePhotosAlbum']) {
+      throw new Error('album_permission_denied');
+    }
+    return true;
+  }
+
+  try {
+    await authorize('scope.writePhotosAlbum');
+    return true;
+  } catch (error) {
+    const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+    if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
+      throw new Error('album_permission_denied');
+    }
+    throw error;
+  }
+}
+
+function explainAlbumSaveError(error) {
+  const errMsg = String((error && error.errMsg) || (error && error.message) || '');
+  if (!errMsg) {
+    return '保存卡片失败，请稍后再试';
+  }
+  if (
+    errMsg.includes('auth deny') ||
+    errMsg.includes('authorize') ||
+    errMsg.includes('album_permission_denied') ||
+    errMsg.includes('saveImageToPhotosAlbum:fail auth denied')
+  ) {
+    return '没有相册权限，请到设置里开启';
+  }
+  if (errMsg.includes('download_status_')) {
+    return `卡片下载失败：${errMsg.replace('download_status_', 'HTTP ')}`.slice(0, 30);
+  }
+  if (errMsg.includes('download_mission_card_failed') || errMsg.includes('download file:fail')) {
+    return '卡片下载失败，请稍后重试';
+  }
+  if (errMsg.includes('fail file not found')) {
+    return '卡片文件已失效，请重新生成';
+  }
+  if (errMsg.includes('saveImageToPhotosAlbum:fail')) {
+    return errMsg.replace('saveImageToPhotosAlbum:fail ', '').slice(0, 30);
+  }
+  return `保存失败：${errMsg}`.slice(0, 30);
 }
 
 Page({
@@ -217,6 +327,7 @@ Page({
     expandedMission: '',
     generatedMissionCardMap: {},
     showMissionCardModal: false,
+    generatingMissionCard: '',
     missionCardModal: {
       mission: '',
       imageSrc: '',
@@ -428,7 +539,31 @@ Page({
     this.updateMissionAssets(mission, { noteText });
   },
 
-  handleGenerateMissionCard(event) {
+  async ensureCompanionNote(mission, missionAssets, options = {}) {
+    const forceRefresh = !!options.forceRefresh;
+    const userNoteText = String((missionAssets && missionAssets.noteText) || '').trim();
+    const photoList = Array.isArray(missionAssets && missionAssets.photoList) ? missionAssets.photoList.filter(Boolean) : [];
+    if (!userNoteText && !photoList.length) {
+      return '';
+    }
+    if (!forceRefresh && missionAssets && missionAssets.companionNote) {
+      return missionAssets.companionNote;
+    }
+
+    const result = await generateCompanionNote({
+      themeTitle: this.data.theme && this.data.theme.title ? this.data.theme.title : '',
+      locationName: this.data.draft && this.data.draft.locationName ? this.data.draft.locationName : '',
+      locationContext: this.data.draft && this.data.draft.locationContext ? this.data.draft.locationContext : '',
+      mission,
+      userNoteText,
+      photoList,
+      previousCompanionNote: missionAssets && missionAssets.companionNote ? missionAssets.companionNote : '',
+      regenerationHint: forceRefresh ? `${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : '',
+    });
+    return String((result && result.companionNote) || '').trim();
+  },
+
+  async handleGenerateMissionCard(event) {
     const mission = event.detail.mission || this.data.activeMission;
     if (!mission) {
       wx.showToast({ title: '先选择一个任务', icon: 'none' });
@@ -443,6 +578,42 @@ Page({
       return;
     }
 
+    this.setData({
+      activeMission: mission,
+      generatingMissionCard: mission,
+      showMissionCardModal: true,
+      missionCardModal: {
+        mission,
+        imageSrc: '',
+        isGenerating: true,
+      },
+    });
+
+    let nextMissionAssets = {
+      ...createEmptyMissionAssets(),
+      ...missionAssets,
+    };
+    const forceRefresh = !!(missionAssets && (missionAssets.cardImagePath || missionAssets.companionNote));
+    try {
+      const companionNote = await this.ensureCompanionNote(mission, nextMissionAssets, { forceRefresh });
+      if (companionNote && companionNote !== nextMissionAssets.companionNote) {
+        nextMissionAssets = {
+          ...nextMissionAssets,
+          companionNote,
+          cardImagePath: '',
+        };
+        this.updateMissionAssets(mission, nextMissionAssets);
+      } else if (forceRefresh) {
+        nextMissionAssets = {
+          ...nextMissionAssets,
+          cardImagePath: '',
+        };
+        this.updateMissionAssets(mission, nextMissionAssets);
+      }
+    } catch (error) {
+      wx.showToast({ title: '66 正在走神，先用现有记录制卡', icon: 'none' });
+    }
+
     const nextMap = {
       ...(this.generatedMissionCardMap || {}),
       [mission]: ((this.generatedMissionCardMap && this.generatedMissionCardMap[mission]) || 0) + 1,
@@ -450,18 +621,27 @@ Page({
     this.generatedMissionCardMap = nextMap;
     const renderVersion = nextMap[mission];
     this.setData({
-      activeMission: mission,
       generatedMissionCardMap: nextMap,
+      missionCardRenderPayload: {
+        mission,
+        assets: nextMissionAssets,
+        renderVersion,
+      },
+    });
+  },
+
+  openEmbeddedMissionCard(event) {
+    const mission = event.detail && event.detail.mission ? event.detail.mission : '';
+    const src = event.detail && event.detail.src ? event.detail.src : '';
+    if (!mission || !src) {
+      return;
+    }
+    this.setData({
       showMissionCardModal: true,
       missionCardModal: {
         mission,
-        imageSrc: '',
-        isGenerating: true,
-      },
-      missionCardRenderPayload: {
-        mission,
-        assets: missionAssets,
-        renderVersion,
+        imageSrc: src,
+        isGenerating: false,
       },
     });
   },
@@ -472,11 +652,19 @@ Page({
     if (!tempFilePath) {
       return;
     }
+    if (
+      this.data.missionCardModal
+      && this.data.missionCardModal.imageSrc === tempFilePath
+      && !this.data.missionCardModal.isGenerating
+    ) {
+      return;
+    }
     this.updateMissionAssets(mission, {
       ...this.getMissionAssets(mission),
       cardImagePath: tempFilePath,
     });
     this.setData({
+      generatingMissionCard: '',
       missionCardModal: {
         mission,
         imageSrc: tempFilePath,
@@ -488,6 +676,7 @@ Page({
   closeMissionCardModal() {
     this.setData({
       showMissionCardModal: false,
+      generatingMissionCard: '',
       missionCardModal: {
         mission: '',
         imageSrc: '',
@@ -496,31 +685,54 @@ Page({
     });
   },
 
+  async resolveMissionCardFilePath() {
+    const src = this.data.missionCardModal && this.data.missionCardModal.imageSrc;
+    if (!src) {
+      throw new Error('missing_mission_card');
+    }
+
+    const normalizedSrc = String(src);
+    if (normalizedSrc.startsWith('cloud://')) {
+      const tempUrl = await resolveCloudFileUrl(normalizedSrc);
+      if (!tempUrl) {
+        throw new Error('missing_mission_card_url');
+      }
+      const download = await downloadFile(tempUrl);
+      if (!download || !download.tempFilePath) {
+        throw new Error('download_mission_card_failed');
+      }
+      return download.tempFilePath;
+    }
+
+    if (/^https?:\/\//i.test(normalizedSrc)) {
+      const download = await downloadFile(normalizedSrc);
+      if (!download || !download.tempFilePath) {
+        throw new Error('download_mission_card_failed');
+      }
+      return download.tempFilePath;
+    }
+
+    return normalizedSrc;
+  },
+
   async handleSaveMissionCardToAlbum() {
-    const filePath = this.data.missionCardModal && this.data.missionCardModal.imageSrc;
-    if (!filePath) {
+    const src = this.data.missionCardModal && this.data.missionCardModal.imageSrc;
+    if (!src) {
       wx.showToast({ title: '还没有可保存的卡片', icon: 'none' });
       return;
     }
     try {
+      await ensureAlbumPermission();
+      const filePath = await this.resolveMissionCardFilePath();
       await saveImageToAlbum(filePath);
       wx.showToast({ title: '已保存到相册', icon: 'success' });
     } catch (error) {
-      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
-      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
-        wx.showModal({
-          title: '需要相册权限',
-          content: '请在设置里允许保存到相册后，再试一次',
-          confirmText: '去设置',
-          success: (res) => {
-            if (res.confirm) {
-              wx.openSetting({});
-            }
-          },
-        });
-        return;
-      }
-      wx.showToast({ title: '保存卡片失败', icon: 'none' });
+      wx.showModal({
+        title: '保存卡片失败',
+        content: explainAlbumSaveError(error),
+        showCancel: false,
+        confirmText: '知道了',
+      });
     }
   },
 
@@ -949,10 +1161,13 @@ Page({
 
     await app.ensureUserReady();
     if (!app.globalData.user) {
+      const pausedLogin = isManualLogoutSuppressed();
       wx.showModal({
-        title: '需要先登录',
-        content: '登录当前微信账户后，才能保存这次漫步记录到个人历史。',
-        confirmText: '去登录',
+        title: pausedLogin ? '先恢复登录' : '先完善资料',
+        content: pausedLogin
+          ? '你刚刚主动退出过账号，去个人页点一次登录后，就能继续把这次漫步保存到你的个人历史。'
+          : '第一次保存漫步前，需要先在个人页设置一次头像和昵称。之后会自动识别当前微信账户。',
+        confirmText: pausedLogin ? '去恢复' : '去设置',
         success: (res) => {
           if (res.confirm) {
             wx.switchTab({ url: '/pages/profile/profile' });
@@ -981,6 +1196,7 @@ Page({
         mission,
         {
           noteText: assets.noteText || '',
+          companionNote: assets.companionNote || '',
           photoList: await Promise.all((assets.photoList || []).map((path) => uploadCached(path, 'image'))),
           videoList: await Promise.all((assets.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video'))),
           audioList: await Promise.all((assets.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio'))),

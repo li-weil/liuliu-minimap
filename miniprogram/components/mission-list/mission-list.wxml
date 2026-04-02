@@ -41,7 +41,7 @@
 
       <textarea
         class="mission-note-area"
-        placeholder="{{card.isSupplemental ? '写下这一段路的补充说明、感受或遗漏细节' : '补一句你是怎么完成这个任务的'}}"
+        placeholder="{{card.isSupplemental ? '写下这段路上被你收进心里的细节与余韵' : '记下你是如何与这一站相遇的'}}"
         maxlength="200"
         value="{{card.assets && card.assets.noteText ? card.assets.noteText : ''}}"
         bindinput="inputMissionNote"
@@ -53,7 +53,9 @@
           <view class="media-scroll">
             <view wx:for="{{card.assets.photoList}}" wx:key="index" wx:for-item="photo" class="media-thumb">
               <image src="{{photo}}" mode="aspectFill" class="media-image" />
-              <view class="danger-btn media-remove" bindtap="removePhoto" data-mission="{{card.mission}}" data-index="{{index}}">删</view>
+              <view class="media-remove" bindtap="removePhoto" data-mission="{{card.mission}}" data-index="{{index}}">
+                <text class="media-remove-icon">×</text>
+              </view>
             </view>
           </view>
         </scroll-view>
@@ -65,7 +67,9 @@
             <view class="asset-title">视频 {{index + 1}}</view>
             <view class="asset-meta">{{video.duration}} 秒</view>
           </view>
-          <button class="ghost-btn" size="mini" bindtap="removeVideo" data-mission="{{card.mission}}" data-index="{{index}}">删除</button>
+          <view class="asset-remove-btn" bindtap="removeVideo" data-mission="{{card.mission}}" data-index="{{index}}">
+            <text class="asset-remove-icon">×</text>
+          </view>
         </view>
       </view>
 
@@ -81,12 +85,19 @@
             <view class="asset-title">录音 {{index + 1}}</view>
             <view class="asset-meta">{{audio.duration}} ms</view>
           </view>
-          <button class="ghost-btn" size="mini" bindtap="removeAudio" data-mission="{{card.mission}}" data-index="{{index}}">删除</button>
+          <view class="asset-remove-btn" bindtap="removeAudio" data-mission="{{card.mission}}" data-index="{{index}}">
+            <text class="asset-remove-icon">×</text>
+          </view>
         </view>
       </view>
 
-      <button class="mission-verify-btn" bindtap="generateCard" data-mission="{{card.mission}}">
-        {{card.cardVersion ? '重新生成打卡卡片' : '生成打卡卡片'}}
+      <view wx:if="{{card.assets && card.assets.cardImagePath}}" class="mission-card-embed" bindtap="openCard" data-mission="{{card.mission}}" data-src="{{card.assets.cardImagePath}}">
+        <view class="mission-card-embed-title">这张打卡卡片</view>
+        <image class="mission-card-embed-image" src="{{card.assets.cardImagePath}}" mode="widthFix" />
+      </view>
+
+      <button class="mission-verify-btn" bindtap="generateCard" data-mission="{{card.mission}}" loading="{{generatingMissionCard === card.mission}}" disabled="{{generatingMissionCard === card.mission}}">
+        {{generatingMissionCard === card.mission ? '66 正在整理卡片...' : (card.cardVersion ? '重新生成卡片' : '生成卡片')}}
       </button>
     </view>
   </view>

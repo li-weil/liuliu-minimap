@@ -14,7 +14,15 @@ function generateStickerImage(payload) {
   });
 }
 
+function generateCompanionNote(payload) {
+  return callApi('generateCompanionNote', {
+    ...payload,
+    stage: 'companion-note',
+  });
+}
+
 module.exports = {
+  generateCompanionNote,
   generateStickerPlan,
   generateStickerImage,
 };
