@@ -4,11 +4,18 @@
     "miniprogram": {
       "list": [
         {
-          "name": "pages/achievement-image-test/achievement-image-test",
-          "pathName": "pages/achievement-image-test/achievement-image-test",
+          "name": "pages/font-test/font-test",
+          "pathName": "pages/font-test/font-test",
           "query": "",
           "scene": null,
           "launchMode": "default"
+        },
+        {
+          "name": "pages/achievement-image-test/achievement-image-test",
+          "pathName": "pages/achievement-image-test/achievement-image-test",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
         }
       ]
     }

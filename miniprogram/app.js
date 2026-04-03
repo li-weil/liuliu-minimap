@@ -1,4 +1,10 @@
-const { cloudEnvId, apiBaseUrl, useCloudMediaStorage, useCloudWalkStorage } = require('./utils/config');
+const {
+  cloudEnvId,
+  apiBaseUrl,
+  brandFontBaseUrl,
+  useCloudMediaStorage,
+  useCloudWalkStorage,
+} = require('./utils/config');
 const { getDefaultDraft, loadDraftStore, removeDraft, saveDraft } = require('./utils/draft');
 const { listMyTeamWalks } = require('./services/team');
 const { listMyWalks } = require('./services/walk');
@@ -11,6 +17,14 @@ const {
 } = require('./services/user');
 
 const PENDING_NAVIGATION_KEY = 'pending_navigation_target_v1';
+
+function buildBrandFontSource(filename) {
+  const baseUrl = String(brandFontBaseUrl || '').trim().replace(/\/+$/, '');
+  if (!baseUrl) {
+    return '';
+  }
+  return `url("${baseUrl}/${filename}")`;
+}
 
 App({
   globalData: {
@@ -235,16 +249,18 @@ App({
       return;
     }
 
-    [
+    const fonts = [
       {
         family: 'ZCOOL KuaiLe',
-        source: 'url("https://fonts.gstatic.com/s/zcoolkuaile/v22/tssqApdaRQokwFjFJjvM6h2Wpg.ttf")',
+        source: buildBrandFontSource('zcool-kuaile.ttf'),
       },
       {
         family: 'ZCOOL XiaoWei',
-        source: 'url("https://fonts.gstatic.com/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf")',
+        source: buildBrandFontSource('zcool-xiaowei.ttf'),
       },
-    ].forEach((font) => {
+    ].filter((font) => font.source);
+
+    fonts.forEach((font) => {
       wx.loadFontFace({
         family: font.family,
         source: font.source,

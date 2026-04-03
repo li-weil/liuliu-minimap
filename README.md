@@ -43,6 +43,12 @@
 - 成就重算规则的单一源码在 [achievement-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/achievement-runtime.js)
 - 修改后执行 `node scripts/sync_cloud_achievement_runtime.js`，再统一部署相关云函数
 
+字体静态资源：
+
+- 品牌字体不再从 `fonts.gstatic.com` 直拉
+- 请把字体文件上传到你自己的微信云托管静态站点
+- 然后在 [config.js](/D:/liuliu-minimap/miniprogram/utils/config.js) 中配置 `brandFontBaseUrl`
+
 ## 关键文档
 
 - [页面结构.md](D:/liuliu-minimap/docs/页面结构.md)

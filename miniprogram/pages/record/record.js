@@ -818,12 +818,6 @@ Page({
     }
 
     const missionAssets = this.getMissionAssets(mission);
-    const hasPhoto = missionAssets.photoList && missionAssets.photoList.length;
-    const hasNote = missionAssets.noteText && missionAssets.noteText.trim();
-    if (!hasPhoto && !hasNote) {
-      wx.showToast({ title: '先上传图片或补一句文字', icon: 'none' });
-      return;
-    }
 
     this.setData({
       activeMission: mission,
