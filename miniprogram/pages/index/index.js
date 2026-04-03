@@ -286,6 +286,7 @@ Page({
   },
 
   onLoad() {
+    this.locationResolveToken = 0;
     const randomTheme = PRESET_THEMES[Math.floor(Math.random() * PRESET_THEMES.length)];
     const currentTheme = trimTheme({ ...randomTheme, locationName: '当前位置', allMissions: randomTheme.missions }, 'pure');
     this.setData({
@@ -318,6 +319,7 @@ Page({
 
   onReady() {
     this.mapCtx = wx.createMapContext('explore-map', this);
+    this.locationResolveToken = 0;
   },
 
   buildMapState({ latitude, longitude, placeName }) {
@@ -373,6 +375,38 @@ Page({
     });
   },
 
+  applyLocationBaseState(location, fallback = {}) {
+    const latitude = Number(location && location.latitude);
+    const longitude = Number(location && location.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return false;
+    }
+
+    const placeName = fallback.placeName || location.placeName || location.name || this.data.locationName || '已选地点';
+    const locationContext = fallback.locationContext || this.data.locationContext || '城市街道';
+    const locationAddress = fallback.locationAddress !== undefined
+      ? fallback.locationAddress
+      : (location.address || this.data.locationAddress || '');
+
+    this.setData({
+      latitude,
+      longitude,
+      locationName: placeName,
+      locationContext,
+      locationAddress,
+      searchResults: [],
+      searchResultCount: 0,
+      ...this.buildMapState({
+        latitude,
+        longitude,
+        placeName,
+      }),
+      nearbyPlaces: [],
+      nearbyExpanded: false,
+    });
+    return true;
+  },
+
   setOption(event) {
     const { field, value } = event.currentTarget.dataset;
     this.setData({ [field]: value });
@@ -397,6 +431,7 @@ Page({
   },
 
   async enrichLocation(location) {
+    const token = ++this.locationResolveToken;
     const regeo = await getRegeo(location).catch(() => null);
     const amapSummary = normalizeAmapLocation(regeo, location.placeName || location.name || location.address);
     const contextResponse = await getLocationContext({
@@ -410,6 +445,9 @@ Page({
       amapSummary,
       contextResponse,
     });
+    if (token !== this.locationResolveToken) {
+      return;
+    }
     this.setData({
       latitude: location.latitude,
       longitude: location.longitude,
@@ -427,6 +465,9 @@ Page({
       nearbyExpanded: false,
     });
     this.loadNearbyPlaces(location.latitude, location.longitude).then(() => {
+      if (token !== this.locationResolveToken) {
+        return;
+      }
       if (this.data.nearbyPlaces.length) {
         this.setData({ nearbyExpanded: true });
       }
@@ -492,7 +533,17 @@ Page({
       });
       wx.showLoading({ title: '定位中' });
       const result = await getCurrentLocation();
-      await this.enrichLocation(result);
+      const applied = this.applyLocationBaseState(result, {
+        placeName: '定位成功',
+        locationContext: '正在补充地点信息',
+        locationAddress: '',
+      });
+      wx.hideLoading();
+      if (!applied) {
+        throw new Error('invalid_location');
+      }
+      wx.showToast({ title: '已定位，正在补充地点推荐', icon: 'none', duration: 1800 });
+      this.enrichLocation(result).catch(() => {});
     } catch (error) {
       if (error && error.message === 'privacy_authorization_denied') {
         wx.showToast({ title: '未同意隐私说明，暂时无法定位', icon: 'none' });

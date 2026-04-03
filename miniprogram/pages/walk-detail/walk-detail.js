@@ -308,13 +308,25 @@ function buildMapPolyline(routePoints) {
   }];
 }
 
-function getMapCenter(routePoints) {
+function getMapCenter(routePoints, fallbackLocation = {}) {
   const points = normalizeMapRoutePoints(routePoints);
-  const fallback = {
+  if (points.length) {
+    return points[points.length - 1];
+  }
+
+  const fallbackLatitude = Number(fallbackLocation.latitude);
+  const fallbackLongitude = Number(fallbackLocation.longitude);
+  if (Number.isFinite(fallbackLatitude) && Number.isFinite(fallbackLongitude)) {
+    return {
+      latitude: fallbackLatitude,
+      longitude: fallbackLongitude,
+    };
+  }
+
+  return {
     latitude: 39.908823,
     longitude: 116.39747,
   };
-  return points.length ? points[points.length - 1] : fallback;
 }
 
 function hasCardGenerationMaterial(assets) {
@@ -417,7 +429,7 @@ Page({
             canDelete: queryCanDelete(result.walk, this.data.source),
           }
         : null;
-      const mapCenter = getMapCenter(walk && walk.routePoints);
+      const mapCenter = getMapCenter(walk && walk.routePoints, walk);
       this.setData({
         walk,
         canResume: !!(walk && walk.status === 'active'),
