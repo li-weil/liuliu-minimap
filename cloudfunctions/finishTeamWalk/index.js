@@ -1,8 +1,10 @@
 const cloud = require('wx-server-sdk');
+const { recalculateUserAchievements } = require('./achievement');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const _ = db.command;
 
 function buildSummary(room, members, contributions) {
   const completedMissionSet = new Set(contributions.filter((item) => item.completed).map((item) => item.missionKey));
@@ -94,6 +96,13 @@ exports.main = async (event) => {
       createdAt: now,
     },
   });
+
+  await Promise.all(
+    members
+      .map((item) => item && item.userId)
+      .filter(Boolean)
+      .map((userId) => recalculateUserAchievements({ db, _, openid: userId }))
+  );
 
   return {
     ok: true,

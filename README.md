@@ -11,6 +11,8 @@
 - 微信 `map` + 高德 SDK 的地图能力接入
 - 记录页任务打卡与轨迹记录
 - 足迹列表与详情页基础展示
+- 单人模式“开始即创建记录、保存即结束记录”的状态型链路
+- 同行模式“建房 -> 开始 -> 多人提交 -> 房主结束”的团队状态型链路
 - 小程序服务层对 Web 共用接口的适配准备
 
 当前项目仍保留两种后端运行方式：
@@ -36,12 +38,39 @@
 - [cloudfunctions](D:/liuliu-minimap/cloudfunctions)：云开发兜底逻辑
 - [docs](D:/liuliu-minimap/docs)：产品结构、接入说明、参考图
 
+云函数共享逻辑：
+
+- 成就重算规则的单一源码在 [achievement-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/achievement-runtime.js)
+- 修改后执行 `node scripts/sync_cloud_achievement_runtime.js`，再统一部署相关云函数
+
 ## 关键文档
 
 - [页面结构.md](D:/liuliu-minimap/docs/页面结构.md)
 - [地图功能接入说明.md](D:/liuliu-minimap/docs/地图功能接入说明.md)
 - [Web后端共用接口接入说明.md](D:/liuliu-minimap/docs/Web后端共用接口接入说明.md)
 - [云函数登录系统说明.md](D:/liuliu-minimap/docs/云函数登录系统说明.md)
+- [成就系统功能实现说明.md](D:/liuliu-minimap/docs/成就系统功能实现说明.md)
+
+## 成就系统部署
+
+当前成就系统已经改为“云端统一计算 + `userAchievements` 集合持久化 + 前端只展示”。
+
+上线或迁移云环境时，至少确认：
+
+1. 云数据库存在 `userAchievements` 集合
+2. 已部署以下相关云函数：
+   - `createWalk`
+   - `finishTeamWalk`
+   - `listMyAchievements`
+   - `deleteWalk`
+   - `deleteTeamWalk`
+3. 如果修改了成就规则，先执行：
+
+```bash
+node scripts/sync_cloud_achievement_runtime.js
+```
+
+再重新部署上面 5 个云函数。
 
 ## 本地开发
 
@@ -64,8 +93,27 @@ Web 后端模式：
 
 - 任务核验目前仍以云函数链路为主
 - 云函数模式下已经具备基于 `OPENID` 的登录、用户资料同步与个人历史隔离
+- 单人进行中记录会按 `walkId` 持久化草稿；若另一端已将该记录结束，当前记录页会自动退出并回到“足迹 - 纪念卡册”
+- 同行房间详情对未加入用户仅返回基础预览信息，不再暴露成员、贡献和动态流
 - 微信登录还没有完全统一到 Web 登录体系
 - 如果切 Web 模式，仍需补齐小程序 token 与鉴权链路
+
+## 当前主链路
+
+单人模式：
+
+1. 探索页生成主题后点击“开始这次漫步”
+2. 立即创建一条 `active` 状态的单人记录
+3. 记录页围绕这条记录持续编辑本地草稿
+4. 点击“完成本次漫步并保存”后，更新同一条记录并标记为 `finished`
+
+同行模式：
+
+1. 探索页切到“同行”并生成主题
+2. 创建一个 `waiting` 状态的同行房间
+3. 队友加入后，房主开始同行，房间变为 `active`
+4. 成员围绕共享任务提交各自贡献
+5. 房主结束同行后，房间变为 `finished`，并进入团队结果页
 
 ## 一句话说明
 

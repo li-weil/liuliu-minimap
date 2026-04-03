@@ -1,8 +1,10 @@
 const cloud = require('wx-server-sdk');
+const { recalculateUserAchievements } = require('./achievement');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const _ = db.command;
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
@@ -65,11 +67,25 @@ exports.main = async (event) => {
       },
     });
     const updatedDoc = await db.collection('walkRecords').doc(walkId).get();
-    return { ok: true, id: walkId, walk: updatedDoc.data };
+    const achievementState = status === 'finished'
+      ? await recalculateUserAchievements({
+          db,
+          _,
+          openid: wxContext.OPENID,
+        })
+      : null;
+    return { ok: true, id: walkId, walk: updatedDoc.data, achievements: achievementState };
   }
 
   payload.createdAt = now;
   const result = await db.collection('walkRecords').add({ data: payload });
   const createdDoc = await db.collection('walkRecords').doc(result._id).get();
-  return { ok: true, id: result._id, walk: createdDoc.data };
+  const achievementState = status === 'finished'
+    ? await recalculateUserAchievements({
+        db,
+        _,
+        openid: wxContext.OPENID,
+      })
+    : null;
+  return { ok: true, id: result._id, walk: createdDoc.data, achievements: achievementState };
 };

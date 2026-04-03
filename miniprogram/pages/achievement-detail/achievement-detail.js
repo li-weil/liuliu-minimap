@@ -1,7 +1,5 @@
 const app = getApp();
-const { listMyWalks } = require('../../services/walk');
-const { listMyTeamWalks } = require('../../services/team');
-const { computeAchievements } = require('../../services/achievement');
+const { listMyAchievements } = require('../../services/achievement');
 const { hydrateAchievementAssets } = require('../../services/asset');
 const {
   FEATURED_ACHIEVEMENT_STORAGE_KEY,
@@ -79,12 +77,7 @@ Page({
     this.setData({ loading: true });
     try {
       await app.ensureUserReady();
-      const [soloResult, teamResult] = await Promise.all([
-        listMyWalks({ limit: 50 }),
-        listMyTeamWalks({ limit: 50 }),
-      ]);
-      const records = [...(soloResult.records || []), ...(teamResult.records || [])];
-      const achievementResult = computeAchievements(records);
+      const achievementResult = await listMyAchievements();
       const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
       const resolvedAchievement = achievements.find((item) => item.id === this.achievementId) || null;
       app.globalData.achievementSnapshot = {

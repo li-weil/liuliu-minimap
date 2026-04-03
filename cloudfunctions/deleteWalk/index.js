@@ -1,8 +1,10 @@
 const cloud = require('wx-server-sdk');
+const { recalculateUserAchievements } = require('./achievement');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const _ = db.command;
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
@@ -34,6 +36,11 @@ exports.main = async (event) => {
 
   try {
     await db.collection('walkRecords').doc(id).remove();
+    await recalculateUserAchievements({
+      db,
+      _,
+      openid: wxContext.OPENID,
+    });
   } catch (error) {
     return { ok: false, reason: 'delete_failed' };
   }

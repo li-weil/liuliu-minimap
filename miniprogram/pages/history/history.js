@@ -1,7 +1,7 @@
 const app = getApp();
 const { listMyWalks } = require('../../services/walk');
 const { listMyTeamWalks } = require('../../services/team');
-const { computeAchievements } = require('../../services/achievement');
+const { listMyAchievements } = require('../../services/achievement');
 const { hydrateAchievementAssets } = require('../../services/asset');
 const { isManualLogoutSuppressed } = require('../../services/user');
 const { formatDate } = require('../../utils/format');
@@ -88,9 +88,10 @@ Page({
   async fetchWalks() {
     this.setData({ loading: true });
     try {
-      const [soloResult, teamResult] = await Promise.all([
+      const [soloResult, teamResult, achievementResult] = await Promise.all([
         listMyWalks({ limit: 20 }),
         listMyTeamWalks({ limit: 20 }),
+        listMyAchievements(),
       ]);
       const walks = [...(soloResult.records || []), ...(teamResult.records || [])]
         .map((item) => ({
@@ -98,18 +99,25 @@ Page({
           createdAtLabel: formatDate(item.createdAt),
         }))
         .sort((left, right) => resolveWalkSortTimestamp(right) - resolveWalkSortTimestamp(left));
-      const achievementResult = computeAchievements(walks);
-      const achievements = await hydrateAchievementAssets(achievementResult.achievements);
+      const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
       const featuredAchievement = this.resolveFeaturedAchievement(achievements);
       app.globalData.achievementSnapshot = {
         achievements,
-        summary: achievementResult.summary,
+        summary: achievementResult.summary || {
+          unlockedCount: 0,
+          totalCount: achievements.length,
+          completionRate: 0,
+        },
         updatedAt: Date.now(),
       };
       this.setData({
         walks,
         achievements,
-        achievementSummary: achievementResult.summary,
+        achievementSummary: achievementResult.summary || {
+          unlockedCount: 0,
+          totalCount: achievements.length,
+          completionRate: 0,
+        },
         featuredAchievement,
       });
       this.notifyNewAchievements(achievements);

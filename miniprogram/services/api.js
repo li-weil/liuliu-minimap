@@ -460,6 +460,18 @@ const ENDPOINTS = {
       }),
     },
   },
+  listMyAchievements: {
+    cloudName: 'listMyAchievements',
+    normalizeCloudResponse: (data) => ({
+      achievements: Array.isArray(data && data.achievements) ? data.achievements : [],
+      summary: data && data.summary ? data.summary : {
+        unlockedCount: 0,
+        totalCount: 0,
+        completionRate: 0,
+      },
+      updatedAt: data && data.updatedAt ? data.updatedAt : 0,
+    }),
+  },
   listPublicWalks: {
     cloudName: 'listPublicWalks',
     normalizeCloudResponse: (data) => ({

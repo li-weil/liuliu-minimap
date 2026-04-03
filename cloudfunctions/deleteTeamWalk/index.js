@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { recalculateUserAchievements } = require('./achievement');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -31,6 +32,10 @@ exports.main = async (event) => {
     .limit(1)
     .get();
   const member = (memberResult.data || [])[0] || null;
+  const allMembersResult = await db.collection('teamWalkMembers')
+    .where({ roomId, status: 'joined' })
+    .get();
+  const affectedUserIds = Array.from(new Set((allMembersResult.data || []).map((item) => item.userId).filter(Boolean)));
 
   if (!member) {
     return { ok: false, reason: 'permission_denied' };
@@ -47,6 +52,9 @@ exports.main = async (event) => {
       db.collection('teamWalkContributions').where({ roomId }).remove(),
       db.collection('teamWalkActivities').where({ roomId }).remove(),
     ]);
+    await Promise.all(
+      affectedUserIds.map((userId) => recalculateUserAchievements({ db, _, openid: userId }))
+    );
   } catch (error) {
     try {
       await db.collection('teamWalkActivities').where({ roomId: _.eq(roomId) }).remove();
