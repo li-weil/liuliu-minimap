@@ -775,6 +775,10 @@ Page({
         confirmText: pausedLogin ? '去恢复' : '去设置',
         success: (res) => {
           if (res.confirm) {
+            app.setPendingNavigation({
+              url: '/pages/index/index',
+              mode: 'switchTab',
+            });
             wx.switchTab({ url: '/pages/profile/profile' });
           }
         },
@@ -885,6 +889,10 @@ Page({
         confirmText: pausedLogin ? '去恢复' : '去设置',
         success: (res) => {
           if (res.confirm) {
+            app.setPendingNavigation({
+              url: '/pages/index/index',
+              mode: 'switchTab',
+            });
             wx.switchTab({ url: '/pages/profile/profile' });
           }
         },

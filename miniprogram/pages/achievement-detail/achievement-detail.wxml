@@ -8,6 +8,7 @@
         class="detail-badge-image"
         src="{{achievement.asset}}"
         mode="aspectFit"
+        lazy-load="true"
         binderror="handleImageError"
       />
       <view wx:else class="detail-badge-image detail-badge-placeholder">
@@ -36,7 +37,7 @@
       <view class="detail-progress-track">
         <view wx:for="{{achievement.milestones}}" wx:key="index" class="detail-progress-node">
           <view class="detail-progress-badge {{item.reached ? 'detail-progress-badge-on' : ''}} {{item.current ? 'detail-progress-badge-current' : ''}}">
-            <image wx:if="{{achievement.asset}}" class="detail-progress-image" src="{{achievement.asset}}" mode="aspectFit" />
+            <image wx:if="{{achievement.asset}}" class="detail-progress-image" src="{{achievement.asset}}" mode="aspectFit" lazy-load="true" />
             <view wx:else class="detail-progress-glyph">{{achievement.progressLabel}}</view>
           </view>
           <view class="detail-progress-label">{{item.label}}</view>

@@ -43,7 +43,12 @@ Page({
       return false;
     }
 
-    const navigate = target.mode === 'navigateTo' ? wx.navigateTo : wx.redirectTo;
+    const navigate =
+      target.mode === 'switchTab'
+        ? wx.switchTab
+        : target.mode === 'navigateTo'
+          ? wx.navigateTo
+          : wx.redirectTo;
     navigate({
       url: target.url,
       fail: () => {

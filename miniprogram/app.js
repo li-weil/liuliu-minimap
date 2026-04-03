@@ -19,6 +19,7 @@ App({
     walkDraft: getDefaultDraft(),
     walkDrafts: {},
     currentTheme: null,
+    achievementSnapshot: null,
     authReady: false,
     pendingNavigation: null,
     activeTeamReminderShown: false,

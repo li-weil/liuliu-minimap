@@ -16,6 +16,8 @@ const {
 
 let recorderManager = null;
 let routeTimer = null;
+let walkStatusPollingTimer = null;
+let walkStatusPollingInFlight = false;
 
 const TRACK_SAMPLE_INTERVAL_MS = 5000;
 const SUMMARY_MISSION_KEY = '__summary__';
@@ -472,6 +474,7 @@ Page({
     },
     mapPolyline: [],
     privacyPopup: createDefaultPrivacyPopup(),
+    isLeavingForHistory: false,
   },
 
   async onLoad(query) {
@@ -508,6 +511,7 @@ Page({
     this.trackingMode = '';
     this.recordingMission = '';
     this.generatedMissionCardMap = {};
+    this.isPageUnloaded = false;
     if (this.currentWalkId) {
       await this.restoreWalkContext(this.currentWalkId);
     }
@@ -515,13 +519,20 @@ Page({
 
   onShow() {
     this.refreshState();
+    this.startWalkStatusPolling();
   },
 
   onUnload() {
+    this.isPageUnloaded = true;
+    this.stopWalkStatusPolling();
     this.stopTracking();
     if (this.data.isRecordingAudio && recorderManager) {
       recorderManager.stop();
     }
+  },
+
+  onHide() {
+    this.stopWalkStatusPolling();
   },
 
   async restoreWalkContext(walkId) {
@@ -544,20 +555,84 @@ Page({
         }, 300);
         return;
       }
-      const remoteDraft = buildDraftFromWalk(walk);
-      const nextDraft = cachedDraft
-        ? syncDraftAggregates({
-            ...remoteDraft,
-            ...cachedDraft,
-            walkId,
-            status: walk.status || cachedDraft.status || 'active',
-          })
-        : remoteDraft;
       app.globalData.currentTheme = walk.themeSnapshot || app.globalData.currentTheme;
-      app.setWalkDraft(nextDraft, walkId);
+
+      if (cachedDraft) {
+        app.setWalkDraft(syncDraftAggregates({
+          ...cachedDraft,
+          walkId,
+          status: 'active',
+        }), walkId);
+        this.currentWalkId = walkId;
+        return;
+      }
+
+      const remoteDraft = buildDraftFromWalk(walk);
+      app.setWalkDraft(remoteDraft, walkId);
       this.currentWalkId = walkId;
     } catch (error) {
       wx.showToast({ title: '恢复进行中漫步失败', icon: 'none' });
+    }
+  },
+
+  startWalkStatusPolling() {
+    this.stopWalkStatusPolling();
+    if (!this.currentWalkId) {
+      return;
+    }
+    walkStatusPollingTimer = setInterval(() => {
+      if (walkStatusPollingInFlight || this.data.isSaving || this.data.isLeavingForHistory || !this.currentWalkId) {
+        return;
+      }
+      this.syncRemoteWalkStatus();
+    }, 4000);
+  },
+
+  stopWalkStatusPolling() {
+    if (walkStatusPollingTimer) {
+      clearInterval(walkStatusPollingTimer);
+      walkStatusPollingTimer = null;
+    }
+  },
+
+  leaveRecordForHistory(message = '这次漫步已在另一端结束，已返回纪念卡册') {
+    if (this.data.isLeavingForHistory) {
+      return;
+    }
+    this.stopWalkStatusPolling();
+    this.stopTracking();
+    this.setData({ isLeavingForHistory: true });
+    wx.showToast({
+      title: message,
+      icon: 'none',
+      duration: 1800,
+    });
+    setTimeout(() => {
+      if (this.isPageUnloaded) {
+        return;
+      }
+      wx.switchTab({ url: '/pages/history/history' });
+    }, 300);
+  },
+
+  async syncRemoteWalkStatus() {
+    if (!this.currentWalkId || this.data.isLeavingForHistory) {
+      return;
+    }
+    walkStatusPollingInFlight = true;
+    try {
+      const result = await getWalkDetail({ id: this.currentWalkId });
+      const walk = result && result.walk ? result.walk : null;
+      if (!walk) {
+        return;
+      }
+      if (walk.status === 'finished') {
+        this.leaveRecordForHistory();
+      }
+    } catch (error) {
+      // Ignore polling failures to avoid interrupting local recording.
+    } finally {
+      walkStatusPollingInFlight = false;
     }
   },
 
@@ -1098,16 +1173,7 @@ Page({
     }
 
     const missionAssets = this.getMissionAssetsForVerify(mission);
-    const hasMedia =
-      (missionAssets.photoList && missionAssets.photoList.length) ||
-      (missionAssets.videoList && missionAssets.videoList.length) ||
-      (missionAssets.audioList && missionAssets.audioList.length);
     const missionNoteText = missionAssets.noteText || '';
-
-    if (!hasMedia && !missionNoteText.trim()) {
-      wx.showToast({ title: '先补一点素材或文字', icon: 'none' });
-      return;
-    }
 
     const clearedReviews = { ...(this.data.draft.missionReviews || {}) };
     delete clearedReviews[mission];
@@ -1381,6 +1447,10 @@ Page({
         confirmText: pausedLogin ? '去恢复' : '去设置',
         success: (res) => {
           if (res.confirm) {
+            app.setPendingNavigation({
+              url: `/pages/record/record?id=${encodeURIComponent(this.currentWalkId || (this.data.draft && this.data.draft.walkId) || '')}`,
+              mode: 'navigateTo',
+            });
             wx.switchTab({ url: '/pages/profile/profile' });
           }
         },
@@ -1390,7 +1460,11 @@ Page({
 
     this.setData({ isSaving: true });
     try {
-      const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY);
+      if (this.data.isTracking) {
+        this.stopTracking();
+      }
+      const saveDraft = syncDraftAggregates(app.globalData.walkDraft);
+      const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY, saveDraft);
       const uploadCache = {};
       const uploadCached = (filePath, kind) => {
         const key = `${kind}:${filePath}`;
@@ -1402,7 +1476,7 @@ Page({
       const uploadedPhotos = await Promise.all((summaryAssets.photoList || []).map((path) => uploadCached(path, 'image')));
       const uploadedVideos = await Promise.all((summaryAssets.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video')));
       const uploadedAudios = await Promise.all((summaryAssets.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio')));
-      const missionAssetEntries = Object.entries(this.data.draft.missionAssetMap || {});
+      const missionAssetEntries = Object.entries(saveDraft.missionAssetMap || {});
       const uploadedMissionAssetEntries = await Promise.all(missionAssetEntries.map(async ([mission, assets]) => ([
         mission,
         {
@@ -1416,48 +1490,47 @@ Page({
       ])));
       const missionAssetMap = Object.fromEntries(uploadedMissionAssetEntries);
       const routeStats = buildRouteStats(
-        this.data.draft.routePoints,
-        this.data.draft.trackStartedAt || this.data.draft.startedAt,
-        this.data.draft.trackStoppedAt || Date.now(),
+        saveDraft.routePoints,
+        saveDraft.trackStartedAt || saveDraft.startedAt,
+        saveDraft.trackStoppedAt || Date.now(),
         false
       );
-      const walkId = this.currentWalkId || this.data.draft.walkId || '';
-      const endedAt = this.data.draft.trackStoppedAt || Date.now();
+      const walkId = this.currentWalkId || saveDraft.walkId || '';
+      const endedAt = saveDraft.trackStoppedAt || Date.now();
       const result = await createWalk({
         id: walkId,
         themeSnapshot: this.data.theme,
         themeTitle: this.data.theme.title,
-        locationName: this.data.draft.locationName,
-        locationContext: this.data.draft.locationContext,
-        locationAddress: this.data.draft.locationAddress,
-        latitude: this.data.draft.latitude,
-        longitude: this.data.draft.longitude,
-        routePoints: this.data.draft.routePoints,
-        missionsCompleted: this.data.draft.completedMissions,
-        missionReviews: this.data.draft.missionReviews,
+        locationName: saveDraft.locationName,
+        locationContext: saveDraft.locationContext,
+        locationAddress: saveDraft.locationAddress,
+        latitude: saveDraft.latitude,
+        longitude: saveDraft.longitude,
+        routePoints: saveDraft.routePoints,
+        missionsCompleted: saveDraft.completedMissions,
+        missionReviews: saveDraft.missionReviews,
         photoList: uploadedPhotos,
         videoList: uploadedVideos,
         audioList: uploadedAudios,
         missionAssetMap,
         noteText: summaryAssets.noteText || '',
         isPublic: false,
-        walkMode: this.data.draft.walkMode,
-        generationSource: this.data.draft.generationSource,
-        season: this.data.draft.season || '',
-        generationContext: this.data.draft.generationContext || {},
-        trackStartedAt: this.data.draft.trackStartedAt || this.data.draft.startedAt,
+        walkMode: saveDraft.walkMode,
+        generationSource: saveDraft.generationSource,
+        season: saveDraft.season || '',
+        generationContext: saveDraft.generationContext || {},
+        trackStartedAt: saveDraft.trackStartedAt || saveDraft.startedAt,
         trackStoppedAt: endedAt,
-        startedAt: this.data.draft.startedAt,
+        startedAt: saveDraft.startedAt,
         endedAt,
         routeStats: {
           durationMs: routeStats.durationMs,
           pointCount: routeStats.pointCount,
           distanceMeters: routeStats.distanceMeters,
         },
-        sticker: this.data.draft.sticker || null,
+        sticker: saveDraft.sticker || null,
         status: 'finished',
       });
-      this.stopTracking();
       app.clearWalkDraft(walkId);
       app.globalData.currentTheme = null;
       wx.showToast({ title: '已保存', icon: 'success' });

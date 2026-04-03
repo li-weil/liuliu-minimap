@@ -46,14 +46,36 @@ async function getRoomBundle(roomId, openid) {
 
   const memberDocs = membersResult.data || [];
   const member = memberDocs.find((item) => item.userId === openid) || null;
+  const contributionDocs = contributionsResult.data || [];
+  const activityDocs = activitiesResult.data || [];
+  const teamStats = room.teamStats || {};
+  const safeTeamStats = {
+    ...teamStats,
+    memberCount: teamStats.memberCount || memberDocs.length,
+    contributionCount: teamStats.contributionCount || contributionDocs.length,
+  };
+
+  if (!member) {
+    return {
+      _id: roomId,
+      ...room,
+      members: [],
+      contributions: [],
+      activities: [],
+      teamStats: safeTeamStats,
+      memberRole: '',
+      canPreview: true,
+    };
+  }
 
   return {
     _id: roomId,
     ...room,
     members: memberDocs,
-    contributions: (contributionsResult.data || []).map((item) => sanitizeContributionForDisplay(item)),
-    activities: activitiesResult.data || [],
-    memberRole: member ? member.role : '',
+    contributions: contributionDocs.map((item) => sanitizeContributionForDisplay(item)),
+    activities: activityDocs,
+    teamStats: safeTeamStats,
+    memberRole: member.role || '',
   };
 }
 

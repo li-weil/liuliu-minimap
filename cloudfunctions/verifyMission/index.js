@@ -62,10 +62,15 @@ exports.main = async (event) => {
     return {
       passed: false,
       score: 0,
-      comment: '先为这个任务补一张图、一段视频、录音，或者写一句说明，再让 AI 来打分',
-      confidence: 'low',
+      comment: '这条任务还没有留下文字或多媒体记录，当前会按空记录保存；之后补充内容后可以再来打分。',
+      confidence: 'medium',
       reviewedAt: Date.now(),
       reason: 'missing_input',
+      mediaSummary: {
+        imageCount: 0,
+        videoCount: 0,
+        audioCount: 0,
+      },
     };
   }
 

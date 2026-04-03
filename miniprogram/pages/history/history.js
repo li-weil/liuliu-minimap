@@ -2,6 +2,7 @@ const app = getApp();
 const { listMyWalks } = require('../../services/walk');
 const { listMyTeamWalks } = require('../../services/team');
 const { computeAchievements } = require('../../services/achievement');
+const { hydrateAchievementAssets } = require('../../services/asset');
 const { isManualLogoutSuppressed } = require('../../services/user');
 const { formatDate } = require('../../utils/format');
 const {
@@ -23,10 +24,6 @@ function persistAchievementState(state) {
   } catch (error) {
     // Ignore storage failures and keep the page state as source of truth.
   }
-}
-
-function isCloudFileId(value) {
-  return typeof value === 'string' && value.indexOf('cloud://') === 0;
 }
 
 function readFeaturedAchievementId() {
@@ -71,6 +68,7 @@ Page({
       loginState: user ? 'ready' : (isManualLogoutSuppressed() ? 'paused' : 'register'),
     });
     if (!user) {
+      app.globalData.achievementSnapshot = null;
       this.setData({
         walks: [],
         achievements: [],
@@ -101,8 +99,13 @@ Page({
         }))
         .sort((left, right) => resolveWalkSortTimestamp(right) - resolveWalkSortTimestamp(left));
       const achievementResult = computeAchievements(walks);
-      const achievements = achievementResult.achievements;
+      const achievements = await hydrateAchievementAssets(achievementResult.achievements);
       const featuredAchievement = this.resolveFeaturedAchievement(achievements);
+      app.globalData.achievementSnapshot = {
+        achievements,
+        summary: achievementResult.summary,
+        updatedAt: Date.now(),
+      };
       this.setData({
         walks,
         achievements,

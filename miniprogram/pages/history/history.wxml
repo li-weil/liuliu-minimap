@@ -13,6 +13,7 @@
             class="featured-chip-image"
             src="{{featuredAchievement.asset}}"
             mode="aspectFit"
+            lazy-load="true"
             binderror="handleFeaturedAchievementImageError"
           />
           <view wx:else class="featured-chip-image featured-chip-image-placeholder">
@@ -81,6 +82,7 @@
             class="achievement-badge-image"
             src="{{item.asset}}"
             mode="aspectFit"
+            lazy-load="true"
             binderror="handleAchievementImageError"
             data-id="{{item.id}}"
           />

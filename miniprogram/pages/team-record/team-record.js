@@ -137,21 +137,32 @@ Page({
   onLoad(query) {
     this.missionDraftCache = {};
     this.missionDraftDirtyMap = {};
+    this.recordingMission = '';
+    this.isPageUnloaded = false;
     this.setData({ roomId: query.roomId || query.id || '' });
     if (wx.getRecorderManager) {
       recorderManager = wx.getRecorderManager();
       recorderManager.onStop((result) => {
-        this.setEditorDraft({
-          ...this.data.editorDraft,
-          audioList: [...(this.data.editorDraft.audioList || []), { tempFilePath: result.tempFilePath, duration: result.duration || 0 }],
-        });
-        this.setData({
-          isRecordingAudio: false,
-          audioButtonLabel: '录音',
-        });
+        const mission = this.recordingMission || this.data.activeMission;
+        this.recordingMission = '';
+        if (mission) {
+          this.updateMissionDraft(mission, (draft) => ({
+            ...draft,
+            audioList: [...(draft.audioList || []), { tempFilePath: result.tempFilePath, duration: result.duration || 0 }],
+          }));
+        }
+        if (!this.isPageUnloaded) {
+          this.setData({
+            isRecordingAudio: false,
+            audioButtonLabel: '录音',
+          });
+        }
       });
       recorderManager.onError((error) => {
-        this.setData({ isRecordingAudio: false, audioButtonLabel: '录音' });
+        this.recordingMission = '';
+        if (!this.isPageUnloaded) {
+          this.setData({ isRecordingAudio: false, audioButtonLabel: '录音' });
+        }
         wx.showModal({
           title: '录音失败',
           content: explainRecorderError(error),
@@ -170,10 +181,13 @@ Page({
 
   onHide() {
     this.stopRoomPolling();
+    this.stopAudioRecording();
   },
 
   onUnload() {
+    this.isPageUnloaded = true;
     this.stopRoomPolling();
+    this.stopAudioRecording();
   },
 
   startRoomPolling() {
@@ -283,6 +297,28 @@ Page({
     this.missionDraftDirtyMap = this.missionDraftDirtyMap || {};
     this.missionDraftCache[mission] = cloneDraft(draft);
     this.missionDraftDirtyMap[mission] = !!dirty;
+  },
+
+  updateMissionDraft(mission, updater, options = {}) {
+    if (!mission || typeof updater !== 'function') {
+      return;
+    }
+    const baseDraft = mission === this.data.activeMission
+      ? cloneDraft(this.data.editorDraft)
+      : (this.getDraftCache(mission) || createEmptyDraft());
+    const nextDraft = cloneDraft(updater(baseDraft));
+    if (mission === this.data.activeMission) {
+      this.setEditorDraft(nextDraft, { mission, ...options });
+      return;
+    }
+    const dirty = Object.prototype.hasOwnProperty.call(options, 'dirty') ? !!options.dirty : true;
+    this.cacheMissionDraft(mission, nextDraft, dirty);
+  },
+
+  stopAudioRecording() {
+    if (this.data.isRecordingAudio && recorderManager) {
+      recorderManager.stop();
+    }
   },
 
   setEditorDraft(nextDraft, options = {}) {
@@ -415,6 +451,7 @@ Page({
     }
     if (this.data.isRecordingAudio) {
       this.setData({ audioButtonLabel: '录音' });
+      this.recordingMission = this.recordingMission || this.data.activeMission;
       recorderManager.stop();
       return;
     }
@@ -423,6 +460,7 @@ Page({
         title: '录音前说明',
         content: '录音仅在你主动点击后开始，用于当前团队任务记录补充，不会在后台自动录制。',
       });
+      this.recordingMission = this.data.activeMission;
       this.setData({ isRecordingAudio: true, audioButtonLabel: '结束录音' });
       recorderManager.start({
         duration: 60000,

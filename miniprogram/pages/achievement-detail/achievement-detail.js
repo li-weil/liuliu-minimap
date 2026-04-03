@@ -2,6 +2,7 @@ const app = getApp();
 const { listMyWalks } = require('../../services/walk');
 const { listMyTeamWalks } = require('../../services/team');
 const { computeAchievements } = require('../../services/achievement');
+const { hydrateAchievementAssets } = require('../../services/asset');
 const {
   FEATURED_ACHIEVEMENT_STORAGE_KEY,
 } = require('../../utils/achievements');
@@ -64,6 +65,17 @@ Page({
       return;
     }
 
+    const snapshot = app.globalData.achievementSnapshot;
+    if (snapshot && Array.isArray(snapshot.achievements)) {
+      const cachedAchievement = snapshot.achievements.find((item) => item.id === this.achievementId) || null;
+      this.setData({
+        loading: false,
+        achievement: cachedAchievement,
+        shareTitle: cachedAchievement ? `${cachedAchievement.title}｜我的城市漫步成就` : '我的城市漫步成就',
+      });
+      return;
+    }
+
     this.setData({ loading: true });
     try {
       await app.ensureUserReady();
@@ -73,7 +85,13 @@ Page({
       ]);
       const records = [...(soloResult.records || []), ...(teamResult.records || [])];
       const achievementResult = computeAchievements(records);
-      const resolvedAchievement = (achievementResult.achievements || []).find((item) => item.id === this.achievementId) || null;
+      const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
+      const resolvedAchievement = achievements.find((item) => item.id === this.achievementId) || null;
+      app.globalData.achievementSnapshot = {
+        achievements,
+        summary: achievementResult.summary,
+        updatedAt: Date.now(),
+      };
       this.setData({
         achievement: resolvedAchievement,
         shareTitle: resolvedAchievement ? `${resolvedAchievement.title}｜我的城市漫步成就` : '我的城市漫步成就',
