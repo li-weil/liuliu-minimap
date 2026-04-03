@@ -1,7 +1,7 @@
 const app = getApp();
 const { createWalk, getWalkDetail } = require('../../services/walk');
 const { requestUpload } = require('../../services/api');
-const { getCurrentLocation } = require('../../utils/location');
+const { explainLocationError, getCurrentLocation } = require('../../utils/location');
 const { chooseImage, chooseVideo } = require('../../utils/media');
 const { verifyMission } = require('../../services/theme');
 const { generateCompanionNote, generateStickerPlan, generateStickerImage } = require('../../services/sticker');
@@ -156,27 +156,6 @@ function mergeRouteStatsWithDraft(draft, isTracking) {
     durationLabel: formatDuration(durationMs),
     distanceLabel: formatDistance(distanceMeters),
   };
-}
-
-function normalizeMapRoutePoints(routePoints) {
-  return (Array.isArray(routePoints) ? routePoints : [])
-    .map((point) => ({
-      latitude: Number(point && point.latitude),
-      longitude: Number(point && point.longitude),
-    }))
-    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
-}
-
-function buildMapPolyline(routePoints) {
-  const points = normalizeMapRoutePoints(routePoints);
-  if (points.length < 2) {
-    return [];
-  }
-  return [{
-    points,
-    color: '#5a5a40',
-    width: 4,
-  }];
 }
 
 function splitPoemLines(poem) {
@@ -552,7 +531,6 @@ Page({
       startedLabel: '未开始',
       stoppedLabel: '未开始',
     },
-    mapPolyline: [],
     saveStatusText: '',
     uploadProgressPercent: 0,
     uploadProgressCurrent: 0,
@@ -744,7 +722,6 @@ Page({
         sticker: decorateSticker(nextDraft.sticker),
       },
       routeStats,
-      mapPolyline: buildMapPolyline(nextDraft.routePoints),
     });
   },
 
@@ -1141,14 +1118,28 @@ Page({
     });
   },
 
+  async waitForPendingCompanionNotes() {
+    const taskMap = this.pendingCompanionTasks || {};
+    const tasks = Object.values(taskMap).filter((task) => task && typeof task.then === 'function');
+    if (!tasks.length) {
+      return;
+    }
+    this.updateSaveProgress('正在整理任务文案...', 0, 0, 0);
+    await Promise.allSettled(tasks);
+  },
+
   isMissionCheckInCurrent(mission, checkedInAt) {
     const completedSet = new Set(this.data.draft && this.data.draft.completedMissions ? this.data.draft.completedMissions : []);
     const review = this.data.draft && this.data.draft.missionReviews ? this.data.draft.missionReviews[mission] : null;
     return completedSet.has(mission) && review && Number(review.checkedInAt || 0) === Number(checkedInAt || 0);
   },
 
-  async generateMissionCompanionNoteInBackground(mission, checkedInAt, snapshotAssets) {
-    try {
+  generateMissionCompanionNoteInBackground(mission, checkedInAt, snapshotAssets) {
+    if (!this.pendingCompanionTasks) {
+      this.pendingCompanionTasks = {};
+    }
+    const task = (async () => {
+      try {
       const companionNote = await this.ensureCompanionNote(mission, snapshotAssets, {
         allowEmptyMaterial: true,
       });
@@ -1170,7 +1161,7 @@ Page({
         checkedInAt,
         companionNoteStatus: companionNote ? 'ready' : 'empty',
       });
-    } catch (error) {
+      } catch (error) {
       if (!this.isMissionCheckInCurrent(mission, checkedInAt)) {
         return;
       }
@@ -1181,11 +1172,17 @@ Page({
         checkedInAt,
         companionNoteStatus: 'failed',
       });
-    } finally {
+      } finally {
       if (this.isMissionCheckInCurrent(mission, checkedInAt)) {
         this.setMissionCompanionPending(mission, false);
       }
-    }
+        if (this.pendingCompanionTasks && this.pendingCompanionTasks[mission] === task) {
+          delete this.pendingCompanionTasks[mission];
+        }
+      }
+    })();
+    this.pendingCompanionTasks[mission] = task;
+    return task;
   },
 
   handleNoteInput(event) {
@@ -1469,15 +1466,15 @@ Page({
 
     try {
       await ensurePrivacyAuthorization(this, {
-        title: '开启轨迹前说明',
-        content: '轨迹追踪会在你停留当前页面时使用前台实时定位，仅用于记录这次漫步路线，不涉及后台持续定位。',
+        title: '开启定位前说明',
+        content: '当前位置显示会在你停留当前页面时使用前台定位，仅用于在记录页展示当前位置，不涉及后台持续定位。',
       });
     } catch (error) {
       if (error && error.message === 'privacy_authorization_denied') {
-        wx.showToast({ title: '未同意隐私说明，暂时无法记录轨迹', icon: 'none' });
+        wx.showToast({ title: '未同意隐私说明，暂时无法显示位置', icon: 'none' });
         return;
       }
-      wx.showToast({ title: '暂时无法开启轨迹追踪', icon: 'none' });
+      wx.showToast({ title: '暂时无法开启位置显示', icon: 'none' });
       return;
     }
 
@@ -1493,26 +1490,25 @@ Page({
       isMapOpen: true,
       draft,
       routeStats: mergeRouteStatsWithDraft(draft, true),
-      mapPolyline: buildMapPolyline(draft.routePoints),
     });
     try {
       const mode = await this.startRealtimeTracking();
       this.trackingMode = mode;
-      wx.showToast({ title: '前台实时定位已开启，请尽量保持当前页', icon: 'none' });
+      wx.showToast({ title: '前台定位已开启，请尽量保持当前页', icon: 'none' });
     } catch (error) {
       try {
         await this.startPollingTracking();
         this.trackingMode = 'polling';
-        const reason = this.lastTrackingFailureReason || '前台实时定位未成功开启';
+        const reason = this.lastTrackingFailureReason || '前台定位未成功开启';
         wx.showModal({
-          title: '已切换为间隔记录',
-          content: `${reason}。当前会改为间隔取点，离开前台或定位受限时，轨迹连续性可能变弱。`,
+          title: '已切换为间隔定位',
+          content: `${reason}。当前会改为间隔刷新当前位置，离开前台或定位受限时，位置更新可能变慢。`,
           showCancel: false,
           confirmText: '知道了',
         });
       } catch (fallbackError) {
         this.setData({ isTracking: false });
-        wx.showToast({ title: explainLocationError(fallbackError, '轨迹记录'), icon: 'none' });
+        wx.showToast({ title: explainLocationError(fallbackError, '位置显示'), icon: 'none' });
       }
     }
   },
@@ -1542,13 +1538,12 @@ Page({
       isTracking: false,
       draft,
       routeStats: mergeRouteStatsWithDraft(draft, false),
-      mapPolyline: buildMapPolyline(draft.routePoints),
     });
   },
 
   startRealtimeTracking() {
     if (!wx.onLocationChange || !wx.startLocationUpdate) {
-      this.lastTrackingFailureReason = '当前环境不支持持续定位';
+      this.lastTrackingFailureReason = '当前环境不支持前台定位更新';
       return Promise.reject(new Error('location_update_not_supported'));
     }
 
@@ -1583,7 +1578,7 @@ Page({
           .then((location) => this.appendTrackPoint(location))
           .catch(() => {
             this.stopTracking();
-            wx.showToast({ title: '轨迹记录失败', icon: 'none' });
+            wx.showToast({ title: '位置显示失败', icon: 'none' });
           });
       }, TRACK_SAMPLE_INTERVAL_MS);
     });
@@ -1621,7 +1616,7 @@ Page({
       return true;
     } catch (error) {
       this.stopTracking();
-      wx.showToast({ title: '轨迹记录失败', icon: 'none' });
+      wx.showToast({ title: '位置显示失败', icon: 'none' });
       return false;
     }
   },
@@ -1680,6 +1675,7 @@ Page({
       if (this.data.isTracking) {
         this.stopTracking();
       }
+      await this.waitForPendingCompanionNotes();
       const saveDraft = syncDraftAggregates(app.globalData.walkDraft);
       this.setDraft(saveDraft);
       const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY, saveDraft);

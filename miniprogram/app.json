@@ -22,7 +22,7 @@
   },
   "permission": {
     "scope.userLocation": {
-      "desc": "用于获取当前位置、选点探索和记录漫步轨迹"
+      "desc": "用于获取当前位置、选点探索和记录漫步位置"
     }
   },
   "tabBar": {

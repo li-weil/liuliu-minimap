@@ -56,7 +56,7 @@ async function ensureLocationPermission() {
 
   const modal = await showModal({
     title: '需要定位权限',
-    content: '遛遛需要定位权限来获取当前位置、手动选点和记录漫步轨迹。是否前往设置开启？',
+    content: '遛遛需要定位权限来获取当前位置、手动选点和记录漫步位置信息。是否前往设置开启？',
     confirmText: '去设置',
   });
 

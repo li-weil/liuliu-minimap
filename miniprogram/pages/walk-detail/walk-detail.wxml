@@ -18,8 +18,8 @@
     </view>
 
     <view class="section-card" style="padding: 28rpx; margin-bottom: 24rpx;">
-      <view class="section-title">地图与轨迹</view>
-      <map longitude="{{mapCenterLongitude}}" latitude="{{mapCenterLatitude}}" scale="15" show-location polyline="{{mapPolyline}}" style="width: 100%; height: 360rpx; border-radius: 22rpx; overflow: hidden;" />
+      <view class="section-title">地图位置</view>
+      <map longitude="{{mapCenterLongitude}}" latitude="{{mapCenterLatitude}}" scale="15" show-location style="width: 100%; height: 360rpx; border-radius: 22rpx; overflow: hidden;" />
       <view class="meta-row" style="margin-top: 20rpx;">
         <view class="meta-pill">{{walk.routeStats.distanceLabel || '0 m'}}</view>
         <view class="meta-pill">{{walk.routeStats.durationLabel || '0秒'}}</view>

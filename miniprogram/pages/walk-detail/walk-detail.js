@@ -287,29 +287,13 @@ async function hydrateMissionItemsAudio(missionItems = []) {
   }));
 }
 
-function normalizeMapRoutePoints(routePoints) {
-  return (Array.isArray(routePoints) ? routePoints : [])
+function getMapCenter(routePoints, fallbackLocation = {}) {
+  const points = (Array.isArray(routePoints) ? routePoints : [])
     .map((point) => ({
       latitude: Number(point && point.latitude),
       longitude: Number(point && point.longitude),
     }))
     .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
-}
-
-function buildMapPolyline(routePoints) {
-  const points = normalizeMapRoutePoints(routePoints);
-  if (points.length < 2) {
-    return [];
-  }
-  return [{
-    points,
-    color: '#5a5a40',
-    width: 4,
-  }];
-}
-
-function getMapCenter(routePoints, fallbackLocation = {}) {
-  const points = normalizeMapRoutePoints(routePoints);
   if (points.length) {
     return points[points.length - 1];
   }
@@ -364,7 +348,6 @@ Page({
     isDeletingWalk: false,
     mapCenterLatitude: 39.908823,
     mapCenterLongitude: 116.39747,
-    mapPolyline: [],
     privacyPopup: createDefaultPrivacyPopup(),
   },
 
@@ -436,7 +419,6 @@ Page({
         activeMission: walk && walk.missionItems && walk.missionItems.length ? walk.missionItems[0].mission : '',
         mapCenterLatitude: mapCenter.latitude,
         mapCenterLongitude: mapCenter.longitude,
-        mapPolyline: buildMapPolyline(walk && walk.routePoints),
       }, () => {
         this.prepareMissionCard();
       });
@@ -480,9 +462,11 @@ Page({
       ...createEmptyMissionAssets(),
       ...(missionItem.assets || {}),
     };
+    const companionNoteStatus = String((missionItem.review && missionItem.review.companionNoteStatus) || '').trim();
     const waitingCompanionNote = !missionAssets.cardImagePath
       && hasCardGenerationMaterial(missionAssets)
-      && !String(missionAssets.companionNote || '').trim();
+      && !String(missionAssets.companionNote || '').trim()
+      && companionNoteStatus === 'pending';
     if (waitingCompanionNote) {
       this.schedulePendingMissionRefresh();
     } else {
@@ -514,7 +498,13 @@ Page({
       ...createEmptyMissionAssets(),
       ...(missionItem.assets || {}),
     };
-    if (!missionAssets.cardImagePath && hasCardGenerationMaterial(missionAssets) && !String(missionAssets.companionNote || '').trim()) {
+    const companionNoteStatus = String((missionItem.review && missionItem.review.companionNoteStatus) || '').trim();
+    if (
+      !missionAssets.cardImagePath
+      && hasCardGenerationMaterial(missionAssets)
+      && !String(missionAssets.companionNote || '').trim()
+      && companionNoteStatus === 'pending'
+    ) {
       wx.showToast({ title: '66 正在准备卡片文案', icon: 'none' });
       this.setData({
         missionCardPendingNote: true,
@@ -814,7 +804,7 @@ async handleDeleteWalk() {
     const confirm = await new Promise((resolve) => {
       wx.showModal({
         title: '删除这条历史记录？',
-        content: '删除后将无法恢复，这条漫步的任务、轨迹、图片、视频和录音记录都会从历史中移除。',
+        content: '删除后将无法恢复，这条漫步的任务、位置信息、图片、视频和录音记录都会从历史中移除。',
         confirmText: '确认删除',
         confirmColor: '#c24f35',
         cancelText: '取消',

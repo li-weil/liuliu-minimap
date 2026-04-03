@@ -328,33 +328,8 @@ Page({
   onLoad(query) {
     this.missionCardRenderVersion = 0;
     this.prepareMissionToken = 0;
-    this.pendingMissionRefreshTimer = null;
     this.setData({ roomId: query.roomId || query.id || '' });
     this.fetchDetail();
-  },
-
-  onUnload() {
-    this.clearPendingMissionRefresh();
-  },
-
-  clearPendingMissionRefresh() {
-    if (this.pendingMissionRefreshTimer) {
-      clearTimeout(this.pendingMissionRefreshTimer);
-      this.pendingMissionRefreshTimer = null;
-    }
-  },
-
-  schedulePendingMissionRefresh() {
-    if (!this.data.roomId || this.pendingMissionRefreshTimer) {
-      return;
-    }
-    this.pendingMissionRefreshTimer = setTimeout(() => {
-      this.pendingMissionRefreshTimer = null;
-      if (this.data.isRenderingMissionCard) {
-        return;
-      }
-      this.fetchDetail();
-    }, 3000);
   },
 
   onShareAppMessage() {
@@ -436,7 +411,6 @@ Page({
     this.prepareMissionToken = token;
     const group = this.getActiveMissionGroup();
     if (!group || !Array.isArray(group.contributions) || !group.contributions.length) {
-      this.clearPendingMissionRefresh();
       this.setData({
         currentMissionCardSrc: '',
         isRenderingMissionCard: false,
@@ -461,17 +435,11 @@ Page({
       room.missionCardMap[group.mission].cardImagePath
         ? room.missionCardMap[group.mission].cardImagePath
         : '';
-    const waitingCompanionNote = false;
-    if (waitingCompanionNote) {
-      this.schedulePendingMissionRefresh();
-    } else {
-      this.clearPendingMissionRefresh();
-    }
     this.setData({
       currentMissionCardSrc: storedCard,
       isRenderingMissionCard: false,
-      missionCardPendingNote: waitingCompanionNote,
-      missionCardPendingText: waitingCompanionNote ? '66 正在记录卡片…' : '',
+      missionCardPendingNote: false,
+      missionCardPendingText: '',
       missionCardRenderPayload: {
         mission: group.mission || '团队打卡卡片',
         entries: buildMissionCardEntries(group, room),
@@ -488,16 +456,6 @@ Page({
     const room = this.data.room || {};
     if (!group || !Array.isArray(group.contributions) || !group.contributions.length) {
       wx.showToast({ title: '这个任务还没有记录', icon: 'none' });
-      return;
-    }
-    const waitingCompanionNote = false;
-    if (waitingCompanionNote) {
-      wx.showToast({ title: '正在准备团队卡片文案', icon: 'none' });
-      this.setData({
-        missionCardPendingNote: true,
-        missionCardPendingText: '66 正在记录卡片…',
-      });
-      this.schedulePendingMissionRefresh();
       return;
     }
     this.missionCardRenderVersion += 1;
