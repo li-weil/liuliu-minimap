@@ -88,7 +88,7 @@ function normalizeTheme(theme, walkMode) {
 }
 
 function findRelatedScenes(event) {
-  const tokens = [event.locationName, event.locationContext, event.preference, event.weather, event.season]
+  const tokens = [event.locationName, event.preference, event.weather, event.season]
     .filter(Boolean)
     .join(' ');
   return sceneProfiles.filter((scene) =>
@@ -124,7 +124,7 @@ exports.main = async (event) => {
   const referenceContext = buildReferenceContext(category, event);
   const fallbackTheme = normalizeTheme({
     title: `${category}：重新看见${event.locationName || '身边角落'}`,
-    description: `围绕 ${category} 在 ${event.locationContext || '城市街道'} 中进行一次更有随机感的自由探索。`,
+    description: `围绕 ${category} 在 ${event.locationName || '这片地点'} 进行一次更有随机感的自由探索。`,
     category,
     missions: event.walkMode === 'advanced'
       ? categoryFallback.missions
@@ -135,7 +135,6 @@ exports.main = async (event) => {
   const prompt = `请为微信小程序“遛遛”生成一个随机 City Walk 主题。
 方向：${category}
 地点：${event.locationName || '当前位置'}
-地点语境：${event.locationContext || '城市街道'}
 模式：${event.walkMode === 'advanced' ? '进阶模式，生成3个任务' : '纯粹模式，生成1个完整而有层次的复合任务'}
 
 以下是随机生成可参考的本地知识上下文：

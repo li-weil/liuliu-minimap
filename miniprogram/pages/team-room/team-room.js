@@ -22,7 +22,6 @@ Page({
     roomModeLabel: '纯粹模式',
     roomStatusLabel: '待出发',
     roomMemberCountLabel: '0 人',
-    roomLocationContextLabel: '城市街道',
     leaveButtonLabel: '退出房间',
   },
 
@@ -69,7 +68,6 @@ Page({
               ? '已解散'
               : '待出发',
       roomMemberCountLabel: `${room && room.teamStats ? room.teamStats.memberCount || ((room.members || []).length) : ((room && room.members) || []).length} 人`,
-      roomLocationContextLabel: room && room.locationContext ? room.locationContext : '城市街道',
       leaveButtonLabel: room && room.memberRole === 'owner' ? '解散房间' : '退出房间',
     };
   },

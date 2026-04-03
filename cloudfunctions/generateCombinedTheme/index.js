@@ -56,7 +56,7 @@ function enrichPureMissionText(mission, categories) {
 }
 
 function buildSceneContext(event) {
-  const tokens = [event.locationName, event.locationContext, event.preference, event.weather, event.season]
+  const tokens = [event.locationName, event.preference, event.weather, event.season]
     .filter(Boolean)
     .join(' ');
   return shuffle(sceneProfiles.filter((scene) => scene.keywords.some((keyword) => tokens.includes(keyword)))).slice(0, 3);
@@ -107,7 +107,6 @@ exports.main = async (event) => {
   const prompt = `你正在为微信小程序“遛遛”生成组合主题。
 组合方向：${categories.join('、')}
 地点：${event.locationName || '当前位置'}
-地点语境：${event.locationContext || '城市街道'}
 模式：${event.walkMode === 'advanced' ? '进阶模式，生成3个任务' : '纯粹模式，生成1个完整而有层次的复合任务'}
 
 以下是组合生成的本地知识上下文：

@@ -72,15 +72,6 @@ async function ensureLocationPermission() {
   throw new Error('location_permission_denied');
 }
 
-function chooseLocation() {
-  return ensureLocationPermission().then(() => new Promise((resolve, reject) => {
-    wx.chooseLocation({
-      success: resolve,
-      fail: reject,
-    });
-  }));
-}
-
 function getCurrentLocation() {
   return ensureLocationPermission().then(() => new Promise((resolve, reject) => {
     wx.getLocation({
@@ -110,7 +101,6 @@ function explainLocationError(error, action) {
 }
 
 module.exports = {
-  chooseLocation,
   explainLocationError,
   getCurrentLocation,
 };

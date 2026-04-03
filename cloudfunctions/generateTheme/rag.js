@@ -109,7 +109,6 @@ function retrieveContext(event) {
   const selectedThemes = normalizeSelectedThemes(event.selectedThemes);
   const tokens = tokenize([
     event.locationName,
-    event.locationContext,
     event.preference,
     event.weather,
     event.mood,
@@ -205,7 +204,6 @@ function buildPrompt(event, ragContext) {
 - 季节: ${event.season}
 - 偏好: ${event.preference}
 - 地点: ${event.locationName}
-- 地点语境: ${event.locationContext}
 ${selectedThemeLine}
 ${strictThemeScopeLine}
 

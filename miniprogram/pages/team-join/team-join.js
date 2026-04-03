@@ -9,7 +9,6 @@ Page({
     roomId: '',
     room: null,
     roomModeLabel: '纯粹模式',
-    roomLocationContextLabel: '城市街道',
     roomMemberCountLabel: '0 人已在房间',
   },
 
@@ -30,7 +29,6 @@ Page({
       this.setData({
         room,
         roomModeLabel: room && room.walkMode === 'advanced' ? '进阶模式' : '纯粹模式',
-        roomLocationContextLabel: room && room.locationContext ? room.locationContext : '城市街道',
         roomMemberCountLabel: `${room && room.teamStats ? room.teamStats.memberCount || ((room.members) || []).length : ((room && room.members) || []).length} 人已在房间`,
       });
     } catch (error) {

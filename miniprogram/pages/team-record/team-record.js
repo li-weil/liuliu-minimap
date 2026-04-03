@@ -207,7 +207,6 @@ Page({
     editorDraft: createEmptyDraft(),
     roomMemberCountLabel: '0 人同行',
     roomMissionProgressLabel: '0 / 0 个任务已点亮',
-    roomLocationContextLabel: '城市街道',
     audioButtonLabel: '录音',
     completedClassName: '',
     isLeavingForHistory: false,
@@ -336,7 +335,6 @@ Page({
         missionViews,
         roomMemberCountLabel: `${room && room.teamStats ? room.teamStats.memberCount || ((room.members || []).length) : ((room && room.members) || []).length} 人同行`,
         roomMissionProgressLabel: `${room && room.teamStats ? room.teamStats.completedMissionCount || 0 : 0} / ${room && room.teamStats ? room.teamStats.totalMissionCount || 0 : 0} 个任务已点亮`,
-        roomLocationContextLabel: room && room.locationContext ? room.locationContext : '城市街道',
       });
       this.syncEditorDraft(activeMission, room);
     } catch (error) {
@@ -615,7 +613,6 @@ Page({
       const result = await generateCompanionNote({
         themeTitle: this.data.room && this.data.room.themeTitle ? this.data.room.themeTitle : '',
         locationName: this.data.room && this.data.room.locationName ? this.data.room.locationName : '',
-        locationContext: this.data.room && this.data.room.locationContext ? this.data.room.locationContext : '',
         mission: this.data.activeMission || '',
         userNoteText,
         photoList,

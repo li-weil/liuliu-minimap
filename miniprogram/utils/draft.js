@@ -4,7 +4,6 @@ function getDefaultDraft() {
   return {
     walkId: '',
     locationName: '当前位置',
-    locationContext: '城市街道',
     locationAddress: '',
     latitude: null,
     longitude: null,

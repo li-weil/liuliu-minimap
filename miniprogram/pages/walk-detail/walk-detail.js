@@ -559,7 +559,6 @@ Page({
       id: walkId,
       themeSnapshot: walk.themeSnapshot,
       locationName: walk.locationName,
-      locationContext: walk.locationContext,
       locationAddress: walk.locationAddress,
       latitude: walk.latitude,
       longitude: walk.longitude,

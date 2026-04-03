@@ -12,7 +12,7 @@ const { explainLocationError, getCurrentLocation } = require('../../utils/locati
 const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
 const { fetchNearbyPois, searchLocations } = require('../../services/map');
 const { createTeamRoom } = require('../../services/team');
-const { generateCombinedTheme, generateRandomTheme, generateTheme, getLocationContext } = require('../../services/theme');
+const { generateCombinedTheme, generateRandomTheme, generateTheme } = require('../../services/theme');
 const { createWalk } = require('../../services/walk');
 const { getBackendProvider } = require('../../services/api');
 const { isManualLogoutSuppressed } = require('../../services/user');
@@ -261,7 +261,6 @@ Page({
     season: SEASONS[0],
     preference: PREFERENCES[2],
     locationName: '当前位置',
-    locationContext: '城市街道',
     locationAddress: '',
     latitude: null,
     longitude: null,
@@ -383,7 +382,6 @@ Page({
     }
 
     const placeName = fallback.placeName || location.placeName || location.name || this.data.locationName || '已选地点';
-    const locationContext = fallback.locationContext || this.data.locationContext || '城市街道';
     const locationAddress = fallback.locationAddress !== undefined
       ? fallback.locationAddress
       : (location.address || this.data.locationAddress || '');
@@ -392,7 +390,6 @@ Page({
       latitude,
       longitude,
       locationName: placeName,
-      locationContext,
       locationAddress,
       searchResults: [],
       searchResultCount: 0,
@@ -434,16 +431,10 @@ Page({
     const token = ++this.locationResolveToken;
     const regeo = await getRegeo(location).catch(() => null);
     const amapSummary = normalizeAmapLocation(regeo, location.placeName || location.name || location.address);
-    const contextResponse = await getLocationContext({
-      latitude: location.latitude,
-      longitude: location.longitude,
-      placeName: amapSummary.placeName || location.placeName || location.name || location.address,
-      address: amapSummary.address || location.address || '',
-    }).catch(() => ({}));
     const displayLocationName = pickBestLocationName({
       location,
       amapSummary,
-      contextResponse,
+      contextResponse: null,
     });
     if (token !== this.locationResolveToken) {
       return;
@@ -452,7 +443,6 @@ Page({
       latitude: location.latitude,
       longitude: location.longitude,
       locationName: displayLocationName,
-      locationContext: contextResponse.context || amapSummary.district || '城市街道',
       locationAddress: amapSummary.address || location.address || '',
       searchResults: [],
       searchResultCount: 0,
@@ -535,7 +525,6 @@ Page({
       const result = await getCurrentLocation();
       const applied = this.applyLocationBaseState(result, {
         placeName: '定位成功',
-        locationContext: '正在补充地点信息',
         locationAddress: '',
       });
       wx.hideLoading();
@@ -585,7 +574,7 @@ Page({
   },
 
   async confirmMapCenterLocation() {
-    wx.showLoading({ title: '分析地点' });
+    wx.showLoading({ title: '读取位置' });
     try {
       const center = await new Promise((resolve, reject) => {
         if (!this.mapCtx || !this.mapCtx.getCenterLocation) {
@@ -606,12 +595,22 @@ Page({
         mapCenterLatitude: latitude,
         mapCenterLongitude: longitude,
       });
-      await this.enrichLocation({
+      const nextLocation = {
         latitude,
         longitude,
         name: '地图选点',
         address: '',
+      };
+      const applied = this.applyLocationBaseState(nextLocation, {
+        placeName: '已设为探索点',
+        locationAddress: '',
       });
+      wx.hideLoading();
+      if (!applied) {
+        throw new Error('map_center_invalid');
+      }
+      wx.showToast({ title: '已设为探索点，正在补充地点推荐', icon: 'none', duration: 1800 });
+      this.enrichLocation(nextLocation).catch(() => {});
     } catch (error) {
       wx.showToast({ title: explainLocationError(error, '选点'), icon: 'none', duration: 2500 });
     } finally {
@@ -663,12 +662,24 @@ Page({
       wx.showToast({ title: '该地点需要手动选点确认', icon: 'none' });
       return;
     }
-    wx.showLoading({ title: '确认地点' });
     try {
-      await this.enrichLocation(item);
-      this.setData({ searchKeyword: item.name, searchResults: [], searchResultCount: 0 });
-    } finally {
-      wx.hideLoading();
+      const applied = this.applyLocationBaseState(item, {
+        placeName: item.name || '已选地点',
+        locationAddress: item.address || '',
+      });
+      if (!applied) {
+        wx.showToast({ title: '该地点需要手动选点确认', icon: 'none' });
+        return;
+      }
+      this.setData({
+        searchKeyword: item.name || '',
+        searchResults: [],
+        searchResultCount: 0,
+      });
+      wx.showToast({ title: '已选地点，正在补充地点推荐', icon: 'none', duration: 1800 });
+      this.enrichLocation(item).catch(() => {});
+    } catch (error) {
+      wx.showToast({ title: '地点切换失败', icon: 'none' });
     }
   },
 
@@ -707,7 +718,6 @@ Page({
         season: this.data.season,
         preference: this.data.preference,
         locationName: this.data.locationName,
-        locationContext: this.data.locationContext,
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
@@ -737,7 +747,6 @@ Page({
       const result = await generateRandomTheme({
         category,
         locationName: this.data.locationName,
-        locationContext: this.data.locationContext,
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
@@ -772,7 +781,6 @@ Page({
           season: this.data.season,
           preference: this.data.preference,
           locationName: this.data.locationName,
-          locationContext: this.data.locationContext,
           latitude: this.data.latitude,
           longitude: this.data.longitude,
           walkMode: this.data.walkMode,
@@ -781,7 +789,6 @@ Page({
         : await generateCombinedTheme({
           categories: selections,
           locationName: this.data.locationName,
-          locationContext: this.data.locationContext,
           latitude: this.data.latitude,
           longitude: this.data.longitude,
           walkMode: this.data.walkMode,
@@ -846,7 +853,6 @@ Page({
         themeSnapshot: this.data.currentTheme,
         themeTitle: this.data.currentTheme.title,
         locationName: this.data.locationName,
-        locationContext: this.data.locationContext,
         locationAddress: this.data.locationAddress,
         routePoints: [],
         missionsCompleted: [],
@@ -887,7 +893,6 @@ Page({
         trackStartedAt: null,
         trackStoppedAt: null,
         locationName: this.data.locationName,
-        locationContext: this.data.locationContext,
         locationAddress: this.data.locationAddress,
         latitude: this.data.latitude,
         longitude: this.data.longitude,
@@ -958,7 +963,6 @@ Page({
         themeSnapshot: this.data.currentTheme,
         themeTitle: this.data.currentTheme.title,
         locationName: this.data.locationName,
-        locationContext: this.data.locationContext,
         locationAddress: this.data.locationAddress,
         latitude: this.data.latitude,
         longitude: this.data.longitude,

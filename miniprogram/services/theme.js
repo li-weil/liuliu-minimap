@@ -12,10 +12,6 @@ function generateCombinedTheme(payload) {
   return callApi('generateCombinedTheme', payload);
 }
 
-function getLocationContext(payload) {
-  return callApi('getLocationContext', payload);
-}
-
 function verifyMission(payload) {
   return callApi('verifyMission', payload);
 }
@@ -24,6 +20,5 @@ module.exports = {
   generateCombinedTheme,
   generateRandomTheme,
   generateTheme,
-  getLocationContext,
   verifyMission,
 };

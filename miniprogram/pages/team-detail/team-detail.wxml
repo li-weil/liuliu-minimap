@@ -9,7 +9,7 @@
         <view class="meta-pill">{{room.createdAtLabel}}</view>
       </view>
       <view class="detail-title">{{room.themeTitle}}</view>
-      <view class="detail-copy">{{room.locationName}} · {{locationContextLabel}}</view>
+      <view class="detail-copy">{{room.locationName}}</view>
       <view wx:if="{{room.teamSummary}}" class="detail-summary">{{room.teamSummary}}</view>
       <button wx:if="{{showActionButton}}" class="primary-btn detail-resume-btn" bindtap="handleResume">{{actionLabel}}</button>
     </view>

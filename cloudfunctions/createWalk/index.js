@@ -56,7 +56,7 @@ exports.main = async (event) => {
     themeTitle: event.themeSnapshot.title,
     themeSnapshot: event.themeSnapshot,
     locationName: event.locationName || '当前位置',
-    locationContext: event.locationContext || '城市街道',
+    locationContext: event.locationContext || '',
     locationAddress: event.locationAddress || '',
     latitude: event.latitude !== undefined ? event.latitude : null,
     longitude: event.longitude !== undefined ? event.longitude : null,

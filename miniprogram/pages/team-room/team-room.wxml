@@ -9,7 +9,7 @@
         <view class="meta-pill">{{roomMemberCountLabel}}</view>
       </view>
       <view class="room-title">{{room.themeTitle}}</view>
-      <view class="room-subtitle">{{room.locationName}} · {{roomLocationContextLabel}}</view>
+      <view class="room-subtitle">{{room.locationName}}</view>
       <view class="room-copy">{{statusCopy}}</view>
     </view>
 

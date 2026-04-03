@@ -37,7 +37,7 @@ exports.main = async (event) => {
     themeTitle: event.themeTitle || themeSnapshot.title || '同行漫步',
     themeCategory: themeSnapshot.category || '',
     locationName: event.locationName || '当前位置',
-    locationContext: event.locationContext || '城市街道',
+    locationContext: event.locationContext || '',
     locationAddress: event.locationAddress || '',
     latitude: event.latitude !== undefined ? event.latitude : null,
     longitude: event.longitude !== undefined ? event.longitude : null,

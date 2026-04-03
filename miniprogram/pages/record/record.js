@@ -251,7 +251,6 @@ function buildDraftFromWalk(walk) {
     walkId: walk.id || walk._id || '',
     status: walk.status || 'active',
     locationName: walk.locationName || '当前位置',
-    locationContext: walk.locationContext || '城市街道',
     locationAddress: walk.locationAddress || '',
     latitude: walk.latitude || null,
     longitude: walk.longitude || null,
@@ -872,12 +871,11 @@ Page({
       return missionAssets.companionNote;
     }
 
-    const result = await generateCompanionNote({
-      themeTitle: this.data.theme && this.data.theme.title ? this.data.theme.title : '',
-      locationName: this.data.draft && this.data.draft.locationName ? this.data.draft.locationName : '',
-      locationContext: this.data.draft && this.data.draft.locationContext ? this.data.draft.locationContext : '',
-      mission,
-      userNoteText,
+      const result = await generateCompanionNote({
+        themeTitle: this.data.theme && this.data.theme.title ? this.data.theme.title : '',
+        locationName: this.data.draft && this.data.draft.locationName ? this.data.draft.locationName : '',
+        mission,
+        userNoteText,
       photoList,
       previousCompanionNote: missionAssets && missionAssets.companionNote ? missionAssets.companionNote : '',
       regenerationHint: forceRefresh ? `${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : '',
@@ -1627,7 +1625,6 @@ Page({
         themeSnapshot: this.data.theme,
         themeTitle: this.data.theme.title,
         locationName: saveDraft.locationName,
-        locationContext: saveDraft.locationContext,
         locationAddress: saveDraft.locationAddress,
         latitude: saveDraft.latitude,
         longitude: saveDraft.longitude,
@@ -1922,7 +1919,6 @@ Page({
         themeCategory: this.data.theme.category,
         walkMode: this.data.draft.walkMode,
         locationName: this.data.draft.locationName,
-        locationContext: this.data.draft.locationContext,
         overallNoteText: this.data.draft.noteText,
         missions: this.data.theme.missions || [],
         completedMissions: this.data.draft.completedMissions || [],

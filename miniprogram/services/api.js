@@ -302,7 +302,6 @@ const ENDPOINTS = {
       normalizeRequest: (data) => ({
         category: data.category,
         locationName: data.locationName,
-        locationContext: data.locationContext,
         walkMode: data.walkMode,
       }),
       normalizeResponse: (data, requestData) => normalizeThemeResponse(data, requestData, data && data.provider ? 'random+ai' : 'random-fallback'),
@@ -408,7 +407,6 @@ const ENDPOINTS = {
           themeTitle: data.themeTitle || (data.themeSnapshot && data.themeSnapshot.title) || '',
           themeCategory: (data.themeSnapshot && data.themeSnapshot.category) || '',
           locationName: data.locationName || '',
-          locationContext: data.locationContext || '',
           locationAddress: data.locationAddress || '',
           recordUnit: photoUrl ? 'image' : Array.isArray(data.routePoints) && data.routePoints.length ? 'location' : 'event',
           isPublic: !!data.isPublic,

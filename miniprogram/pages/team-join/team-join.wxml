@@ -7,7 +7,7 @@
       <view class="meta-pill">{{roomMemberCountLabel}}</view>
     </view>
     <view class="join-title">{{room.themeTitle}}</view>
-    <view class="join-subtitle">{{room.locationName}} · {{roomLocationContextLabel}}</view>
+    <view class="join-subtitle">{{room.locationName}}</view>
     <view class="join-copy">加入伙伴，完成同一套任务，一起留下共同记录</view>
 
     <view class="section-card join-section">

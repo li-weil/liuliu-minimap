@@ -12,7 +12,6 @@
       <view style="color: #6f6a5f; line-height: 1.7; margin-bottom: 16rpx;">{{walk.themeSnapshot.description}}</view>
       <view class="meta-row">
         <view class="meta-pill">{{walk.locationName}}</view>
-        <view class="meta-pill">{{walk.locationContext}}</view>
         <view class="meta-pill">{{walk.createdAtLabel}}</view>
       </view>
       <button wx:if="{{canResume}}" class="primary-btn walk-resume-btn" bindtap="handleResumeWalk">继续记录这次漫步</button>
