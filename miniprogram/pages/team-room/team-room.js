@@ -142,7 +142,7 @@ Page({
       return;
     }
 
-    wx.showLoading({ title: '正在出发' });
+    wx.showLoading({ title: '准备出发' });
     try {
       const result = await startTeamWalk({ roomId: this.data.roomId });
       this.setData({ room: result.room || this.data.room });

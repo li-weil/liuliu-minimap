@@ -3,8 +3,48 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
+const companionNoteJobs = db.collection('companionNoteJobs');
 const TEXT_RISK_PATTERN = /(?:加微|加v|vx|v信|微信号|qq|扣扣|色情网|裸聊|约炮|招嫖|嫖娼|赌博|博彩|彩票|刷单|返利|代开发票|办证|毒品|冰毒|海洛因|枪支|炸药)/i;
 const CONTENT_MAX_LENGTH = 300;
+
+async function enqueueCompanionNoteJob({ roomId, missionKey, openid }) {
+  if (!roomId || !missionKey || !openid) {
+    return;
+  }
+  const now = Date.now();
+  const dedupeKey = `team:${roomId}:${openid}:${missionKey}`;
+  const existingResult = await companionNoteJobs.where({ dedupeKey }).limit(1).get();
+  const existing = existingResult.data && existingResult.data[0] ? existingResult.data[0] : null;
+  const payload = {
+    dedupeKey,
+    type: 'team',
+    status: 'pending',
+    payload: {
+      roomId,
+      missionKey,
+      openid,
+    },
+    attempts: 0,
+    lastError: '',
+    nextRunAt: now,
+    updatedAt: now,
+  };
+  if (existing) {
+    await companionNoteJobs.doc(existing._id).update({
+      data: {
+        ...payload,
+        createdAt: existing.createdAt || now,
+      },
+    });
+    return;
+  }
+  await companionNoteJobs.add({
+    data: {
+      ...payload,
+      createdAt: now,
+    },
+  });
+}
 
 function normalizeText(value, maxLength = CONTENT_MAX_LENGTH) {
   return String(value || '').trim().slice(0, maxLength);
@@ -86,6 +126,7 @@ function sanitizeContributionForDisplay(item) {
     audioList,
     audioCount: item && item.audioCount !== undefined ? item.audioCount : audioList.length,
     audioAuditStatus: item && item.audioAuditStatus ? item.audioAuditStatus : (audioList.length ? 'pending' : 'approved'),
+    companionNote: item && item.companionNote ? item.companionNote : '',
   };
 }
 
@@ -188,6 +229,7 @@ exports.main = async (event) => {
     audioList,
     audioCount: audioList.length,
     audioAuditStatus: buildMediaAuditStatus(audioList),
+    companionNote: normalizeText(event.companionNote || '', 200),
     completed: !!event.completed,
     createdAt: existing ? existing.createdAt || now : now,
     updatedAt: now,
@@ -227,6 +269,12 @@ exports.main = async (event) => {
       },
       createdAt: now,
     },
+  });
+
+  await enqueueCompanionNoteJob({
+    roomId,
+    missionKey: nextPayload.missionKey,
+    openid,
   });
 
   return {

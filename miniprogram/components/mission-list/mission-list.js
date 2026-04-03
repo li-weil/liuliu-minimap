@@ -68,6 +68,10 @@ Component({
       type: String,
       value: '',
     },
+    showCardActions: {
+      type: Boolean,
+      value: true,
+    },
   },
 
   observers: {

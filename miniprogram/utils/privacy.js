@@ -1,3 +1,5 @@
+const { privacyBypassForDev } = require('./config');
+
 function createDefaultPrivacyPopup() {
   return {
     visible: false,
@@ -56,6 +58,10 @@ function resetPrivacyResolvers(page) {
 function ensurePrivacyAuthorization(page, options = {}) {
   if (!page || typeof page.setData !== 'function') {
     return Promise.reject(new Error('privacy_page_context_required'));
+  }
+
+  if (privacyBypassForDev) {
+    return Promise.resolve(true);
   }
 
   return getPrivacySetting().then((setting) => {

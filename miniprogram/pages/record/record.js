@@ -1,5 +1,5 @@
 const app = getApp();
-const { createWalk, getWalkDetail } = require('../../services/walk');
+const { createWalk, getWalkDetail, processCompanionNoteJobs } = require('../../services/walk');
 const { requestUpload } = require('../../services/api');
 const { getCurrentLocation } = require('../../utils/location');
 const { chooseImage, chooseVideo } = require('../../utils/media');
@@ -22,6 +22,11 @@ let walkStatusPollingInFlight = false;
 const TRACK_SAMPLE_INTERVAL_MS = 5000;
 const SUMMARY_MISSION_KEY = '__summary__';
 const SUMMARY_MISSION_LABEL = '总结与补充';
+const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_UPLOAD_SIZE_BYTES = 30 * 1024 * 1024;
+const MAX_AUDIO_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const LARGE_VIDEO_WARNING_SIZE_BYTES = 15 * 1024 * 1024;
+const UPLOAD_RETRY_LIMIT = 1;
 
 function createEmptyMissionAssets() {
   return {
@@ -435,6 +440,72 @@ function explainRecorderError(error) {
   return `录音失败：${rawErrMsg}`;
 }
 
+function formatFileSize(bytes) {
+  const size = Number(bytes || 0);
+  if (size >= 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+  }
+  if (size >= 1024) {
+    return `${Math.round(size / 1024)}KB`;
+  }
+  return `${size}B`;
+}
+
+function getUploadSizeLimit(kind) {
+  if (kind === 'video') {
+    return MAX_VIDEO_UPLOAD_SIZE_BYTES;
+  }
+  if (kind === 'audio') {
+    return MAX_AUDIO_UPLOAD_SIZE_BYTES;
+  }
+  return MAX_IMAGE_UPLOAD_SIZE_BYTES;
+}
+
+function getUploadKindLabel(kind) {
+  if (kind === 'video') {
+    return '视频';
+  }
+  if (kind === 'audio') {
+    return '录音';
+  }
+  return '图片';
+}
+
+function buildUploadKey(kind, filePath) {
+  return `${kind}:${filePath}`;
+}
+
+function extractUploadPath(item) {
+  if (!item) {
+    return '';
+  }
+  if (typeof item === 'string') {
+    return item;
+  }
+  return item.tempFilePath || item.path || '';
+}
+
+function getKnownUploadSize(item) {
+  if (!item || typeof item === 'string') {
+    return 0;
+  }
+  return Number(item.size || 0);
+}
+
+function isRemoteAsset(filePath) {
+  return !filePath || String(filePath).startsWith('cloud://') || String(filePath).startsWith('http');
+}
+
+function getFileInfo(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.getFileInfo({
+      filePath,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
 Page({
   data: {
     activeMission: '',
@@ -473,6 +544,10 @@ Page({
       stoppedLabel: '未开始',
     },
     mapPolyline: [],
+    saveStatusText: '',
+    uploadProgressPercent: 0,
+    uploadProgressCurrent: 0,
+    uploadProgressTotal: 0,
     privacyPopup: createDefaultPrivacyPopup(),
     isLeavingForHistory: false,
   },
@@ -810,6 +885,34 @@ Page({
     return String((result && result.companionNote) || '').trim();
   },
 
+  async prepareMissionAssetMapForSave(saveDraft) {
+    const missionAssetMap = saveDraft && saveDraft.missionAssetMap ? saveDraft.missionAssetMap : {};
+    const preparedEntries = await Promise.all(Object.entries(missionAssetMap).map(async ([mission, assets]) => {
+      const nextAssets = {
+        ...createEmptyMissionAssets(),
+        ...(assets || {}),
+      };
+      const userNoteText = String(nextAssets.noteText || '').trim();
+      const photoList = Array.isArray(nextAssets.photoList) ? nextAssets.photoList.filter(Boolean) : [];
+      if (!userNoteText && !photoList.length) {
+        return [mission, nextAssets];
+      }
+      try {
+        const companionNote = await this.ensureCompanionNote(
+          mission === SUMMARY_MISSION_KEY ? SUMMARY_MISSION_LABEL : mission,
+          nextAssets
+        );
+        if (companionNote) {
+          nextAssets.companionNote = companionNote;
+        }
+      } catch (error) {
+        // Ignore note generation failure and keep saving the walk.
+      }
+      return [mission, nextAssets];
+    }));
+    return Object.fromEntries(preparedEntries);
+  },
+
   async handleGenerateMissionCard(event) {
     const mission = event.detail.mission || this.data.activeMission;
     if (!mission) {
@@ -1056,6 +1159,25 @@ Page({
         duration: item.duration || 0,
         size: item.size || 0,
       }));
+      const oversizedVideo = selectedVideos.find((item) => Number(item.size || 0) > MAX_VIDEO_UPLOAD_SIZE_BYTES);
+      if (oversizedVideo) {
+        wx.showModal({
+          title: '视频过大',
+          content: `当前限制为 ${formatFileSize(MAX_VIDEO_UPLOAD_SIZE_BYTES)}，你选择的视频约 ${formatFileSize(oversizedVideo.size)}，请压缩后再上传。`,
+          showCancel: false,
+          confirmText: '知道了',
+        });
+        return;
+      }
+      const largeVideo = selectedVideos.find((item) => Number(item.size || 0) > LARGE_VIDEO_WARNING_SIZE_BYTES);
+      if (largeVideo) {
+        wx.showModal({
+          title: '视频较大',
+          content: `这个视频约 ${formatFileSize(largeVideo.size)}，弱网下上传会更久。建议尽量裁短或压缩后再保存。`,
+          showCancel: false,
+          confirmText: '继续',
+        });
+      }
       const targetMission = mission || this.getActiveMissionKey();
       let draft = { ...this.data.draft };
       selectedVideos.forEach((item) => {
@@ -1458,28 +1580,37 @@ Page({
         this.stopTracking();
       }
       const saveDraft = syncDraftAggregates(app.globalData.walkDraft);
+      this.setDraft(saveDraft);
       const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY, saveDraft);
-      const uploadCache = {};
-      const uploadCached = (filePath, kind) => {
-        const key = `${kind}:${filePath}`;
-        if (!uploadCache[key]) {
-          uploadCache[key] = this.uploadAsset(filePath, kind);
+      const uploadJobs = await this.collectUploadJobs(saveDraft);
+      const invalidFile = await this.validateUploadJobs(uploadJobs);
+      if (invalidFile) {
+        throw new Error(`${invalidFile.label}超过${formatFileSize(invalidFile.limit)}`);
+      }
+      const uploadResultMap = await this.uploadJobsSequentially(uploadJobs);
+      const resolveUploadedAsset = (item, kind) => {
+        const filePath = extractUploadPath(item);
+        if (!filePath) {
+          return item;
         }
-        return uploadCache[key];
+        if (isRemoteAsset(filePath)) {
+          return filePath;
+        }
+        return uploadResultMap[buildUploadKey(kind, filePath)] || filePath;
       };
-      const uploadedPhotos = await Promise.all((summaryAssets.photoList || []).map((path) => uploadCached(path, 'image')));
-      const uploadedVideos = await Promise.all((summaryAssets.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video')));
-      const uploadedAudios = await Promise.all((summaryAssets.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio')));
+      const uploadedPhotos = (summaryAssets.photoList || []).map((path) => resolveUploadedAsset(path, 'image'));
+      const uploadedVideos = (summaryAssets.videoList || []).map((item) => resolveUploadedAsset(item, 'video'));
+      const uploadedAudios = (summaryAssets.audioList || []).map((item) => resolveUploadedAsset(item, 'audio'));
       const missionAssetEntries = Object.entries(saveDraft.missionAssetMap || {});
       const uploadedMissionAssetEntries = await Promise.all(missionAssetEntries.map(async ([mission, assets]) => ([
         mission,
         {
           noteText: assets.noteText || '',
           companionNote: assets.companionNote || '',
-          photoList: await Promise.all((assets.photoList || []).map((path) => uploadCached(path, 'image'))),
-          videoList: await Promise.all((assets.videoList || []).map((item) => uploadCached(item.tempFilePath || item, 'video'))),
-          audioList: await Promise.all((assets.audioList || []).map((item) => uploadCached(item.tempFilePath || item, 'audio'))),
-          cardImagePath: assets.cardImagePath ? await uploadCached(assets.cardImagePath, 'image') : '',
+          photoList: (assets.photoList || []).map((path) => resolveUploadedAsset(path, 'image')),
+          videoList: (assets.videoList || []).map((item) => resolveUploadedAsset(item, 'video')),
+          audioList: (assets.audioList || []).map((item) => resolveUploadedAsset(item, 'audio')),
+          cardImagePath: assets.cardImagePath ? resolveUploadedAsset(assets.cardImagePath, 'image') : '',
         },
       ])));
       const missionAssetMap = Object.fromEntries(uploadedMissionAssetEntries);
@@ -1527,6 +1658,7 @@ Page({
       });
       app.clearWalkDraft(walkId);
       app.globalData.currentTheme = null;
+      this.kickoffCompanionNoteWorker();
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => {
         wx.switchTab({ url: '/pages/history/history' });
@@ -1539,16 +1671,155 @@ Page({
         duration: 3000,
       });
     } finally {
-      this.setData({ isSaving: false });
+      wx.hideLoading();
+      this.setData({
+        isSaving: false,
+        saveStatusText: '',
+        uploadProgressPercent: 0,
+        uploadProgressCurrent: 0,
+        uploadProgressTotal: 0,
+      });
       this.refreshState();
     }
   },
 
-  uploadAsset(filePath, kind) {
-    if (!filePath || String(filePath).startsWith('cloud://') || String(filePath).startsWith('http')) {
+  kickoffCompanionNoteWorker() {
+    processCompanionNoteJobs({ batchSize: 6 }).catch(() => {});
+  },
+
+  async collectUploadJobs(saveDraft) {
+    const jobs = [];
+    const seen = new Set();
+    const pushJob = (item, kind) => {
+      const filePath = extractUploadPath(item);
+      if (!filePath || isRemoteAsset(filePath)) {
+        return;
+      }
+      const key = buildUploadKey(kind, filePath);
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      jobs.push({
+        key,
+        kind,
+        filePath,
+        size: getKnownUploadSize(item),
+        label: getUploadKindLabel(kind),
+      });
+    };
+
+    const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY, saveDraft);
+    (summaryAssets.photoList || []).forEach((item) => pushJob(item, 'image'));
+    (summaryAssets.videoList || []).forEach((item) => pushJob(item, 'video'));
+    (summaryAssets.audioList || []).forEach((item) => pushJob(item, 'audio'));
+    Object.values(saveDraft.missionAssetMap || {}).forEach((assets) => {
+      ((assets && assets.photoList) || []).forEach((item) => pushJob(item, 'image'));
+      ((assets && assets.videoList) || []).forEach((item) => pushJob(item, 'video'));
+      ((assets && assets.audioList) || []).forEach((item) => pushJob(item, 'audio'));
+      if (assets && assets.cardImagePath) {
+        pushJob(assets.cardImagePath, 'image');
+      }
+    });
+    return jobs;
+  },
+
+  async validateUploadJobs(uploadJobs = []) {
+    for (let index = 0; index < uploadJobs.length; index += 1) {
+      const job = uploadJobs[index];
+      const size = job.size || await this.resolveLocalFileSize(job.filePath);
+      const limit = getUploadSizeLimit(job.kind);
+      if (size > limit) {
+        return {
+          ...job,
+          size,
+          limit,
+        };
+      }
+    }
+    return null;
+  },
+
+  async resolveLocalFileSize(filePath) {
+    if (!filePath || isRemoteAsset(filePath)) {
+      return 0;
+    }
+    try {
+      const info = await getFileInfo(filePath);
+      return Number(info.size || 0);
+    } catch (error) {
+      return 0;
+    }
+  },
+
+  updateSaveProgress(text, current, total, percent) {
+    const safePercent = Math.max(0, Math.min(100, Math.round(percent || 0)));
+    const nextText = text || '正在保存这次漫步...';
+    this.setData({
+      saveStatusText: nextText,
+      uploadProgressCurrent: current || 0,
+      uploadProgressTotal: total || 0,
+      uploadProgressPercent: safePercent,
+    });
+    wx.showLoading({
+      title: safePercent > 0 ? `${Math.min(safePercent, 99)}%` : '保存中',
+      mask: true,
+    });
+  },
+
+  async uploadJobsSequentially(uploadJobs = []) {
+    const total = uploadJobs.length;
+    const uploadResultMap = {};
+    if (!total) {
+      this.updateSaveProgress('正在整理漫步记录...', 0, 0, 100);
+      return uploadResultMap;
+    }
+
+    for (let index = 0; index < uploadJobs.length; index += 1) {
+      const job = uploadJobs[index];
+      const current = index + 1;
+      this.updateSaveProgress(`正在上传${job.label} ${current}/${total}`, current, total, ((current - 1) / total) * 100);
+      const result = await this.uploadAssetWithRetry(job, current, total);
+      uploadResultMap[job.key] = result;
+    }
+    this.updateSaveProgress('正在保存漫步记录...', total, total, 100);
+    return uploadResultMap;
+  },
+
+  async uploadAssetWithRetry(job, current, total) {
+    let lastError = null;
+    for (let attempt = 0; attempt <= UPLOAD_RETRY_LIMIT; attempt += 1) {
+      try {
+        return await this.uploadAsset(job.filePath, job.kind, {
+          onProgress: (progressEvent) => {
+            const percent = Number(progressEvent && progressEvent.progress ? progressEvent.progress : 0);
+            const overallPercent = total
+              ? (((current - 1) + (percent / 100)) / total) * 100
+              : percent;
+            this.updateSaveProgress(
+              `正在上传${job.label} ${current}/${total}（${Math.round(percent)}%）`,
+              current,
+              total,
+              overallPercent
+            );
+          },
+        });
+      } catch (error) {
+        lastError = error;
+        if (attempt >= UPLOAD_RETRY_LIMIT) {
+          break;
+        }
+        this.updateSaveProgress(`正在重试${job.label} ${current}/${total}`, current, total, ((current - 1) / total) * 100);
+      }
+    }
+    throw lastError || new Error(`${job.label}上传失败`);
+  },
+
+  uploadAsset(filePath, kind, options = {}) {
+    if (isRemoteAsset(filePath)) {
       return Promise.resolve(filePath);
     }
-    return requestUpload(filePath, { kind });
+    return requestUpload(filePath, { kind }, options);
   },
 
   openStickerModal() {

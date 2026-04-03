@@ -20,6 +20,7 @@ function sanitizeContributionForDisplay(item) {
     audioList,
     audioCount: item && item.audioCount !== undefined ? item.audioCount : audioList.length,
     audioAuditStatus: item && item.audioAuditStatus ? item.audioAuditStatus : (audioList.length ? 'pending' : 'approved'),
+    companionNote: item && item.companionNote ? item.companionNote : '',
   };
 }
 

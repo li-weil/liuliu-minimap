@@ -1,0 +1,9 @@
+{
+  "triggers": [
+    {
+      "name": "processCompanionNoteJobsTimer",
+      "type": "timer",
+      "config": "0 */1 * * * * *"
+    }
+  ]
+}

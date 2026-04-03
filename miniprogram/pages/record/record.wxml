@@ -27,7 +27,7 @@
   </view>
 
   <button class="map-switch-btn" bindtap="toggleTracking">{{isTracking ? '停止追踪' : '开启轨迹追踪'}}</button>
-  <view class="track-mode-tip">{{isTracking ? '当前使用前台实时定位：请尽量保持小程序停留在前台，切到后台后连续轨迹可能中断。' : '轨迹追踪当前使用前台实时定位，开启后请尽量保持小程序停留在前台。'}}</view>
+  <view class="track-mode-tip">{{isTracking ? '当前使用前台实时定位：请尽量保持小程序停留在前台，切到后台后连续轨迹可能中断。' : '轨迹追踪使用前台实时定位，开启后请保持小程序停留在前台'}}</view>
 
   <view class="section-card section-block track-stats-block">
     <view class="section-title">轨迹信息</view>
@@ -60,6 +60,7 @@
       missionAssetMap="{{draft.missionAssetMap}}"
       generatedMissionCardMap="{{generatedMissionCardMap}}"
       generatingMissionCard="{{generatingMissionCard}}"
+      showCardActions="{{false}}"
       isRecordingAudio="{{isRecordingAudio}}"
       recordingMission="{{recordingMission || ''}}"
       locationName="{{draft.locationName}}"
@@ -70,43 +71,23 @@
       bind:verify="handleMissionVerify"
       bind:toggle="toggleMissionDone"
       bind:missionnote="handleMissionNoteInput"
-      bind:generatecard="handleGenerateMissionCard"
-      bind:opencard="openEmbeddedMissionCard"
       bind:removephoto="removeMissionPhoto"
       bind:removevideo="removeMissionVideo"
       bind:removeaudio="removeMissionAudio"
     />
   </view>
 
+  <view wx:if="{{isSaving}}" class="section-card save-progress-card">
+    <view class="save-progress-title">{{saveStatusText || '正在保存这次漫步...'}}</view>
+    <view wx:if="{{uploadProgressTotal}}" class="save-progress-meta">已处理 {{uploadProgressCurrent}} / {{uploadProgressTotal}} 项素材</view>
+    <view class="save-progress-track">
+      <view class="save-progress-fill" style="width: {{uploadProgressPercent}}%;"></view>
+    </view>
+    <view class="save-progress-percent">{{uploadProgressPercent}}%</view>
+  </view>
+
   <button class="primary-btn save-btn" bindtap="handleSave" loading="{{isSaving}}">完成本次漫步并保存</button>
 
-  <checkin-card
-    mission="{{missionCardRenderPayload.mission}}"
-    assets="{{missionCardRenderPayload.assets}}"
-    locationName="{{draft.locationName}}"
-    themeTitle="{{theme.title}}"
-    dateLabel="{{routeStats.startedLabel}}"
-    accentColor="{{theme.vibeColor || '#c96f4a'}}"
-    renderVersion="{{missionCardRenderPayload.renderVersion}}"
-    autoRender="{{true}}"
-    bind:generated="handleMissionCardGenerated"
-  />
-
-  <view wx:if="{{showMissionCardModal}}" class="mission-card-modal-mask" catchtap="closeMissionCardModal">
-    <view class="mission-card-modal-sheet" catchtap="noop">
-      <view class="mission-card-modal-panel">
-        <view class="mission-card-modal-title">{{missionCardModal.mission || '打卡卡片'}}</view>
-        <scroll-view scroll-y class="mission-card-modal-scroll">
-          <view wx:if="{{missionCardModal.isGenerating}}" class="mission-card-modal-loading">正在生成打卡卡片...</view>
-          <image wx:elif="{{missionCardModal.imageSrc}}" class="mission-card-modal-image" src="{{missionCardModal.imageSrc}}" mode="widthFix" />
-        </scroll-view>
-      </view>
-      <view class="mission-card-modal-actions">
-        <button class="ghost-btn mission-card-modal-action" bindtap="closeMissionCardModal">关闭</button>
-        <button class="primary-btn mission-card-modal-action" bindtap="handleSaveMissionCardToAlbum" disabled="{{!missionCardModal.imageSrc || missionCardModal.isGenerating}}">保存到本地</button>
-      </view>
-    </view>
-  </view>
 </view>
 
 <view wx:else class="page-shell empty-copy">还没有属于今天的漫步主题，先去探索页挑一段想走的城市情绪吧</view>

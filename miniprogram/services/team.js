@@ -40,6 +40,14 @@ function getTeamWalkDetail(payload = {}) {
   return callApi('getTeamWalkDetail', payload);
 }
 
+function saveTeamMissionCard(payload = {}) {
+  return callApi('saveTeamMissionCard', payload);
+}
+
+function processCompanionNoteJobs(payload = {}) {
+  return callApi('processCompanionNoteJobs', payload);
+}
+
 function listMyTeamWalks(payload = {}) {
   return callApi('listMyTeamWalks', payload);
 }
@@ -58,6 +66,8 @@ module.exports = {
   leaveTeamRoom,
   listMyTeamWalks,
   listTeamActivities,
+  processCompanionNoteJobs,
+  saveTeamMissionCard,
   startTeamWalk,
   submitContentFeedback,
   submitTeamContribution,

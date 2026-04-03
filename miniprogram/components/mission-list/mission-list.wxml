@@ -93,12 +93,12 @@
         </view>
       </view>
 
-      <view wx:if="{{card.assets && card.assets.cardImagePath}}" class="mission-card-embed" bindtap="openCard" data-mission="{{card.mission}}" data-src="{{card.assets.cardImagePath}}">
+      <view wx:if="{{showCardActions && card.assets && card.assets.cardImagePath}}" class="mission-card-embed" bindtap="openCard" data-mission="{{card.mission}}" data-src="{{card.assets.cardImagePath}}">
         <view class="mission-card-embed-title">这张打卡卡片</view>
         <image class="mission-card-embed-image" src="{{card.assets.cardImagePath}}" mode="widthFix" />
       </view>
 
-      <button class="mission-verify-btn" bindtap="generateCard" data-mission="{{card.mission}}" loading="{{generatingMissionCard === card.mission}}" disabled="{{generatingMissionCard === card.mission}}">
+      <button wx:if="{{showCardActions}}" class="mission-verify-btn" bindtap="generateCard" data-mission="{{card.mission}}" loading="{{generatingMissionCard === card.mission}}" disabled="{{generatingMissionCard === card.mission}}">
         {{generatingMissionCard === card.mission ? '66 正在记录...' : (card.cardVersion ? '重新生成卡片' : '生成卡片')}}
       </button>
     </view>

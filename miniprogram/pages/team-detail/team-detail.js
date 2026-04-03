@@ -1,5 +1,6 @@
-const { generateCompanionNote } = require('../../services/sticker');
-const { deleteTeamWalk, getTeamWalkDetail } = require('../../services/team');
+const { requestUpload } = require('../../services/api');
+const { deleteTeamWalk, getTeamWalkDetail, saveTeamMissionCard } = require('../../services/team');
+const { batchResolveCloudFileIds, isCloudFileId } = require('../../services/asset');
 const { formatDate } = require('../../utils/format');
 const {
   createDefaultPrivacyPopup,
@@ -41,7 +42,7 @@ function buildMissionGroups(room) {
         nickName: item.nickName || '队友',
         avatarUrl: item.avatarUrl || '',
         noteText: String(item.noteText || '').trim(),
-        noteTextDisplay: String(item.noteText || '').trim() || '这位同行者这次主要用图片和声音留下了记录。',
+        noteTextDisplay: String(item.noteText || '').trim() || '这个成员没有留下文字记录',
         photoList: normalizeMediaList(item.photoList),
         photoCount: Number(item.photoCount || 0),
         photoAuditStatus: item.photoAuditStatus || 'approved',
@@ -90,6 +91,44 @@ function decorateMissionGroupsActive(missionGroups, activeMission) {
     rowClass: activeMission && item.mission === activeMission ? 'mission-row mission-row-active' : 'mission-row',
     anchorClass: activeMission && item.mission === activeMission ? 'mission-anchor mission-anchor-active' : 'mission-anchor',
   }));
+}
+
+async function downloadAudioToLocal(src) {
+  if (!src) {
+    return '';
+  }
+  let finalUrl = src;
+  if (isCloudFileId(src)) {
+    const resolvedMap = await batchResolveCloudFileIds([src]).catch(() => ({}));
+    finalUrl = resolvedMap[src] || '';
+  }
+  if (!finalUrl) {
+    return src;
+  }
+  if (!/^https?:\/\//i.test(String(finalUrl))) {
+    return finalUrl;
+  }
+  const download = await downloadFile(finalUrl).catch(() => null);
+  return download && download.tempFilePath ? download.tempFilePath : finalUrl;
+}
+
+async function hydrateMissionGroupsAudio(missionGroups = []) {
+  const cache = {};
+  return Promise.all((missionGroups || []).map(async (group) => ({
+    ...group,
+    contributions: await Promise.all((group.contributions || []).map(async (contribution) => ({
+      ...contribution,
+      audioList: await Promise.all((contribution.audioList || []).map(async (item) => {
+        if (!item) {
+          return item;
+        }
+        if (!cache[item]) {
+          cache[item] = downloadAudioToLocal(item).catch(() => item);
+        }
+        return cache[item];
+      })),
+    }))),
+  })));
 }
 
 function explainDeleteFailure(error) {
@@ -252,6 +291,8 @@ Page({
     activeMission: '',
     currentMissionCardSrc: '',
     isRenderingMissionCard: false,
+    missionCardPendingNote: false,
+    missionCardPendingText: '',
     missionCardRenderPayload: {
       mission: '',
       entries: [],
@@ -272,8 +313,33 @@ Page({
   onLoad(query) {
     this.missionCardRenderVersion = 0;
     this.prepareMissionToken = 0;
+    this.pendingMissionRefreshTimer = null;
     this.setData({ roomId: query.roomId || query.id || '' });
     this.fetchDetail();
+  },
+
+  onUnload() {
+    this.clearPendingMissionRefresh();
+  },
+
+  clearPendingMissionRefresh() {
+    if (this.pendingMissionRefreshTimer) {
+      clearTimeout(this.pendingMissionRefreshTimer);
+      this.pendingMissionRefreshTimer = null;
+    }
+  },
+
+  schedulePendingMissionRefresh() {
+    if (!this.data.roomId || this.pendingMissionRefreshTimer) {
+      return;
+    }
+    this.pendingMissionRefreshTimer = setTimeout(() => {
+      this.pendingMissionRefreshTimer = null;
+      if (this.data.isRenderingMissionCard) {
+        return;
+      }
+      this.fetchDetail();
+    }, 3000);
   },
 
   onShareAppMessage() {
@@ -295,7 +361,8 @@ Page({
       const result = await getTeamWalkDetail({ roomId: this.data.roomId });
       const room = result.room || null;
       const status = room && room.status ? room.status : '';
-      const missionGroups = buildMissionGroups(room || {});
+      const baseMissionGroups = buildMissionGroups(room || {});
+      const missionGroups = await hydrateMissionGroupsAudio(baseMissionGroups);
       const nextActiveMission = missionGroups.length
         ? (this.data.activeMission && missionGroups.some((item) => item.mission === this.data.activeMission)
           ? this.data.activeMission
@@ -355,9 +422,12 @@ Page({
     this.prepareMissionToken = token;
     const group = this.getActiveMissionGroup();
     if (!group || !Array.isArray(group.contributions) || !group.contributions.length) {
+      this.clearPendingMissionRefresh();
       this.setData({
         currentMissionCardSrc: '',
         isRenderingMissionCard: false,
+        missionCardPendingNote: false,
+        missionCardPendingText: '',
         missionCardRenderPayload: {
           mission: '',
           entries: [],
@@ -369,48 +439,80 @@ Page({
       });
       return;
     }
-
-    let nextContributions = group.contributions.slice();
     const room = this.data.room || {};
-
-    nextContributions = await Promise.all(nextContributions.map(async (item) => {
-      if (item.companionNote || (!item.noteText && !item.photoList.length)) {
-        return item;
-      }
-      try {
-        const result = await generateCompanionNote({
-          themeTitle: room.themeTitle || '',
-          locationName: room.locationName || '',
-          locationContext: room.locationContext || '',
-          mission: group.mission || '',
-          userNoteText: item.noteText || '',
+    const storedCard =
+      room &&
+      room.missionCardMap &&
+      room.missionCardMap[group.mission] &&
+      room.missionCardMap[group.mission].cardImagePath
+        ? room.missionCardMap[group.mission].cardImagePath
+        : '';
+    const waitingCompanionNote = !storedCard && group.contributions.some((item) => {
+      const noteText = String(item.noteText || '').trim();
+      const photoList = Array.isArray(item.photoList) ? item.photoList.filter(Boolean) : [];
+      return (noteText || photoList.length) && !String(item.companionNote || '').trim();
+    });
+    if (waitingCompanionNote) {
+      this.schedulePendingMissionRefresh();
+    } else {
+      this.clearPendingMissionRefresh();
+    }
+    this.setData({
+      currentMissionCardSrc: storedCard,
+      isRenderingMissionCard: false,
+      missionCardPendingNote: waitingCompanionNote,
+      missionCardPendingText: waitingCompanionNote ? '66 正在记录卡片…' : '',
+      missionCardRenderPayload: {
+        mission: group.mission || '团队打卡卡片',
+        entries: group.contributions.map((item) => ({
+          authorName: item.nickName || '队友',
+          noteText: item.noteText || '',
+          companionNote: item.companionNote || '',
           photoList: item.photoList || [],
-        });
-        if (result && result.companionNote) {
-          return {
-            ...item,
-            companionNote: result.companionNote,
-          };
-        }
-      } catch (error) {
-        // Ignore AI note generation failure and still render the stacked card.
-      }
-      return item;
-    }));
+        })),
+        locationName: room.locationName || '',
+        themeTitle: room.themeTitle || '',
+        dateLabel: room.endedAtLabel || room.createdAtLabel || '',
+        renderVersion: 0,
+      },
+    });
+  },
 
-    if (this.prepareMissionToken !== token) {
+  handleGenerateMissionCard() {
+    const group = this.getActiveMissionGroup();
+    const room = this.data.room || {};
+    if (!group || !Array.isArray(group.contributions) || !group.contributions.length) {
+      wx.showToast({ title: '这个任务还没有记录', icon: 'none' });
       return;
     }
-
-    this.updateMissionContributions(group.mission, nextContributions);
-
+    const waitingCompanionNote = !(
+      room &&
+      room.missionCardMap &&
+      room.missionCardMap[group.mission] &&
+      room.missionCardMap[group.mission].cardImagePath
+    ) && group.contributions.some((item) => {
+      const noteText = String(item.noteText || '').trim();
+      const photoList = Array.isArray(item.photoList) ? item.photoList.filter(Boolean) : [];
+      return (noteText || photoList.length) && !String(item.companionNote || '').trim();
+    });
+    if (waitingCompanionNote) {
+      wx.showToast({ title: '正在准备团队卡片文案', icon: 'none' });
+      this.setData({
+        missionCardPendingNote: true,
+        missionCardPendingText: '66 正在记录卡片…',
+      });
+      this.schedulePendingMissionRefresh();
+      return;
+    }
     this.missionCardRenderVersion += 1;
     this.setData({
       currentMissionCardSrc: '',
       isRenderingMissionCard: true,
+      missionCardPendingNote: false,
+      missionCardPendingText: '',
       missionCardRenderPayload: {
         mission: group.mission || '团队打卡卡片',
-        entries: nextContributions.map((item) => ({
+        entries: group.contributions.map((item) => ({
           authorName: item.nickName || '队友',
           noteText: item.noteText || '',
           companionNote: item.companionNote || '',
@@ -424,7 +526,33 @@ Page({
     });
   },
 
-  handleMissionCardGenerated(event) {
+  async persistMissionCard(missionKey, tempFilePath) {
+    if (!this.data.roomId || !missionKey || !tempFilePath) {
+      return '';
+    }
+    const cardImagePath = await requestUpload(tempFilePath, { kind: 'image' });
+    const result = await saveTeamMissionCard({
+      roomId: this.data.roomId,
+      missionKey,
+      cardImagePath,
+    });
+    const room = this.data.room || {};
+    const missionCardMap = result && result.missionCardMap
+      ? result.missionCardMap
+      : {
+          ...(room.missionCardMap || {}),
+          [missionKey]: { cardImagePath, updatedAt: Date.now() },
+        };
+    this.setData({
+      room: {
+        ...room,
+        missionCardMap,
+      },
+    });
+    return cardImagePath;
+  },
+
+  async handleMissionCardGenerated(event) {
     const tempFilePath = event.detail && event.detail.tempFilePath ? event.detail.tempFilePath : '';
     const mission = event.detail && event.detail.mission ? event.detail.mission : '';
     const activeMissionGroup = this.getActiveMissionGroup();
@@ -435,7 +563,19 @@ Page({
     this.setData({
       currentMissionCardSrc: tempFilePath,
       isRenderingMissionCard: false,
+      missionCardRenderPayload: {
+        ...this.data.missionCardRenderPayload,
+        renderVersion: 0,
+      },
     });
+    if (!activeMissionGroup || !activeMissionGroup.mission) {
+      return;
+    }
+    try {
+      await this.persistMissionCard(activeMissionGroup.mission, tempFilePath);
+    } catch (error) {
+      wx.showToast({ title: '卡片已生成，持久化失败', icon: 'none' });
+    }
   },
 
   openMissionCardModal(event) {

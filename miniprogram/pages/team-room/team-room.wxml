@@ -1,5 +1,5 @@
 <view class="page-shell">
-  <view wx:if="{{loading}}" class="empty-copy">正在整理同行房间...</view>
+  <view wx:if="{{loading}}" class="empty-copy">正在创建同行房间...</view>
 
   <view wx:elif="{{room}}">
     <view class="hero-card room-hero">

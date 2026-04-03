@@ -1,5 +1,6 @@
-const { getWalkDetail, publishWalkShare, deleteWalk } = require('../../services/walk');
-const { generateCompanionNote } = require('../../services/sticker');
+const { createWalk, getWalkDetail, publishWalkShare, deleteWalk } = require('../../services/walk');
+const { requestUpload } = require('../../services/api');
+const { batchResolveCloudFileIds, isCloudFileId } = require('../../services/asset');
 const { formatDate } = require('../../utils/format');
 const {
   createDefaultPrivacyPopup,
@@ -243,6 +244,49 @@ function buildMissionItems(walk) {
   }));
 }
 
+async function downloadAudioToLocal(src) {
+  if (!src) {
+    return '';
+  }
+  let finalUrl = src;
+  if (isCloudFileId(src)) {
+    const resolvedMap = await batchResolveCloudFileIds([src]).catch(() => ({}));
+    finalUrl = resolvedMap[src] || '';
+  }
+  if (!finalUrl) {
+    return src;
+  }
+  if (!/^https?:\/\//i.test(String(finalUrl))) {
+    return finalUrl;
+  }
+  const download = await downloadFile(finalUrl).catch(() => null);
+  return download && download.tempFilePath ? download.tempFilePath : finalUrl;
+}
+
+async function hydrateMissionItemsAudio(missionItems = []) {
+  const cache = {};
+  return Promise.all((missionItems || []).map(async (missionItem) => {
+    const assets = missionItem && missionItem.assets ? missionItem.assets : {};
+    const audioList = await Promise.all((assets.audioList || []).map(async (item) => {
+      const src = item && item.tempFilePath ? item.tempFilePath : item;
+      if (!src) {
+        return item;
+      }
+      if (!cache[src]) {
+        cache[src] = downloadAudioToLocal(src).catch(() => src);
+      }
+      return cache[src];
+    }));
+    return {
+      ...missionItem,
+      assets: {
+        ...assets,
+        audioList,
+      },
+    };
+  }));
+}
+
 function normalizeMapRoutePoints(routePoints) {
   return (Array.isArray(routePoints) ? routePoints : [])
     .map((point) => ({
@@ -273,6 +317,12 @@ function getMapCenter(routePoints) {
   return points.length ? points[points.length - 1] : fallback;
 }
 
+function hasCardGenerationMaterial(assets) {
+  const noteText = String((assets && assets.noteText) || '').trim();
+  const photoList = Array.isArray(assets && assets.photoList) ? assets.photoList.filter(Boolean) : [];
+  return !!noteText || photoList.length > 0;
+}
+
 Page({
   data: {
     loading: true,
@@ -282,6 +332,8 @@ Page({
     activeMission: '',
     currentMissionCardSrc: '',
     isRenderingMissionCard: false,
+    missionCardPendingNote: false,
+    missionCardPendingText: '',
     missionCardRenderPayload: {
       mission: '',
       assets: null,
@@ -306,12 +358,39 @@ Page({
 
   onLoad(query) {
     this.missionCardRenderVersion = 0;
+    this.pendingMissionRefreshTimer = null;
     this.setData({ source: query.source || 'history' });
     if (query.id) {
       this.fetchDetail(query.id);
     } else {
       this.setData({ loading: false });
     }
+  },
+
+  onUnload() {
+    this.clearPendingMissionRefresh();
+  },
+
+  clearPendingMissionRefresh() {
+    if (this.pendingMissionRefreshTimer) {
+      clearTimeout(this.pendingMissionRefreshTimer);
+      this.pendingMissionRefreshTimer = null;
+    }
+  },
+
+  schedulePendingMissionRefresh() {
+    const walk = this.data.walk;
+    const walkId = walk && (walk.id || walk._id);
+    if (!walkId || this.pendingMissionRefreshTimer) {
+      return;
+    }
+    this.pendingMissionRefreshTimer = setTimeout(() => {
+      this.pendingMissionRefreshTimer = null;
+      if (this.data.isRenderingMissionCard) {
+        return;
+      }
+      this.fetchDetail(walkId);
+    }, 3000);
   },
 
   onShareAppMessage() {
@@ -327,12 +406,14 @@ Page({
     this.setData({ loading: true });
     try {
       const result = await getWalkDetail({ id });
+      const baseMissionItems = result.walk ? buildMissionItems(result.walk) : [];
+      const missionItems = await hydrateMissionItemsAudio(baseMissionItems);
       const walk = result.walk
         ? {
             ...result.walk,
             sticker: decorateSticker(result.walk.sticker),
             createdAtLabel: formatDate(result.walk.createdAt),
-            missionItems: buildMissionItems(result.walk),
+            missionItems,
             canDelete: queryCanDelete(result.walk, this.data.source),
           }
         : null;
@@ -366,9 +447,12 @@ Page({
   async prepareMissionCard() {
     const missionItem = this.getActiveMissionItem();
     if (!missionItem) {
+      this.clearPendingMissionRefresh();
       this.setData({
         currentMissionCardSrc: '',
         isRenderingMissionCard: false,
+        missionCardPendingNote: false,
+        missionCardPendingText: '',
         missionCardRenderPayload: {
           mission: '',
           assets: null,
@@ -380,62 +464,62 @@ Page({
       });
       return;
     }
-
-    let nextAssets = {
+    const missionAssets = {
       ...createEmptyMissionAssets(),
       ...(missionItem.assets || {}),
     };
-    const userNoteText = String(nextAssets.noteText || '').trim();
-    const photoList = Array.isArray(nextAssets.photoList) ? nextAssets.photoList.filter(Boolean) : [];
-    if (!nextAssets.companionNote && (userNoteText || photoList.length)) {
-      try {
-        const result = await generateCompanionNote({
-          themeTitle: (this.data.walk && this.data.walk.themeTitle) || '',
-          locationName: (this.data.walk && this.data.walk.locationName) || '',
-          locationContext: (this.data.walk && this.data.walk.locationContext) || '',
-          mission: missionItem.label || missionItem.mission || '',
-          userNoteText,
-          photoList,
-        });
-        if (result && result.companionNote) {
-          nextAssets = {
-            ...nextAssets,
-            companionNote: result.companionNote,
-          };
-        }
-      } catch (error) {
-        // Ignore companion note generation failure and still render the card.
-      }
+    const waitingCompanionNote = !missionAssets.cardImagePath
+      && hasCardGenerationMaterial(missionAssets)
+      && !String(missionAssets.companionNote || '').trim();
+    if (waitingCompanionNote) {
+      this.schedulePendingMissionRefresh();
+    } else {
+      this.clearPendingMissionRefresh();
     }
+    this.setData({
+      currentMissionCardSrc: missionAssets.cardImagePath || '',
+      isRenderingMissionCard: false,
+      missionCardPendingNote: waitingCompanionNote,
+      missionCardPendingText: waitingCompanionNote ? '66 正在记录卡片…' : '',
+      missionCardRenderPayload: {
+        mission: missionItem.label || '打卡卡片',
+        assets: missionAssets,
+        locationName: (this.data.walk && this.data.walk.locationName) || '',
+        themeTitle: (this.data.walk && this.data.walk.themeTitle) || '',
+        dateLabel: (this.data.walk && this.data.walk.createdAtLabel) || '',
+        renderVersion: 0,
+      },
+    });
+  },
 
-    if (nextAssets.companionNote && this.data.walk && Array.isArray(this.data.walk.missionItems)) {
-      const missionItems = this.data.walk.missionItems.map((item) => (
-        item.mission === missionItem.mission
-          ? {
-              ...item,
-              assets: {
-                ...createEmptyMissionAssets(),
-                ...(item.assets || {}),
-                companionNote: nextAssets.companionNote,
-              },
-            }
-          : item
-      ));
+  handleGenerateMissionCard() {
+    const missionItem = this.getActiveMissionItem();
+    if (!missionItem) {
+      wx.showToast({ title: '先选择一个任务', icon: 'none' });
+      return;
+    }
+    const missionAssets = {
+      ...createEmptyMissionAssets(),
+      ...(missionItem.assets || {}),
+    };
+    if (!missionAssets.cardImagePath && hasCardGenerationMaterial(missionAssets) && !String(missionAssets.companionNote || '').trim()) {
+      wx.showToast({ title: '66 正在准备卡片文案', icon: 'none' });
       this.setData({
-        walk: {
-          ...this.data.walk,
-          missionItems,
-        },
+        missionCardPendingNote: true,
+        missionCardPendingText: '66 正在记录卡片…',
       });
+      this.schedulePendingMissionRefresh();
+      return;
     }
-
     this.missionCardRenderVersion += 1;
     this.setData({
       currentMissionCardSrc: '',
       isRenderingMissionCard: true,
+      missionCardPendingNote: false,
+      missionCardPendingText: '',
       missionCardRenderPayload: {
         mission: missionItem.label || '打卡卡片',
-        assets: nextAssets,
+        assets: missionAssets,
         locationName: (this.data.walk && this.data.walk.locationName) || '',
         themeTitle: (this.data.walk && this.data.walk.themeTitle) || '',
         dateLabel: (this.data.walk && this.data.walk.createdAtLabel) || '',
@@ -444,7 +528,64 @@ Page({
     });
   },
 
-  handleMissionCardGenerated(event) {
+  async persistMissionCard(missionKey, tempFilePath) {
+    const walk = this.data.walk;
+    const walkId = walk && (walk.id || walk._id);
+    if (!walk || !walkId || !missionKey || !tempFilePath) {
+      return '';
+    }
+    const cardImagePath = await requestUpload(tempFilePath, { kind: 'image' });
+    const missionAssetMap = {
+      ...(walk.missionAssetMap || {}),
+      [missionKey]: {
+        ...createEmptyMissionAssets(),
+        ...(((walk.missionAssetMap || {})[missionKey]) || {}),
+        cardImagePath,
+      },
+    };
+    const result = await createWalk({
+      id: walkId,
+      themeSnapshot: walk.themeSnapshot,
+      locationName: walk.locationName,
+      locationContext: walk.locationContext,
+      locationAddress: walk.locationAddress,
+      latitude: walk.latitude,
+      longitude: walk.longitude,
+      routePoints: walk.routePoints || [],
+      missionsCompleted: walk.completedMissions || [],
+      missionReviews: walk.missionReviews || {},
+      missionAssetMap,
+      photoList: walk.photoList || [],
+      videoList: walk.videoList || [],
+      audioList: walk.audioList || [],
+      noteText: walk.noteText || '',
+      isPublic: !!walk.isPublic,
+      walkMode: walk.walkMode,
+      generationSource: walk.generationSource,
+      season: walk.season || '',
+      generationContext: walk.generationContext || {},
+      trackStartedAt: walk.trackStartedAt,
+      trackStoppedAt: walk.trackStoppedAt,
+      startedAt: walk.startedAt,
+      endedAt: walk.endedAt,
+      routeStats: walk.routeStats || {},
+      sticker: walk.sticker || null,
+      status: walk.status || 'finished',
+    });
+    const persistedWalk = result && result.walk ? result.walk : { ...walk, missionAssetMap };
+    this.setData({
+      walk: {
+        ...persistedWalk,
+        sticker: decorateSticker(persistedWalk.sticker),
+        createdAtLabel: formatDate(persistedWalk.createdAt),
+        missionItems: buildMissionItems(persistedWalk),
+        canDelete: queryCanDelete(persistedWalk, this.data.source),
+      },
+    });
+    return cardImagePath;
+  },
+
+  async handleMissionCardGenerated(event) {
     const tempFilePath = event.detail && event.detail.tempFilePath ? event.detail.tempFilePath : '';
     const mission = event.detail && event.detail.mission ? event.detail.mission : '';
     const activeMissionItem = this.getActiveMissionItem();
@@ -455,7 +596,19 @@ Page({
     this.setData({
       currentMissionCardSrc: tempFilePath,
       isRenderingMissionCard: false,
+      missionCardRenderPayload: {
+        ...this.data.missionCardRenderPayload,
+        renderVersion: 0,
+      },
     });
+    if (!activeMissionItem || !activeMissionItem.mission) {
+      return;
+    }
+    try {
+      await this.persistMissionCard(activeMissionItem.mission, tempFilePath);
+    } catch (error) {
+      wx.showToast({ title: '卡片已生成，持久化失败', icon: 'none' });
+    }
   },
 
   openStickerModal() {

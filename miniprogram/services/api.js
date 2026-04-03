@@ -4,7 +4,7 @@ const { inferExtension } = require('../utils/media');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'generateCompanionNote', 'publishWalkShare', 'deleteWalk']
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'generateCompanionNote', 'publishWalkShare', 'deleteWalk', 'saveTeamMissionCard', 'processCompanionNoteJobs']
     : []
 );
 
@@ -164,6 +164,7 @@ function normalizeTeamContribution(item) {
     audioList: Array.isArray(item.audioList) ? item.audioList.filter(Boolean) : [],
     audioCount: item.audioCount !== undefined ? item.audioCount : (Array.isArray(item.audioList) ? item.audioList.length : 0),
     audioAuditStatus: item.audioAuditStatus || 'approved',
+    companionNote: item.companionNote || '',
     textAuditStatus: item.textAuditStatus || 'approved',
     completed: !!item.completed,
     createdAt: item.createdAt || Date.now(),
@@ -219,6 +220,7 @@ function normalizeTeamWalkRecord(item) {
   const activities = Array.isArray(item.activities)
     ? item.activities.map(normalizeTeamActivity).filter(Boolean)
     : [];
+  const missionCardMap = item.missionCardMap || {};
   const teamStats = item.teamStats || {};
   const generationContext = item.generationContext || {};
 
@@ -258,6 +260,7 @@ function normalizeTeamWalkRecord(item) {
     members,
     contributions,
     activities,
+    missionCardMap,
     canDelete: false,
     isPublic: false,
     memberRole: item.memberRole || '',
@@ -378,6 +381,9 @@ const ENDPOINTS = {
   },
   generateCompanionNote: {
     cloudName: 'generateSticker',
+  },
+  processCompanionNoteJobs: {
+    cloudName: 'processCompanionNoteJobs',
   },
   createWalk: {
     cloudName: 'createWalk',
@@ -608,6 +614,9 @@ const ENDPOINTS = {
       room: data && data.room ? normalizeTeamWalkRecord(data.room) : null,
     }),
   },
+  saveTeamMissionCard: {
+    cloudName: 'saveTeamMissionCard',
+  },
   listMyTeamWalks: {
     cloudName: 'listMyTeamWalks',
     normalizeCloudResponse: (data) => ({
@@ -755,7 +764,7 @@ function requestWeb({ path, method, data, header }) {
   });
 }
 
-function requestUpload(filePath, formData = {}) {
+function requestUpload(filePath, formData = {}, options = {}) {
   const endpoint = ENDPOINTS.uploadMedia;
   if (getBackendProvider() !== 'web' || !endpoint.web || useCloudMediaStorage) {
     const inferredExt = inferExtension(filePath, formData.kind === 'image' ? 'jpg' : '');
@@ -765,16 +774,26 @@ function requestUpload(filePath, formData = {}) {
         : formData.kind === 'audio'
           ? (inferredExt || 'mp3')
           : (inferredExt || 'jpg');
-    return uploadToCloud({
-      cloudPath: `walks/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
-      filePath,
-    }).then((response) => response.fileID);
+    return new Promise((resolve, reject) => {
+      const uploadTask = uploadToCloud({
+        cloudPath: `walks/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`,
+        filePath,
+      });
+      if (uploadTask && uploadTask.onProgressUpdate && typeof options.onProgress === 'function') {
+        uploadTask.onProgressUpdate((progressEvent) => {
+          options.onProgress(progressEvent);
+        });
+      }
+      Promise.resolve(uploadTask)
+        .then((response) => resolve(response.fileID))
+        .catch(reject);
+    });
   }
 
   const token = getStoredToken();
   const normalizedFormData = endpoint.web.normalizeUploadFormData ? endpoint.web.normalizeUploadFormData(formData) : formData;
   return new Promise((resolve, reject) => {
-    wx.uploadFile({
+    const uploadTask = wx.uploadFile({
       url: buildUrl(endpoint.web.path),
       filePath,
       name: 'file',
@@ -794,6 +813,11 @@ function requestUpload(filePath, formData = {}) {
       },
       fail: reject,
     });
+    if (uploadTask && uploadTask.onProgressUpdate && typeof options.onProgress === 'function') {
+      uploadTask.onProgressUpdate((progressEvent) => {
+        options.onProgress(progressEvent);
+      });
+    }
   });
 }
 

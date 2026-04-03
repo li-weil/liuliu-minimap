@@ -106,6 +106,21 @@
   margin-top: 24rpx;
 }
 
+.mission-audio-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.mission-audio-player-wrap {
+  min-width: 640rpx;
+  border-radius: 22rpx;
+}
+
+.mission-audio-player {
+  width: 640rpx;
+  display: block;
+}
+
 .danger-action-btn {
   width: calc(100% - 64rpx);
   margin: 8rpx 32rpx 0;

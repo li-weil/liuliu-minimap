@@ -64,6 +64,16 @@
         <view class="complete-check {{completedClassName}}"></view>
         <view class="complete-copy">这条任务我已经完成了</view>
       </view>
+      <view wx:if="{{saving}}" class="save-progress-card">
+        <view class="save-progress-title">{{saveStatusText || '正在同步给团队...'}}</view>
+        <view class="save-progress-meta">
+          <text>已处理 {{uploadProgressCurrent}} / {{uploadProgressTotal || 0}}</text>
+          <text>{{uploadProgressPercent}}%</text>
+        </view>
+        <view class="save-progress-track">
+          <view class="save-progress-fill" style="width: {{uploadProgressPercent}}%;"></view>
+        </view>
+      </view>
       <button class="primary-btn" bindtap="handleSubmit" loading="{{saving}}">同步给团队</button>
     </view>
 

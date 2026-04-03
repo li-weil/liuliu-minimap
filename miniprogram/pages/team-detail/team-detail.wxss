@@ -184,6 +184,21 @@
   margin-bottom: 12rpx;
 }
 
+.mission-audio-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.mission-audio-player-wrap {
+  min-width: 640rpx;
+  border-radius: 22rpx;
+}
+
+.mission-audio-player {
+  width: 640rpx;
+  display: block;
+}
+
 .mission-empty-copy {
   padding: 20rpx 0;
 }

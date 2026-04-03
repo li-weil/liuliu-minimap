@@ -12,7 +12,7 @@
     "pages/history/history",
     "pages/profile/profile"
   ],
-  "__usePrivacyCheck__": true,
+  "__usePrivacyCheck__": false,
   "window": {
     "navigationBarTitleText": "城市漫步者",
     "navigationBarBackgroundColor": "#f5f2ed",
@@ -25,11 +25,6 @@
       "desc": "用于获取当前位置、选点探索和记录漫步轨迹"
     }
   },
-  "requiredPrivateInfos": [
-    "getLocation",
-    "onLocationChange",
-    "startLocationUpdate"
-  ],
   "tabBar": {
     "color": "#6f6a5f",
     "selectedColor": "#5a5a40",

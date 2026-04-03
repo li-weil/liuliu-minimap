@@ -2,7 +2,6 @@
   "navigationBarTitleText": "记录漫步",
   "usingComponents": {
     "mission-list": "/components/mission-list/mission-list",
-    "checkin-card": "/components/checkin-card/checkin-card",
     "privacy-consent": "/components/privacy-consent/privacy-consent"
   }
 }

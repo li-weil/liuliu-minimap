@@ -55,7 +55,7 @@
               </view>
 
               <view class="mission-detail-note">
-                {{missionItem.assets.noteText || '这个任务下还没有留下文字记录。'}}
+                {{missionItem.assets.noteText || '这个任务下还没有留下文字记录'}}
               </view>
 
 
@@ -65,7 +65,7 @@
                 <view wx:if="{{missionItem.assets.photoList.length}}" style="display: flex; flex-wrap: wrap; gap: 16rpx;">
                   <image wx:for="{{missionItem.assets.photoList}}" wx:key="index" src="{{item}}" mode="aspectFill" style="width: 208rpx; height: 208rpx; border-radius: 18rpx;" />
                 </view>
-                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有图片记录。</view>
+                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有图片记录</view>
               </view>
 
               <view class="mission-media-group">
@@ -80,7 +80,7 @@
                     style="width: 100%; height: 360rpx; border-radius: 18rpx; margin-bottom: 16rpx;"
                   />
                 </view>
-                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有视频记录。</view>
+                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有视频记录</view>
               </view>
 
               <view class="mission-media-group">
@@ -88,15 +88,20 @@
                 <view wx:if="{{missionItem.assets.audioList.length}}">
                   <view wx:for="{{missionItem.assets.audioList}}" wx:key="index" class="mission-card" style="padding: 18rpx 20rpx; margin-bottom: 14rpx;">
                     <view style="font-size: 24rpx; font-weight: 600; margin-bottom: 12rpx;">录音 {{index + 1}}</view>
-                    <audio src="{{item.tempFilePath || item}}" controls style="width: 100%;" />
+                    <scroll-view class="mission-audio-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
+                      <view class="mission-audio-player-wrap">
+                        <audio class="mission-audio-player" src="{{item.tempFilePath || item}}" controls />
+                      </view>
+                    </scroll-view>
                   </view>
                 </view>
-                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有录音记录。</view>
+                <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有录音记录</view>
               </view>
 
               <view class="mission-card-preview">
                 <view class="section-subtitle">打卡卡片</view>
-                <view wx:if="{{isRenderingMissionCard}}" class="mission-card-preview-loading">正在整理这张卡片...</view>
+                <view wx:if="{{isRenderingMissionCard}}" class="mission-card-preview-loading">66 正在整理这张卡片...</view>
+                <view wx:elif="{{missionCardPendingNote}}" class="mission-card-preview-loading">{{missionCardPendingText}}</view>
                 <image
                   wx:elif="{{currentMissionCardSrc}}"
                   class="mission-card-preview-image"
@@ -106,6 +111,10 @@
                   data-src="{{currentMissionCardSrc}}"
                   data-title="{{missionItem.label || '打卡卡片'}}"
                 />
+                <view wx:else class="empty-copy" style="padding: 20rpx 0;">还没有生成卡片</view>
+                <button wx:if="{{!currentMissionCardSrc}}" class="ghost-btn" bindtap="handleGenerateMissionCard" disabled="{{missionCardPendingNote}}">
+                  生成卡片
+                </button>
               </view>    
 
             </view>
@@ -127,6 +136,7 @@
   <view wx:else class="empty-copy">没有找到这条足迹。</view>
 
   <checkin-card
+    wx:if="{{isRenderingMissionCard && missionCardRenderPayload.renderVersion > 0}}"
     mission="{{missionCardRenderPayload.mission}}"
     assets="{{missionCardRenderPayload.assets}}"
     locationName="{{missionCardRenderPayload.locationName}}"

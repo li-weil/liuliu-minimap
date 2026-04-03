@@ -79,7 +79,7 @@
                     <view wx:if="{{item.photoList.length}}" class="photo-grid">
                       <image wx:for="{{item.photoList}}" wx:key="index" src="{{item}}" mode="aspectFill" class="photo-grid-image" />
                     </view>
-                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传图片。</view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传图片</view>
                   </view>
 
                   <view class="mission-media-group">
@@ -94,18 +94,22 @@
                         class="mission-video"
                       />
                     </view>
-                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传视频。</view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传视频</view>
                   </view>
 
                   <view class="mission-media-group">
                     <view class="section-subtitle">录音记录</view>
                     <view wx:if="{{item.audioList.length}}">
-                        <view wx:for="{{item.audioList}}" wx:key="index" class="mission-card audio-card">
-                          <view class="audio-card-title">录音 {{index + 1}}</view>
-                        <audio src="{{item}}" controls style="width: 100%;" />
+                      <view wx:for="{{item.audioList}}" wx:key="index" class="mission-card audio-card">
+                        <view class="audio-card-title">录音 {{index + 1}}</view>
+                        <scroll-view class="mission-audio-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
+                          <view class="mission-audio-player-wrap">
+                            <audio class="mission-audio-player" src="{{item}}" controls />
+                          </view>
+                        </scroll-view>
                       </view>
                     </view>
-                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传录音。</view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传录音</view>
                   </view>
 
                   <button
@@ -121,11 +125,12 @@
                   </button>
                 </view>
               </view>
-              <view wx:else class="empty-copy detail-empty">这个任务下还没有团队记录。</view>
+              <view wx:else class="empty-copy detail-empty">这个任务下还没有团队记录</view>
 
               <view class="mission-card-preview">
                 <view class="section-subtitle">打卡卡片</view>
                 <view wx:if="{{isRenderingMissionCard}}" class="mission-card-preview-loading">正在汇总全部成员的内容，生成团队打卡卡片...</view>
+                <view wx:elif="{{missionCardPendingNote}}" class="mission-card-preview-loading">{{missionCardPendingText}}</view>
                 <image
                   wx:elif="{{currentMissionCardSrc}}"
                   class="mission-card-preview-image"
@@ -135,8 +140,10 @@
                   data-src="{{currentMissionCardSrc}}"
                   data-title="{{missionItem.mission}}"
                 />
-                <view wx:elif="{{missionItem.contributionCount}}" class="empty-copy mission-empty-copy">66 正在记录卡片...</view>
-                <view wx:else class="empty-copy mission-empty-copy">66 正在记录卡片...</view>
+                <view wx:else class="empty-copy mission-empty-copy">还没有生成团队卡片</view>
+                <button wx:if="{{missionItem.contributionCount && !currentMissionCardSrc}}" class="ghost-btn" bindtap="handleGenerateMissionCard" disabled="{{missionCardPendingNote}}">
+                  生成卡片
+                </button>
               </view>
             </view>
           </view>
@@ -162,6 +169,7 @@
   <view wx:else class="empty-copy">没有找到这场同行漫步。</view>
 
   <checkin-card
+    wx:if="{{isRenderingMissionCard && missionCardRenderPayload.renderVersion > 0}}"
     mission="{{missionCardRenderPayload.mission}}"
     entries="{{missionCardRenderPayload.entries}}"
     locationName="{{missionCardRenderPayload.locationName}}"

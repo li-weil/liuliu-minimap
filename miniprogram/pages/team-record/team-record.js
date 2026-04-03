@@ -1,6 +1,7 @@
 const app = getApp();
 const { requestUpload } = require('../../services/api');
-const { finishTeamWalk, getTeamRoomDetail, submitTeamContribution } = require('../../services/team');
+const { generateCompanionNote } = require('../../services/sticker');
+const { finishTeamWalk, getTeamRoomDetail, processCompanionNoteJobs, submitTeamContribution } = require('../../services/team');
 const { chooseImage, chooseVideo } = require('../../utils/media');
 const {
   createDefaultPrivacyPopup,
@@ -13,6 +14,11 @@ const {
 let recorderManager = null;
 let roomPollingTimer = null;
 let roomPollingInFlight = false;
+const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_UPLOAD_SIZE_BYTES = 30 * 1024 * 1024;
+const MAX_AUDIO_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+const LARGE_VIDEO_WARNING_SIZE_BYTES = 15 * 1024 * 1024;
+const UPLOAD_RETRY_LIMIT = 1;
 
 function createEmptyDraft() {
   return {
@@ -20,6 +26,7 @@ function createEmptyDraft() {
     photoList: [],
     videoList: [],
     audioList: [],
+    companionNote: '',
     completed: false,
   };
 }
@@ -30,6 +37,7 @@ function cloneDraft(draft) {
     photoList: Array.isArray(draft && draft.photoList) ? [...draft.photoList] : [],
     videoList: Array.isArray(draft && draft.videoList) ? [...draft.videoList] : [],
     audioList: Array.isArray(draft && draft.audioList) ? [...draft.audioList] : [],
+    companionNote: String((draft && draft.companionNote) || ''),
     completed: !!(draft && draft.completed),
   };
 }
@@ -43,6 +51,7 @@ function buildDraftFromContribution(contribution) {
     photoList: [...(contribution.photoList || [])],
     videoList: [...(contribution.videoList || [])],
     audioList: [...(contribution.audioList || [])],
+    companionNote: contribution.companionNote || '',
     completed: !!contribution.completed,
   };
 }
@@ -115,10 +124,81 @@ function explainRecorderError(error) {
   return `录音失败：${rawErrMsg}`;
 }
 
+function formatFileSize(size) {
+  const numericSize = Number(size || 0);
+  if (numericSize >= 1024 * 1024) {
+    return `${(numericSize / (1024 * 1024)).toFixed(1)}MB`;
+  }
+  if (numericSize >= 1024) {
+    return `${Math.round(numericSize / 1024)}KB`;
+  }
+  return `${numericSize}B`;
+}
+
+function getUploadSizeLimit(kind) {
+  if (kind === 'video') {
+    return MAX_VIDEO_UPLOAD_SIZE_BYTES;
+  }
+  if (kind === 'audio') {
+    return MAX_AUDIO_UPLOAD_SIZE_BYTES;
+  }
+  return MAX_IMAGE_UPLOAD_SIZE_BYTES;
+}
+
+function getUploadKindLabel(kind) {
+  if (kind === 'video') {
+    return '视频';
+  }
+  if (kind === 'audio') {
+    return '录音';
+  }
+  return '图片';
+}
+
+function buildUploadKey(kind, filePath) {
+  return `${kind}:${filePath}`;
+}
+
+function extractUploadPath(item) {
+  if (!item) {
+    return '';
+  }
+  if (typeof item === 'string') {
+    return item;
+  }
+  return item.tempFilePath || item.filePath || item.url || '';
+}
+
+function getKnownUploadSize(item) {
+  if (!item || typeof item === 'string') {
+    return 0;
+  }
+  return Number(item.size || 0);
+}
+
+function isRemoteAsset(filePath) {
+  const normalizedPath = String(filePath || '');
+  return normalizedPath.startsWith('cloud://') || normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://');
+}
+
+function getFileInfo(filePath) {
+  return new Promise((resolve, reject) => {
+    wx.getFileInfo({
+      filePath,
+      success: resolve,
+      fail: reject,
+    });
+  });
+}
+
 Page({
   data: {
     loading: true,
     saving: false,
+    saveStatusText: '',
+    uploadProgressPercent: 0,
+    uploadProgressCurrent: 0,
+    uploadProgressTotal: 0,
     isRecordingAudio: false,
     roomId: '',
     room: null,
@@ -422,9 +502,29 @@ Page({
         content: '选择或拍摄视频仅用于当前团队任务记录保存，不会在你未操作时自动启用。',
       });
       const result = await chooseVideo(1);
+      const selectedVideos = (result.tempFiles || []).filter(Boolean);
+      const oversizedVideo = selectedVideos.find((item) => Number(item.size || 0) > MAX_VIDEO_UPLOAD_SIZE_BYTES);
+      if (oversizedVideo) {
+        wx.showModal({
+          title: '视频太大了',
+          content: `单个视频需控制在 ${formatFileSize(MAX_VIDEO_UPLOAD_SIZE_BYTES)} 内，建议裁剪后再上传。`,
+          showCancel: false,
+          confirmText: '知道了',
+        });
+        return;
+      }
+      const largeVideo = selectedVideos.find((item) => Number(item.size || 0) > LARGE_VIDEO_WARNING_SIZE_BYTES);
+      if (largeVideo) {
+        wx.showModal({
+          title: '视频较大',
+          content: `当前视频约 ${formatFileSize(largeVideo.size)}，弱网下上传会更久，建议尽量压缩后再同步。`,
+          showCancel: false,
+          confirmText: '继续',
+        });
+      }
       this.setEditorDraft({
         ...this.data.editorDraft,
-        videoList: [...(this.data.editorDraft.videoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
+        videoList: [...(this.data.editorDraft.videoList || []), ...selectedVideos.map((item) => item.tempFilePath).filter(Boolean)],
       });
     } catch (error) {
       if (error && error.message === 'privacy_authorization_denied') {
@@ -501,11 +601,155 @@ Page({
     this.setEditorDraft({ ...this.data.editorDraft, audioList });
   },
 
-  uploadAsset(filePath, kind) {
-    if (!filePath || String(filePath).startsWith('cloud://') || String(filePath).startsWith('http')) {
+  async ensureDraftCompanionNote(draft) {
+    const nextDraft = cloneDraft(draft);
+    const userNoteText = String(nextDraft.noteText || '').trim();
+    const photoList = Array.isArray(nextDraft.photoList) ? nextDraft.photoList.filter(Boolean) : [];
+    if (!userNoteText && !photoList.length) {
+      return nextDraft;
+    }
+    if (nextDraft.companionNote) {
+      return nextDraft;
+    }
+    try {
+      const result = await generateCompanionNote({
+        themeTitle: this.data.room && this.data.room.themeTitle ? this.data.room.themeTitle : '',
+        locationName: this.data.room && this.data.room.locationName ? this.data.room.locationName : '',
+        locationContext: this.data.room && this.data.room.locationContext ? this.data.room.locationContext : '',
+        mission: this.data.activeMission || '',
+        userNoteText,
+        photoList,
+      });
+      nextDraft.companionNote = String((result && result.companionNote) || '').trim();
+    } catch (error) {
+      nextDraft.companionNote = nextDraft.companionNote || '';
+    }
+    return nextDraft;
+  },
+
+  async collectUploadJobs(draft = this.data.editorDraft) {
+    const jobs = [];
+    const seen = new Set();
+    const pushJob = (item, kind) => {
+      const filePath = extractUploadPath(item);
+      if (!filePath || isRemoteAsset(filePath)) {
+        return;
+      }
+      const key = buildUploadKey(kind, filePath);
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      jobs.push({
+        key,
+        kind,
+        filePath,
+        size: getKnownUploadSize(item),
+        label: getUploadKindLabel(kind),
+      });
+    };
+
+    (draft.photoList || []).forEach((item) => pushJob(item, 'image'));
+    (draft.videoList || []).forEach((item) => pushJob(item, 'video'));
+    (draft.audioList || []).forEach((item) => pushJob(item, 'audio'));
+    return jobs;
+  },
+
+  async validateUploadJobs(uploadJobs = []) {
+    for (let index = 0; index < uploadJobs.length; index += 1) {
+      const job = uploadJobs[index];
+      const size = job.size || await this.resolveLocalFileSize(job.filePath);
+      const limit = getUploadSizeLimit(job.kind);
+      if (size > limit) {
+        return {
+          ...job,
+          size,
+          limit,
+        };
+      }
+    }
+    return null;
+  },
+
+  async resolveLocalFileSize(filePath) {
+    if (!filePath || isRemoteAsset(filePath)) {
+      return 0;
+    }
+    try {
+      const info = await getFileInfo(filePath);
+      return Number(info.size || 0);
+    } catch (error) {
+      return 0;
+    }
+  },
+
+  updateSaveProgress(text, current, total, percent) {
+    const safePercent = Math.max(0, Math.min(100, Math.round(percent || 0)));
+    this.setData({
+      saveStatusText: text || '正在同步给团队...',
+      uploadProgressCurrent: current || 0,
+      uploadProgressTotal: total || 0,
+      uploadProgressPercent: safePercent,
+    });
+    wx.showLoading({
+      title: safePercent > 0 ? `${Math.min(safePercent, 99)}%` : '同步中',
+      mask: true,
+    });
+  },
+
+  async uploadJobsSequentially(uploadJobs = []) {
+    const total = uploadJobs.length;
+    const uploadResultMap = {};
+    if (!total) {
+      this.updateSaveProgress('正在整理团队记录...', 0, 0, 100);
+      return uploadResultMap;
+    }
+
+    for (let index = 0; index < uploadJobs.length; index += 1) {
+      const job = uploadJobs[index];
+      const current = index + 1;
+      this.updateSaveProgress(`正在上传${job.label} ${current}/${total}`, current, total, ((current - 1) / total) * 100);
+      const result = await this.uploadAssetWithRetry(job, current, total);
+      uploadResultMap[job.key] = result;
+    }
+    this.updateSaveProgress('正在同步团队记录...', total, total, 100);
+    return uploadResultMap;
+  },
+
+  async uploadAssetWithRetry(job, current, total) {
+    let lastError = null;
+    for (let attempt = 0; attempt <= UPLOAD_RETRY_LIMIT; attempt += 1) {
+      try {
+        return await this.uploadAsset(job.filePath, job.kind, {
+          onProgress: (progressEvent) => {
+            const percent = Number(progressEvent && progressEvent.progress ? progressEvent.progress : 0);
+            const overallPercent = total
+              ? (((current - 1) + (percent / 100)) / total) * 100
+              : percent;
+            this.updateSaveProgress(
+              `正在上传${job.label} ${current}/${total}（${Math.round(percent)}%）`,
+              current,
+              total,
+              overallPercent
+            );
+          },
+        });
+      } catch (error) {
+        lastError = error;
+        if (attempt >= UPLOAD_RETRY_LIMIT) {
+          break;
+        }
+        this.updateSaveProgress(`正在重试${job.label} ${current}/${total}`, current, total, ((current - 1) / total) * 100);
+      }
+    }
+    throw lastError || new Error(`${job.label}上传失败`);
+  },
+
+  uploadAsset(filePath, kind, options = {}) {
+    if (!filePath || isRemoteAsset(filePath)) {
       return Promise.resolve(filePath);
     }
-    return requestUpload(filePath, { kind });
+    return requestUpload(filePath, { kind }, options);
   },
 
   async handleSubmit() {
@@ -516,23 +760,42 @@ Page({
 
     this.setData({ saving: true });
     try {
-      const photoList = await Promise.all((this.data.editorDraft.photoList || []).map((item) => this.uploadAsset(item, 'image')));
-      const videoList = await Promise.all((this.data.editorDraft.videoList || []).map((item) => this.uploadAsset(item.tempFilePath || item, 'video')));
-      const audioList = await Promise.all((this.data.editorDraft.audioList || []).map((item) => this.uploadAsset(item.tempFilePath || item, 'audio')));
+      const preparedDraft = cloneDraft(this.data.editorDraft);
+      this.setEditorDraft(preparedDraft);
+      const uploadJobs = await this.collectUploadJobs(preparedDraft);
+      const invalidFile = await this.validateUploadJobs(uploadJobs);
+      if (invalidFile) {
+        throw new Error(`${invalidFile.label}超过${formatFileSize(invalidFile.limit)}`);
+      }
+      const uploadResultMap = await this.uploadJobsSequentially(uploadJobs);
+      const resolveUploadedAsset = (item, kind) => {
+        const filePath = extractUploadPath(item);
+        if (!filePath) {
+          return item;
+        }
+        if (isRemoteAsset(filePath)) {
+          return filePath;
+        }
+        return uploadResultMap[buildUploadKey(kind, filePath)] || filePath;
+      };
+      const photoList = (preparedDraft.photoList || []).map((item) => resolveUploadedAsset(item, 'image'));
+      const videoList = (preparedDraft.videoList || []).map((item) => resolveUploadedAsset(item, 'video'));
+      const audioList = (preparedDraft.audioList || []).map((item) => resolveUploadedAsset(item, 'audio'));
       const result = await submitTeamContribution({
         roomId: this.data.roomId,
         missionKey: this.data.activeMission,
         missionLabel: this.data.activeMission,
-        noteText: this.data.editorDraft.noteText,
+        noteText: preparedDraft.noteText,
         photoList,
         videoList,
         audioList,
-        completed: !!this.data.editorDraft.completed,
+        companionNote: preparedDraft.companionNote || '',
+        completed: !!preparedDraft.completed,
       });
       const room = result.room || this.data.room;
       const missionViews = withMissionSelection(groupMissionViews(room || {}), this.data.activeMission);
       const syncedDraft = {
-        ...this.data.editorDraft,
+        ...preparedDraft,
         photoList,
         videoList,
         audioList,
@@ -544,12 +807,26 @@ Page({
         editorDraft: syncedDraft,
         completedClassName: syncedDraft.completed ? 'complete-check-active' : '',
       });
+      this.kickoffCompanionNoteWorker();
       wx.showToast({ title: '已同步到团队', icon: 'success' });
     } catch (error) {
-      wx.showToast({ title: explainSubmitFailure(error), icon: 'none' });
+      const fallbackMessage = explainSubmitFailure(error);
+      const errorMessage = String((error && error.message) || '');
+      wx.showToast({ title: (errorMessage ? `提交失败：${errorMessage}` : fallbackMessage).slice(0, 20), icon: 'none', duration: 3000 });
     } finally {
-      this.setData({ saving: false });
+      wx.hideLoading();
+      this.setData({
+        saving: false,
+        saveStatusText: '',
+        uploadProgressPercent: 0,
+        uploadProgressCurrent: 0,
+        uploadProgressTotal: 0,
+      });
     }
+  },
+
+  kickoffCompanionNoteWorker() {
+    processCompanionNoteJobs({ batchSize: 6 }).catch(() => {});
   },
 
   async handleFinish() {

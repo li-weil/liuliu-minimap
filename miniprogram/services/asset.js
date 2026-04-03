@@ -140,6 +140,7 @@ async function hydrateAchievementAssets(achievements = []) {
 }
 
 module.exports = {
+  batchResolveCloudFileIds,
   hydrateAchievementAssets,
   isCloudFileId,
 };
