@@ -4,7 +4,7 @@ const { inferExtension } = require('../utils/media');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'generateCompanionNote', 'publishWalkShare', 'deleteWalk', 'saveTeamMissionCard', 'processCompanionNoteJobs']
+    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'generateCompanionNote', 'publishWalkShare', 'deleteWalk', 'saveTeamMissionCard', 'updateTeamMemberDraftState']
     : []
 );
 
@@ -138,6 +138,9 @@ function normalizeTeamMember(item) {
     role: item.role || 'member',
     status: item.status || 'joined',
     joinedAt: item.joinedAt || item.createdAt || Date.now(),
+    pendingMissionKeys: Array.isArray(item.pendingMissionKeys) ? item.pendingMissionKeys.filter(Boolean) : [],
+    lastDraftUpdatedAt: item.lastDraftUpdatedAt || 0,
+    lastSyncedAt: item.lastSyncedAt || 0,
   };
 }
 
@@ -381,9 +384,6 @@ const ENDPOINTS = {
   generateCompanionNote: {
     cloudName: 'generateSticker',
   },
-  processCompanionNoteJobs: {
-    cloudName: 'processCompanionNoteJobs',
-  },
   createWalk: {
     cloudName: 'createWalk',
     normalizeCloudResponse: (data) => ({
@@ -614,6 +614,9 @@ const ENDPOINTS = {
   },
   saveTeamMissionCard: {
     cloudName: 'saveTeamMissionCard',
+  },
+  updateTeamMemberDraftState: {
+    cloudName: 'updateTeamMemberDraftState',
   },
   listMyTeamWalks: {
     cloudName: 'listMyTeamWalks',

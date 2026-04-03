@@ -20,10 +20,17 @@ Component({
       type: String,
       value: '带着这份线索，走进今天的城市片刻',
     },
+    startDisabled: {
+      type: Boolean,
+      value: false,
+    },
   },
 
   methods: {
     handleStart() {
+      if (this.properties.startDisabled) {
+        return;
+      }
       this.triggerEvent('start');
     },
   },

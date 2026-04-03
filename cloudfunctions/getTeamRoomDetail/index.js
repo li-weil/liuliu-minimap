@@ -23,6 +23,15 @@ function sanitizeContributionForDisplay(item) {
   };
 }
 
+function sanitizeMemberForDisplay(item) {
+  return {
+    ...item,
+    pendingMissionKeys: Array.isArray(item && item.pendingMissionKeys) ? item.pendingMissionKeys.filter(Boolean) : [],
+    lastDraftUpdatedAt: item && item.lastDraftUpdatedAt ? item.lastDraftUpdatedAt : 0,
+    lastSyncedAt: item && item.lastSyncedAt ? item.lastSyncedAt : 0,
+  };
+}
+
 async function getRoomBundle(roomId, openid) {
   const roomDoc = await db.collection('teamWalkRooms').doc(roomId).get();
   const room = roomDoc.data;
@@ -71,7 +80,7 @@ async function getRoomBundle(roomId, openid) {
   return {
     _id: roomId,
     ...room,
-    members: memberDocs,
+    members: memberDocs.map(sanitizeMemberForDisplay),
     contributions: contributionDocs.map((item) => sanitizeContributionForDisplay(item)),
     activities: activityDocs,
     teamStats: safeTeamStats,

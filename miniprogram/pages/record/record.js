@@ -1,5 +1,5 @@
 const app = getApp();
-const { createWalk, getWalkDetail, processCompanionNoteJobs } = require('../../services/walk');
+const { createWalk, getWalkDetail } = require('../../services/walk');
 const { requestUpload } = require('../../services/api');
 const { getCurrentLocation } = require('../../utils/location');
 const { chooseImage, chooseVideo } = require('../../utils/media');
@@ -37,6 +37,15 @@ function createEmptyMissionAssets() {
     companionNote: '',
     cardImagePath: '',
   };
+}
+
+function hasMissionContent(assets) {
+  const safeAssets = assets || {};
+  const noteText = String(safeAssets.noteText || '').trim();
+  const photoCount = Array.isArray(safeAssets.photoList) ? safeAssets.photoList.filter(Boolean).length : 0;
+  const videoCount = Array.isArray(safeAssets.videoList) ? safeAssets.videoList.filter(Boolean).length : 0;
+  const audioCount = Array.isArray(safeAssets.audioList) ? safeAssets.audioList.filter(Boolean).length : 0;
+  return !!noteText || photoCount > 0 || videoCount > 0 || audioCount > 0;
 }
 
 function toRadians(value) {
@@ -520,6 +529,7 @@ Page({
     isRecordingAudio: false,
     recordingMission: '',
     expandedMission: '',
+    checkingInMission: '',
     generatedMissionCardMap: {},
     showMissionCardModal: false,
     generatingMissionCard: '',
@@ -547,6 +557,7 @@ Page({
     uploadProgressPercent: 0,
     uploadProgressCurrent: 0,
     uploadProgressTotal: 0,
+    pendingCompanionMissionMap: {},
     privacyPopup: createDefaultPrivacyPopup(),
     isLeavingForHistory: false,
   },
@@ -778,25 +789,47 @@ Page({
       ...(missionAssetMap[missionKey] || {}),
     };
     missionAssets[field] = [...(missionAssets[field] || []), asset];
+    missionAssets.companionNote = '';
+    missionAssets.cardImagePath = '';
     missionAssetMap[missionKey] = missionAssets;
+    const completedMissions = Array.isArray(draft.completedMissions) ? [...draft.completedMissions] : [];
+    const missionReviews = { ...(draft.missionReviews || {}) };
     return {
       ...draft,
       missionAssetMap,
+      completedMissions: completedMissions.filter((item) => item !== missionKey),
+      missionReviews: Object.fromEntries(Object.entries(missionReviews).filter(([key]) => key !== missionKey)),
     };
   },
 
-  updateMissionAssets(mission, patch) {
+  updateMissionAssets(mission, patch, options = {}) {
     const draft = { ...this.data.draft };
     const missionKey = mission || SUMMARY_MISSION_KEY;
     const missionAssetMap = ensureMissionAssetMap(draft.missionAssetMap || {});
-    missionAssetMap[missionKey] = {
+    const nextMissionAssets = {
       ...createEmptyMissionAssets(),
       ...(missionAssetMap[missionKey] || {}),
       ...patch,
     };
-    this.setDraft({
+    const preserveCheckIn = !!options.preserveCheckIn;
+    if (!preserveCheckIn) {
+      nextMissionAssets.companionNote = '';
+      nextMissionAssets.cardImagePath = '';
+    }
+    missionAssetMap[missionKey] = nextMissionAssets;
+    const missionReviews = { ...(draft.missionReviews || {}) };
+    const completedMissions = Array.isArray(draft.completedMissions) ? [...draft.completedMissions] : [];
+    const nextDraft = {
       ...draft,
       missionAssetMap,
+    };
+    if (!preserveCheckIn) {
+      delete missionReviews[missionKey];
+      nextDraft.missionReviews = missionReviews;
+      nextDraft.completedMissions = completedMissions.filter((item) => item !== missionKey);
+    }
+    this.setDraft({
+      ...nextDraft,
     });
   },
 
@@ -808,21 +841,6 @@ Page({
       activeMission: mission,
       expandedMission: this.data.expandedMission === mission ? '' : mission,
     });
-  },
-
-  toggleMissionDone(event) {
-    const mission = event.detail.mission;
-    if (!mission || mission === SUMMARY_MISSION_KEY) {
-      return;
-    }
-    const completed = new Set(this.data.draft.completedMissions || []);
-    if (completed.has(mission)) {
-      completed.delete(mission);
-    } else {
-      completed.add(mission);
-    }
-    const draft = { ...this.data.draft, completedMissions: Array.from(completed), selectedMission: mission };
-    this.setDraft(draft);
   },
 
   async handleMissionVerify(event) {
@@ -862,9 +880,10 @@ Page({
 
   async ensureCompanionNote(mission, missionAssets, options = {}) {
     const forceRefresh = !!options.forceRefresh;
+    const allowEmptyMaterial = !!options.allowEmptyMaterial;
     const userNoteText = String((missionAssets && missionAssets.noteText) || '').trim();
     const photoList = Array.isArray(missionAssets && missionAssets.photoList) ? missionAssets.photoList.filter(Boolean) : [];
-    if (!userNoteText && !photoList.length) {
+    if (!allowEmptyMaterial && !userNoteText && !photoList.length) {
       return '';
     }
     if (!forceRefresh && missionAssets && missionAssets.companionNote) {
@@ -883,32 +902,30 @@ Page({
     return String((result && result.companionNote) || '').trim();
   },
 
-  async prepareMissionAssetMapForSave(saveDraft) {
-    const missionAssetMap = saveDraft && saveDraft.missionAssetMap ? saveDraft.missionAssetMap : {};
-    const preparedEntries = await Promise.all(Object.entries(missionAssetMap).map(async ([mission, assets]) => {
-      const nextAssets = {
-        ...createEmptyMissionAssets(),
-        ...(assets || {}),
-      };
-      const userNoteText = String(nextAssets.noteText || '').trim();
-      const photoList = Array.isArray(nextAssets.photoList) ? nextAssets.photoList.filter(Boolean) : [];
-      if (!userNoteText && !photoList.length) {
-        return [mission, nextAssets];
-      }
-      try {
-        const companionNote = await this.ensureCompanionNote(
-          mission === SUMMARY_MISSION_KEY ? SUMMARY_MISSION_LABEL : mission,
-          nextAssets
-        );
-        if (companionNote) {
-          nextAssets.companionNote = companionNote;
-        }
-      } catch (error) {
-        // Ignore note generation failure and keep saving the walk.
-      }
-      return [mission, nextAssets];
-    }));
-    return Object.fromEntries(preparedEntries);
+  async handleMissionCheckIn(event) {
+    const mission = event.detail.mission || this.data.activeMission;
+    if (!mission) {
+      return;
+    }
+    const completedSet = new Set(this.data.draft && this.data.draft.completedMissions ? this.data.draft.completedMissions : []);
+    if (completedSet.has(mission)) {
+      return;
+    }
+
+    const missionAssets = {
+      ...createEmptyMissionAssets(),
+      ...this.getMissionAssets(mission),
+    };
+    const checkedInAt = Date.now();
+    this.markMissionPassed(mission, {
+      status: 'checked_in',
+      checkedInAt,
+      companionNoteStatus: 'pending',
+    });
+    this.setData({ activeMission: mission, checkingInMission: '' });
+    this.setMissionCompanionPending(mission, true);
+    wx.showToast({ title: '已打卡', icon: 'success' });
+    this.generateMissionCompanionNoteInBackground(mission, checkedInAt, missionAssets);
   },
 
   async handleGenerateMissionCard(event) {
@@ -1104,6 +1121,71 @@ Page({
     };
     const draft = { ...this.data.draft, missionReviews, selectedMission: mission };
     this.setDraft(draft);
+  },
+
+  setMissionCompanionPending(mission, pending) {
+    if (!mission) {
+      return;
+    }
+    const nextMap = {
+      ...(this.data.pendingCompanionMissionMap || {}),
+    };
+    if (pending) {
+      nextMap[mission] = true;
+    } else {
+      delete nextMap[mission];
+    }
+    this.setData({
+      pendingCompanionMissionMap: nextMap,
+      checkingInMission: '',
+    });
+  },
+
+  isMissionCheckInCurrent(mission, checkedInAt) {
+    const completedSet = new Set(this.data.draft && this.data.draft.completedMissions ? this.data.draft.completedMissions : []);
+    const review = this.data.draft && this.data.draft.missionReviews ? this.data.draft.missionReviews[mission] : null;
+    return completedSet.has(mission) && review && Number(review.checkedInAt || 0) === Number(checkedInAt || 0);
+  },
+
+  async generateMissionCompanionNoteInBackground(mission, checkedInAt, snapshotAssets) {
+    try {
+      const companionNote = await this.ensureCompanionNote(mission, snapshotAssets, {
+        allowEmptyMaterial: true,
+      });
+      if (!this.isMissionCheckInCurrent(mission, checkedInAt)) {
+        return;
+      }
+      if (companionNote) {
+        const latestMissionAssets = this.getMissionAssets(mission);
+        this.updateMissionAssets(mission, {
+          ...latestMissionAssets,
+          companionNote,
+          cardImagePath: '',
+        }, { preserveCheckIn: true });
+      }
+      const currentReview = (this.data.draft && this.data.draft.missionReviews && this.data.draft.missionReviews[mission]) || {};
+      this.saveMissionReview(mission, {
+        ...currentReview,
+        status: 'checked_in',
+        checkedInAt,
+        companionNoteStatus: companionNote ? 'ready' : 'empty',
+      });
+    } catch (error) {
+      if (!this.isMissionCheckInCurrent(mission, checkedInAt)) {
+        return;
+      }
+      const currentReview = (this.data.draft && this.data.draft.missionReviews && this.data.draft.missionReviews[mission]) || {};
+      this.saveMissionReview(mission, {
+        ...currentReview,
+        status: 'checked_in',
+        checkedInAt,
+        companionNoteStatus: 'failed',
+      });
+    } finally {
+      if (this.isMissionCheckInCurrent(mission, checkedInAt)) {
+        this.setMissionCompanionPending(mission, false);
+      }
+    }
   },
 
   handleNoteInput(event) {
@@ -1549,6 +1631,27 @@ Page({
       wx.showToast({ title: '缺少主题信息', icon: 'none' });
       return;
     }
+    const checkableMissions = [
+      ...(Array.isArray(this.data.theme.missions) ? this.data.theme.missions : []),
+      SUMMARY_MISSION_KEY,
+    ];
+    const completedSet = new Set(this.data.draft && this.data.draft.completedMissions ? this.data.draft.completedMissions : []);
+    const pendingMissions = checkableMissions.filter((mission) => {
+      if (completedSet.has(mission)) {
+        return false;
+      }
+      const missionAssets = this.getMissionAssets(mission, this.data.draft);
+      return hasMissionContent(missionAssets);
+    });
+    if (pendingMissions.length) {
+      wx.showModal({
+        title: '还有任务未打卡',
+        content: `有 ${pendingMissions.length} 个已经填写内容的任务还没打卡，请先完成这些任务的打卡后再保存。`,
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      return;
+    }
 
     await app.ensureUserReady();
     if (!app.globalData.user) {
@@ -1655,7 +1758,6 @@ Page({
       });
       app.clearWalkDraft(walkId);
       app.globalData.currentTheme = null;
-      this.kickoffCompanionNoteWorker();
       wx.showToast({ title: '已保存', icon: 'success' });
       setTimeout(() => {
         wx.switchTab({ url: '/pages/history/history' });
@@ -1678,10 +1780,6 @@ Page({
       });
       this.refreshState();
     }
-  },
-
-  kickoffCompanionNoteWorker() {
-    processCompanionNoteJobs({ batchSize: 6 }).catch(() => {});
   },
 
   async collectUploadJobs(saveDraft) {

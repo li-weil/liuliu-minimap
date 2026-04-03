@@ -24,16 +24,11 @@ function deleteWalk(payload = {}) {
   return callApi('deleteWalk', payload);
 }
 
-function processCompanionNoteJobs(payload = {}) {
-  return callApi('processCompanionNoteJobs', payload);
-}
-
 module.exports = {
   createWalk,
   deleteWalk,
   getWalkDetail,
   listMyWalks,
   listPublicWalks,
-  processCompanionNoteJobs,
   publishWalkShare,
 };

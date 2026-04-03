@@ -93,6 +93,22 @@ function decorateMissionGroupsActive(missionGroups, activeMission) {
   }));
 }
 
+function buildMissionCardEntries(group, room) {
+  const members = Array.isArray(room && room.members) ? room.members : [];
+  const contributions = Array.isArray(group && group.contributions) ? group.contributions : [];
+  const contributionMap = new Map(contributions.map((item) => [item.userId, item]));
+  return members.map((member) => {
+    const contribution = contributionMap.get(member.userId) || null;
+    const useActualContent = !!(contribution && contribution.completed);
+    return {
+      authorName: (contribution && contribution.nickName) || member.nickName || '队友',
+      noteText: useActualContent && contribution ? contribution.noteText || '' : '',
+      companionNote: useActualContent && contribution ? contribution.companionNote || '' : '',
+      photoList: useActualContent && contribution ? contribution.photoList || [] : [],
+    };
+  });
+}
+
 async function downloadAudioToLocal(src) {
   if (!src) {
     return '';
@@ -445,11 +461,7 @@ Page({
       room.missionCardMap[group.mission].cardImagePath
         ? room.missionCardMap[group.mission].cardImagePath
         : '';
-    const waitingCompanionNote = !storedCard && group.contributions.some((item) => {
-      const noteText = String(item.noteText || '').trim();
-      const photoList = Array.isArray(item.photoList) ? item.photoList.filter(Boolean) : [];
-      return (noteText || photoList.length) && !String(item.companionNote || '').trim();
-    });
+    const waitingCompanionNote = false;
     if (waitingCompanionNote) {
       this.schedulePendingMissionRefresh();
     } else {
@@ -462,12 +474,7 @@ Page({
       missionCardPendingText: waitingCompanionNote ? '66 正在记录卡片…' : '',
       missionCardRenderPayload: {
         mission: group.mission || '团队打卡卡片',
-        entries: group.contributions.map((item) => ({
-          authorName: item.nickName || '队友',
-          noteText: item.noteText || '',
-          companionNote: item.companionNote || '',
-          photoList: item.photoList || [],
-        })),
+        entries: buildMissionCardEntries(group, room),
         locationName: room.locationName || '',
         themeTitle: room.themeTitle || '',
         dateLabel: room.endedAtLabel || room.createdAtLabel || '',
@@ -483,16 +490,7 @@ Page({
       wx.showToast({ title: '这个任务还没有记录', icon: 'none' });
       return;
     }
-    const waitingCompanionNote = !(
-      room &&
-      room.missionCardMap &&
-      room.missionCardMap[group.mission] &&
-      room.missionCardMap[group.mission].cardImagePath
-    ) && group.contributions.some((item) => {
-      const noteText = String(item.noteText || '').trim();
-      const photoList = Array.isArray(item.photoList) ? item.photoList.filter(Boolean) : [];
-      return (noteText || photoList.length) && !String(item.companionNote || '').trim();
-    });
+    const waitingCompanionNote = false;
     if (waitingCompanionNote) {
       wx.showToast({ title: '正在准备团队卡片文案', icon: 'none' });
       this.setData({
@@ -510,12 +508,7 @@ Page({
       missionCardPendingText: '',
       missionCardRenderPayload: {
         mission: group.mission || '团队打卡卡片',
-        entries: group.contributions.map((item) => ({
-          authorName: item.nickName || '队友',
-          noteText: item.noteText || '',
-          companionNote: item.companionNote || '',
-          photoList: item.photoList || [],
-        })),
+        entries: buildMissionCardEntries(group, room),
         locationName: room.locationName || '',
         themeTitle: room.themeTitle || '',
         dateLabel: room.endedAtLabel || room.createdAtLabel || '',

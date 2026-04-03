@@ -5,45 +5,6 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
 const _ = db.command;
-const companionNoteJobs = db.collection('companionNoteJobs');
-
-async function enqueueCompanionNoteJob({ walkId, openid }) {
-  if (!walkId || !openid) {
-    return;
-  }
-  const now = Date.now();
-  const dedupeKey = `walk:${walkId}`;
-  const existingResult = await companionNoteJobs.where({ dedupeKey }).limit(1).get();
-  const existing = existingResult.data && existingResult.data[0] ? existingResult.data[0] : null;
-  const payload = {
-    dedupeKey,
-    type: 'walk',
-    status: 'pending',
-    payload: {
-      walkId,
-      openid,
-    },
-    attempts: 0,
-    lastError: '',
-    nextRunAt: now,
-    updatedAt: now,
-  };
-  if (existing) {
-    await companionNoteJobs.doc(existing._id).update({
-      data: {
-        ...payload,
-        createdAt: existing.createdAt || now,
-      },
-    });
-    return;
-  }
-  await companionNoteJobs.add({
-    data: {
-      ...payload,
-      createdAt: now,
-    },
-  });
-}
 
 exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
@@ -114,12 +75,6 @@ exports.main = async (event) => {
           openid: wxContext.OPENID,
         })
       : null;
-    if (status === 'finished') {
-      await enqueueCompanionNoteJob({
-        walkId,
-        openid: wxContext.OPENID,
-      });
-    }
     return { ok: true, id: walkId, walk: updatedDoc.data, achievements: achievementState };
   }
 
@@ -133,11 +88,5 @@ exports.main = async (event) => {
         openid: wxContext.OPENID,
       })
     : null;
-  if (status === 'finished') {
-    await enqueueCompanionNoteJob({
-      walkId: result._id,
-      openid: wxContext.OPENID,
-    });
-  }
   return { ok: true, id: result._id, walk: createdDoc.data, achievements: achievementState };
 };

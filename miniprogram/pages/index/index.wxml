@@ -81,6 +81,7 @@
       <view class="map-helper-copy">{{isMapDragging ? '慢慢移动，寻找最想走进去的那一片街景' : '把定位针停在此刻最想出发的地方'}}</view>
       <button class="primary-btn map-confirm-btn" bindtap="confirmMapCenterLocation">设为探索点</button>
     </view>
+    <view class="helper-copy">{{hasConfirmedExplorePoint ? '探索点已设定，可以开始这次漫步。' : '当前默认点仅用于展示，请先定位、搜索地点，或拖图后点“设为探索点”'}}</view>
 
     <view wx:if="{{supportsNearbyPois}}" class="nearby-panel">
       <view class="nearby-panel-head">
@@ -105,7 +106,6 @@
         </view>
       </scroll-view>
       <view wx:elif="{{loadingNearbyPlaces}}" class="nearby-empty">正在把这片街区里值得停下来的地点整理出来</view>
-      <view wx:else class="nearby-empty">先定位、搜索或设定探索点，这里就会出现周边地点推荐</view>
     </view>
   </view>
 
@@ -129,8 +129,9 @@
         theme="{{currentTheme}}"
         modeLabel="纯粹模式"
         displaySummary="{{displaySummary}}"
+        startDisabled="{{!hasConfirmedExplorePoint}}"
         startMain="{{journeyMode === 'team' ? '发起同行漫步' : '开始这次漫步'}}"
-        startSub="{{journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻'}}"
+        startSub="{{hasConfirmedExplorePoint ? (journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻') : '先设定探索点，再开始这次漫步'}}"
         bind:start="handleStartWalk"
       />
     </view>
@@ -172,8 +173,9 @@
         theme="{{currentTheme}}"
         modeLabel="进阶模式"
         displaySummary="{{displaySummary}}"
+        startDisabled="{{!hasConfirmedExplorePoint}}"
         startMain="{{journeyMode === 'team' ? '发起同行漫步' : '开始这次漫步'}}"
-        startSub="{{journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻'}}"
+        startSub="{{hasConfirmedExplorePoint ? (journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻') : '先设定探索点，再开始这次漫步'}}"
         bind:start="handleStartWalk"
       />
     </view>

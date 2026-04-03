@@ -127,6 +127,11 @@
   border-radius: 32rpx;
 }
 
+.theme-start-btn-disabled {
+  background: linear-gradient(135deg, #9d9486 0%, #b8afa2 100%);
+  box-shadow: none;
+}
+
 .theme-start-main {
   font-size: 30rpx;
   font-weight: 600;

@@ -60,10 +60,6 @@
           <view class="asset-remove" bindtap="removeAudio" data-index="{{index}}">删除</view>
         </view>
       </view>
-      <view class="complete-row" bindtap="toggleCompleted">
-        <view class="complete-check {{completedClassName}}"></view>
-        <view class="complete-copy">这条任务我已经完成了</view>
-      </view>
       <view wx:if="{{saving}}" class="save-progress-card">
         <view class="save-progress-title">{{saveStatusText || '正在同步给团队...'}}</view>
         <view class="save-progress-meta">
@@ -74,7 +70,9 @@
           <view class="save-progress-fill" style="width: {{uploadProgressPercent}}%;"></view>
         </view>
       </view>
-      <button class="primary-btn" bindtap="handleSubmit" loading="{{saving}}">同步给团队</button>
+      <view class="submit-action-row">
+        <button class="primary-btn submit-action-btn" bindtap="handleSubmit" loading="{{saving}}">同步给团队</button>
+      </view>
     </view>
 
     <view class="section-card team-block">

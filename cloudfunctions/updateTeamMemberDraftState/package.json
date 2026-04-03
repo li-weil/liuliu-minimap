@@ -1,5 +1,5 @@
 {
-  "name": "processCompanionNoteJobs",
+  "name": "updateTeamMemberDraftState",
   "version": "1.0.0",
   "dependencies": {
     "wx-server-sdk": "latest"

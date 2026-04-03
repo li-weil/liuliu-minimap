@@ -44,8 +44,8 @@ function saveTeamMissionCard(payload = {}) {
   return callApi('saveTeamMissionCard', payload);
 }
 
-function processCompanionNoteJobs(payload = {}) {
-  return callApi('processCompanionNoteJobs', payload);
+function updateTeamMemberDraftState(payload = {}) {
+  return callApi('updateTeamMemberDraftState', payload);
 }
 
 function listMyTeamWalks(payload = {}) {
@@ -66,9 +66,9 @@ module.exports = {
   leaveTeamRoom,
   listMyTeamWalks,
   listTeamActivities,
-  processCompanionNoteJobs,
   saveTeamMissionCard,
   startTeamWalk,
   submitContentFeedback,
   submitTeamContribution,
+  updateTeamMemberDraftState,
 };

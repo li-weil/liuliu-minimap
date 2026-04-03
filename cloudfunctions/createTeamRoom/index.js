@@ -69,6 +69,9 @@ exports.main = async (event) => {
     avatarUrl: user && user.avatarUrl ? user.avatarUrl : '',
     role: 'owner',
     status: 'joined',
+    pendingMissionKeys: [],
+    lastDraftUpdatedAt: 0,
+    lastSyncedAt: now,
     joinedAt: now,
     createdAt: now,
   };

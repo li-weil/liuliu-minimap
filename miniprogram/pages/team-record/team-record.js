@@ -1,7 +1,7 @@
 const app = getApp();
 const { requestUpload } = require('../../services/api');
 const { generateCompanionNote } = require('../../services/sticker');
-const { finishTeamWalk, getTeamRoomDetail, processCompanionNoteJobs, submitTeamContribution } = require('../../services/team');
+const { finishTeamWalk, getTeamRoomDetail, submitTeamContribution, updateTeamMemberDraftState } = require('../../services/team');
 const { chooseImage, chooseVideo } = require('../../utils/media');
 const {
   createDefaultPrivacyPopup,
@@ -40,6 +40,40 @@ function cloneDraft(draft) {
     companionNote: String((draft && draft.companionNote) || ''),
     completed: !!(draft && draft.completed),
   };
+}
+
+function hasDraftContent(draft) {
+  const safeDraft = draft || {};
+  const noteText = String(safeDraft.noteText || '').trim();
+  const photoCount = Array.isArray(safeDraft.photoList) ? safeDraft.photoList.filter(Boolean).length : 0;
+  const videoCount = Array.isArray(safeDraft.videoList) ? safeDraft.videoList.filter(Boolean).length : 0;
+  const audioCount = Array.isArray(safeDraft.audioList) ? safeDraft.audioList.filter(Boolean).length : 0;
+  return !!noteText || photoCount > 0 || videoCount > 0 || audioCount > 0;
+}
+
+function resetDraftCheckIn(draft) {
+  return {
+    ...cloneDraft(draft),
+    companionNote: '',
+    completed: false,
+  };
+}
+
+function buildPendingMemberNotice(members = [], currentUserId = '') {
+  const pendingMembers = (Array.isArray(members) ? members : []).filter((item) => {
+    if (!item || item.userId === currentUserId) {
+      return false;
+    }
+    return Array.isArray(item.pendingMissionKeys) && item.pendingMissionKeys.filter(Boolean).length > 0;
+  });
+  if (!pendingMembers.length) {
+    return '';
+  }
+  const visibleNames = pendingMembers.map((item) => item.nickName || '队友').filter(Boolean);
+  const preview = visibleNames.slice(0, 3).join('、');
+  return pendingMembers.length > 3
+    ? `${preview} 等 ${pendingMembers.length} 位成员还有内容未同步`
+    : `${preview} 还有内容未同步`;
 }
 
 function buildDraftFromContribution(contribution) {
@@ -216,6 +250,7 @@ Page({
   onLoad(query) {
     this.missionDraftCache = {};
     this.missionDraftDirtyMap = {};
+    this.draftStateReportTimers = {};
     this.recordingMission = '';
     this.isPageUnloaded = false;
     this.setData({ roomId: query.roomId || query.id || '' });
@@ -225,7 +260,7 @@ Page({
         const mission = this.recordingMission || this.data.activeMission;
         this.recordingMission = '';
         if (mission) {
-          this.updateMissionDraft(mission, (draft) => ({
+          this.updateMissionDraft(mission, (draft) => resetDraftCheckIn({
             ...draft,
             audioList: [...(draft.audioList || []), { tempFilePath: result.tempFilePath, duration: result.duration || 0 }],
           }));
@@ -265,6 +300,8 @@ Page({
 
   onUnload() {
     this.isPageUnloaded = true;
+    Object.values(this.draftStateReportTimers || {}).forEach((timer) => clearTimeout(timer));
+    this.draftStateReportTimers = {};
     this.stopRoomPolling();
     this.stopAudioRecording();
   },
@@ -375,6 +412,26 @@ Page({
     this.missionDraftDirtyMap = this.missionDraftDirtyMap || {};
     this.missionDraftCache[mission] = cloneDraft(draft);
     this.missionDraftDirtyMap[mission] = !!dirty;
+    this.scheduleDraftStateReport(mission, draft, !!dirty);
+  },
+
+  scheduleDraftStateReport(mission, draft, dirty) {
+    if (!mission || !this.data.roomId) {
+      return;
+    }
+    this.draftStateReportTimers = this.draftStateReportTimers || {};
+    if (this.draftStateReportTimers[mission]) {
+      clearTimeout(this.draftStateReportTimers[mission]);
+    }
+    this.draftStateReportTimers[mission] = setTimeout(() => {
+      delete this.draftStateReportTimers[mission];
+      updateTeamMemberDraftState({
+        roomId: this.data.roomId,
+        missionKey: mission,
+        pending: !!dirty && hasDraftContent(draft),
+        timestamp: Date.now(),
+      }).catch(() => {});
+    }, dirty ? 400 : 0);
   },
 
   updateMissionDraft(mission, updater, options = {}) {
@@ -451,17 +508,10 @@ Page({
   },
 
   handleNoteInput(event) {
-    this.setEditorDraft({
+    this.setEditorDraft(resetDraftCheckIn({
       ...this.data.editorDraft,
       noteText: event.detail.value || '',
-    });
-  },
-
-  toggleCompleted() {
-    this.setEditorDraft({
-      ...this.data.editorDraft,
-      completed: !this.data.editorDraft.completed,
-    });
+    }));
   },
 
   async choosePhoto() {
@@ -471,10 +521,10 @@ Page({
         content: '选择图片仅用于当前团队任务记录保存，不会在你未操作时自动读取相册。',
       });
       const result = await chooseImage(6);
-      this.setEditorDraft({
+      this.setEditorDraft(resetDraftCheckIn({
         ...this.data.editorDraft,
         photoList: [...(this.data.editorDraft.photoList || []), ...((result.tempFiles || []).map((item) => item.tempFilePath).filter(Boolean))],
-      });
+      }));
     } catch (error) {
       if (error && error.message === 'privacy_authorization_denied') {
         wx.showToast({ title: '未同意隐私说明，暂时无法选图', icon: 'none' });
@@ -520,10 +570,10 @@ Page({
           confirmText: '继续',
         });
       }
-      this.setEditorDraft({
+      this.setEditorDraft(resetDraftCheckIn({
         ...this.data.editorDraft,
         videoList: [...(this.data.editorDraft.videoList || []), ...selectedVideos.map((item) => item.tempFilePath).filter(Boolean)],
-      });
+      }));
     } catch (error) {
       if (error && error.message === 'privacy_authorization_denied') {
         wx.showToast({ title: '未同意隐私说明，暂时无法选视频', icon: 'none' });
@@ -582,21 +632,21 @@ Page({
     const index = Number(event.currentTarget.dataset.index);
     const photoList = [...(this.data.editorDraft.photoList || [])];
     photoList.splice(index, 1);
-    this.setEditorDraft({ ...this.data.editorDraft, photoList });
+    this.setEditorDraft(resetDraftCheckIn({ ...this.data.editorDraft, photoList }));
   },
 
   removeVideo(event) {
     const index = Number(event.currentTarget.dataset.index);
     const videoList = [...(this.data.editorDraft.videoList || [])];
     videoList.splice(index, 1);
-    this.setEditorDraft({ ...this.data.editorDraft, videoList });
+    this.setEditorDraft(resetDraftCheckIn({ ...this.data.editorDraft, videoList }));
   },
 
   removeAudio(event) {
     const index = Number(event.currentTarget.dataset.index);
     const audioList = [...(this.data.editorDraft.audioList || [])];
     audioList.splice(index, 1);
-    this.setEditorDraft({ ...this.data.editorDraft, audioList });
+    this.setEditorDraft(resetDraftCheckIn({ ...this.data.editorDraft, audioList }));
   },
 
   async ensureDraftCompanionNote(draft) {
@@ -622,6 +672,25 @@ Page({
       nextDraft.companionNote = nextDraft.companionNote || '';
     }
     return nextDraft;
+  },
+
+  hasPendingUnsyncedContent() {
+    const missionKeys = new Set([
+      ...Object.keys(this.missionDraftDirtyMap || {}),
+      ...Object.keys(this.missionDraftCache || {}),
+    ]);
+    if (this.data.activeMission) {
+      missionKeys.add(this.data.activeMission);
+    }
+    return Array.from(missionKeys).some((mission) => {
+      if (!mission || !this.isDraftDirty(mission)) {
+        return false;
+      }
+      const draft = mission === this.data.activeMission
+        ? cloneDraft(this.data.editorDraft)
+        : this.getDraftCache(mission);
+      return hasDraftContent(draft);
+    });
   },
 
   async collectUploadJobs(draft = this.data.editorDraft) {
@@ -757,7 +826,20 @@ Page({
 
     this.setData({ saving: true });
     try {
-      const preparedDraft = cloneDraft(this.data.editorDraft);
+      let preparedDraft = cloneDraft(this.data.editorDraft);
+      const intendedCompleted = hasDraftContent(preparedDraft);
+      preparedDraft = {
+        ...preparedDraft,
+        completed: intendedCompleted,
+      };
+      if (intendedCompleted) {
+        preparedDraft = await this.ensureDraftCompanionNote(preparedDraft);
+      } else {
+        preparedDraft = {
+          ...preparedDraft,
+          companionNote: '',
+        };
+      }
       this.setEditorDraft(preparedDraft);
       const uploadJobs = await this.collectUploadJobs(preparedDraft);
       const invalidFile = await this.validateUploadJobs(uploadJobs);
@@ -804,7 +886,6 @@ Page({
         editorDraft: syncedDraft,
         completedClassName: syncedDraft.completed ? 'complete-check-active' : '',
       });
-      this.kickoffCompanionNoteWorker();
       wx.showToast({ title: '已同步到团队', icon: 'success' });
     } catch (error) {
       const fallbackMessage = explainSubmitFailure(error);
@@ -822,13 +903,28 @@ Page({
     }
   },
 
-  kickoffCompanionNoteWorker() {
-    processCompanionNoteJobs({ batchSize: 6 }).catch(() => {});
-  },
-
   async handleFinish() {
     const room = this.data.room;
     if (!(room && room.memberRole === 'owner')) {
+      return;
+    }
+    const pendingMemberNotice = buildPendingMemberNotice(room && room.members, this.getCurrentUserId());
+    if (this.hasPendingUnsyncedContent()) {
+      wx.showModal({
+        title: '先同步最新内容',
+        content: '你当前还有带内容的任务改动没有同步给团队，先点“同步给团队”再结束同行。',
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      return;
+    }
+    if (pendingMemberNotice) {
+      wx.showModal({
+        title: '还有成员未同步',
+        content: `${pendingMemberNotice}，暂时不能结束同行。`,
+        showCancel: false,
+        confirmText: '知道了',
+      });
       return;
     }
     const modal = await new Promise((resolve) => {
@@ -847,7 +943,19 @@ Page({
       await finishTeamWalk({ roomId: this.data.roomId });
       this.goHistoryWithFinishNotice();
     } catch (error) {
-      wx.showToast({ title: '结束失败', icon: 'none' });
+      const rawMessage = String((error && error.message) || (error && error.errMsg) || '');
+      const pendingMatch = rawMessage.match(/pending_member_sync:([^,\n]+)/);
+      if (pendingMatch) {
+        wx.showModal({
+          title: '还有成员未同步',
+          content: `${pendingMatch[1]} 还有带内容的任务改动没同步，暂时不能结束同行。`,
+          showCancel: false,
+          confirmText: '知道了',
+        });
+        this.fetchRoom({ silent: true });
+      } else {
+        wx.showToast({ title: '结束失败', icon: 'none' });
+      }
     } finally {
       wx.hideLoading();
     }

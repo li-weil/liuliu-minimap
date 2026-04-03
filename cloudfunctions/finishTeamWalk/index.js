@@ -58,6 +58,11 @@ exports.main = async (event) => {
   const membersResult = await db.collection('teamWalkMembers').where({ roomId, status: 'joined' }).get();
   const contributionsResult = await db.collection('teamWalkContributions').where({ roomId }).get();
   const members = membersResult.data || [];
+  const pendingMembers = members.filter((item) => Array.isArray(item.pendingMissionKeys) && item.pendingMissionKeys.filter(Boolean).length);
+  if (pendingMembers.length) {
+    const names = pendingMembers.map((item) => item.nickName || '队友').filter(Boolean).slice(0, 3);
+    throw new Error(`pending_member_sync:${names.join('、')}`);
+  }
   const contributions = contributionsResult.data || [];
   const completedMissionSet = new Set(contributions.filter((item) => item.completed).map((item) => item.missionKey));
   const teamStats = {

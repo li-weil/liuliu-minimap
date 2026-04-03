@@ -270,6 +270,7 @@ Page({
     mapMarkers: [],
     mapCircles: [],
     isMapDragging: false,
+    hasConfirmedExplorePoint: false,
     walkMode: 'pure',
     journeyMode: 'solo',
     isGenerating: false,
@@ -404,6 +405,12 @@ Page({
     return true;
   },
 
+  markExplorePointConfirmed() {
+    if (!this.data.hasConfirmedExplorePoint) {
+      this.setData({ hasConfirmedExplorePoint: true });
+    }
+  },
+
   setOption(event) {
     const { field, value } = event.currentTarget.dataset;
     this.setData({ [field]: value });
@@ -531,6 +538,7 @@ Page({
       if (!applied) {
         throw new Error('invalid_location');
       }
+      this.markExplorePointConfirmed();
       wx.showToast({ title: '已定位，正在补充地点推荐', icon: 'none', duration: 1800 });
       this.enrichLocation(result).catch(() => {});
     } catch (error) {
@@ -609,6 +617,7 @@ Page({
       if (!applied) {
         throw new Error('map_center_invalid');
       }
+      this.markExplorePointConfirmed();
       wx.showToast({ title: '已设为探索点，正在补充地点推荐', icon: 'none', duration: 1800 });
       this.enrichLocation(nextLocation).catch(() => {});
     } catch (error) {
@@ -671,6 +680,7 @@ Page({
         wx.showToast({ title: '该地点需要手动选点确认', icon: 'none' });
         return;
       }
+      this.markExplorePointConfirmed();
       this.setData({
         searchKeyword: item.name || '',
         searchResults: [],
@@ -691,6 +701,7 @@ Page({
     }
     wx.showLoading({ title: '切换地点' });
     try {
+      this.markExplorePointConfirmed();
       await this.enrichLocation({
         latitude: item.latitude,
         longitude: item.longitude,
@@ -814,6 +825,11 @@ Page({
 
   async handleStartWalk() {
     if (!this.data.currentTheme) {
+      return;
+    }
+
+    if (!this.data.hasConfirmedExplorePoint) {
+      wx.showToast({ title: '请先定位、搜索或设为探索点', icon: 'none', duration: 2500 });
       return;
     }
 

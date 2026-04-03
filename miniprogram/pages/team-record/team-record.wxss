@@ -105,6 +105,14 @@
   background: rgba(90, 90, 64, 0.08);
 }
 
+.submit-action-row {
+  margin-top: 32rpx;
+}
+
+.submit-action-btn {
+  width: 100%;
+}
+
 .save-progress-title {
   font-size: 26rpx;
   font-weight: 600;

@@ -68,6 +68,10 @@ Component({
       type: String,
       value: '',
     },
+    checkingInMission: {
+      type: String,
+      value: '',
+    },
     showCardActions: {
       type: Boolean,
       value: true,
@@ -106,7 +110,7 @@ Component({
           isSupplemental,
           active: activeMission === mission,
           expanded: expandedMission === mission,
-          completed: isSupplemental ? false : completedSet.has(mission),
+          completed: completedSet.has(mission),
           review: missionReviews && missionReviews[mission] ? missionReviews[mission] : null,
           assets: missionAssetMap && missionAssetMap[mission] ? missionAssetMap[mission] : null,
           cardVersion: generatedMissionCardMap && generatedMissionCardMap[mission] ? generatedMissionCardMap[mission] : 0,
@@ -122,15 +126,15 @@ Component({
       this.triggerEvent('select', { mission });
     },
 
-    toggleMission(event) {
-      const mission = event.currentTarget.dataset.mission;
-      this.triggerEvent('toggle', { mission });
-    },
-
     verifyMission(event) {
       const mission = event.currentTarget.dataset.mission;
       const mode = event.currentTarget.dataset.mode || '';
       this.triggerEvent('verify', { mission, mode });
+    },
+
+    checkIn(event) {
+      const mission = event.currentTarget.dataset.mission;
+      this.triggerEvent('checkin', { mission });
     },
 
     generateCard(event) {
