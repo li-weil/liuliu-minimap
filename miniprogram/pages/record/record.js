@@ -2,6 +2,7 @@ const app = getApp();
 const { createWalk, getWalkDetail } = require('../../services/walk');
 const { requestUpload } = require('../../services/api');
 const { explainLocationError, getCurrentLocation } = require('../../utils/location');
+const { normalizeRecordedDuration } = require('../../utils/audio');
 const { chooseImage, chooseVideo } = require('../../utils/media');
 const { verifyMission } = require('../../services/theme');
 const { generateCompanionNote, generateStickerPlan, generateStickerImage } = require('../../services/sticker');
@@ -547,7 +548,7 @@ Page({
       recorderManager.onStop((result) => {
         const nextAudio = {
           tempFilePath: result.tempFilePath,
-          duration: result.duration || 0,
+          duration: normalizeRecordedDuration(result.duration),
         };
         const mission = this.recordingMission || this.getActiveMissionKey();
         let draft = { ...app.globalData.walkDraft };

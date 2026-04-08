@@ -1,6 +1,7 @@
 const { createWalk, getWalkDetail, publishWalkShare, deleteWalk } = require('../../services/walk');
 const { requestUpload } = require('../../services/api');
 const { batchResolveCloudFileIds, isCloudFileId } = require('../../services/asset');
+const { ensurePlayableLocalAudio } = require('../../utils/audio');
 const { formatDate } = require('../../utils/format');
 const {
   createDefaultPrivacyPopup,
@@ -259,8 +260,11 @@ async function downloadAudioToLocal(src) {
   if (!/^https?:\/\//i.test(String(finalUrl))) {
     return finalUrl;
   }
-  const download = await downloadFile(finalUrl).catch(() => null);
-  return download && download.tempFilePath ? download.tempFilePath : finalUrl;
+  return ensurePlayableLocalAudio(finalUrl, {
+    cacheKey: src,
+    sourceHint: src,
+    filePrefix: 'walk-audio',
+  }).catch(() => finalUrl);
 }
 
 async function hydrateMissionItemsAudio(missionItems = []) {

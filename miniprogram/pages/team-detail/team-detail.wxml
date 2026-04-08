@@ -102,11 +102,7 @@
                     <view wx:if="{{item.audioList.length}}">
                       <view wx:for="{{item.audioList}}" wx:key="index" class="mission-card audio-card">
                         <view class="audio-card-title">录音 {{index + 1}}</view>
-                        <scroll-view class="mission-audio-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
-                          <view class="mission-audio-player-wrap">
-                            <audio class="mission-audio-player" src="{{item}}" controls />
-                          </view>
-                        </scroll-view>
+                        <audio-player src="{{item}}" />
                       </view>
                     </view>
                     <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传录音</view>

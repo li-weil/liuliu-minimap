@@ -2,6 +2,7 @@ const app = getApp();
 const { requestUpload } = require('../../services/api');
 const { generateCompanionNote } = require('../../services/sticker');
 const { finishTeamWalk, getTeamRoomDetail, submitTeamContribution, updateTeamMemberDraftState } = require('../../services/team');
+const { normalizeRecordedDuration } = require('../../utils/audio');
 const { chooseImage, chooseVideo } = require('../../utils/media');
 const {
   createDefaultPrivacyPopup,
@@ -262,7 +263,10 @@ Page({
         if (mission) {
           this.updateMissionDraft(mission, (draft) => resetDraftCheckIn({
             ...draft,
-            audioList: [...(draft.audioList || []), { tempFilePath: result.tempFilePath, duration: result.duration || 0 }],
+            audioList: [...(draft.audioList || []), {
+              tempFilePath: result.tempFilePath,
+              duration: normalizeRecordedDuration(result.duration),
+            }],
           }));
         }
         if (!this.isPageUnloaded) {

@@ -1,6 +1,7 @@
 const { requestUpload } = require('../../services/api');
 const { deleteTeamWalk, getTeamWalkDetail, saveTeamMissionCard } = require('../../services/team');
 const { batchResolveCloudFileIds, isCloudFileId } = require('../../services/asset');
+const { ensurePlayableLocalAudio } = require('../../utils/audio');
 const { formatDate } = require('../../utils/format');
 const {
   createDefaultPrivacyPopup,
@@ -124,8 +125,11 @@ async function downloadAudioToLocal(src) {
   if (!/^https?:\/\//i.test(String(finalUrl))) {
     return finalUrl;
   }
-  const download = await downloadFile(finalUrl).catch(() => null);
-  return download && download.tempFilePath ? download.tempFilePath : finalUrl;
+  return ensurePlayableLocalAudio(finalUrl, {
+    cacheKey: src,
+    sourceHint: src,
+    filePrefix: 'team-audio',
+  }).catch(() => finalUrl);
 }
 
 async function hydrateMissionGroupsAudio(missionGroups = []) {

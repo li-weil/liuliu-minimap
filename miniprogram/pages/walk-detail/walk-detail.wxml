@@ -85,13 +85,9 @@
               <view class="mission-media-group">
                 <view class="section-subtitle">录音记录</view>
                 <view wx:if="{{missionItem.assets.audioList.length}}">
-                  <view wx:for="{{missionItem.assets.audioList}}" wx:key="index" class="mission-card" style="padding: 18rpx 20rpx; margin-bottom: 14rpx;">
+                  <view wx:for="{{missionItem.assets.audioList}}" wx:key="index" class="mission-card audio-card">
                     <view style="font-size: 24rpx; font-weight: 600; margin-bottom: 12rpx;">录音 {{index + 1}}</view>
-                    <scroll-view class="mission-audio-scroll" scroll-x enable-flex show-scrollbar="{{false}}">
-                      <view class="mission-audio-player-wrap">
-                        <audio class="mission-audio-player" src="{{item.tempFilePath || item}}" controls />
-                      </view>
-                    </scroll-view>
+                    <audio-player src="{{item.tempFilePath || item}}" />
                   </view>
                 </view>
                 <view wx:else class="empty-copy" style="padding: 20rpx 0;">这个任务下没有录音记录</view>
