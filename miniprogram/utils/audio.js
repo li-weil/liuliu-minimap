@@ -1,4 +1,27 @@
 const AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'wav', 'amr', 'caf', 'flac', 'ogg', 'webm'];
+let audioPlaybackOptionsPromise = null;
+
+function applyPlaybackAudioOptions() {
+  if (audioPlaybackOptionsPromise) {
+    return audioPlaybackOptionsPromise;
+  }
+
+  if (!wx.setInnerAudioOption) {
+    audioPlaybackOptionsPromise = Promise.resolve(false);
+    return audioPlaybackOptionsPromise;
+  }
+
+  audioPlaybackOptionsPromise = new Promise((resolve) => {
+    wx.setInnerAudioOption({
+      obeyMuteSwitch: false,
+      speakerOn: true,
+      success: () => resolve(true),
+      fail: () => resolve(false),
+    });
+  });
+
+  return audioPlaybackOptionsPromise;
+}
 
 function normalizeRecordedDuration(duration) {
   const numericDuration = Number(duration || 0);
@@ -122,6 +145,7 @@ async function ensurePlayableLocalAudio(src, options = {}) {
 }
 
 module.exports = {
+  applyPlaybackAudioOptions,
   ensurePlayableLocalAudio,
   formatAudioClock,
   normalizeRecordedDuration,

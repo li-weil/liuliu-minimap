@@ -338,8 +338,13 @@ Page({
 
   onShareAppMessage() {
     const room = this.data.room;
+    const app = getApp();
+    const user = app.globalData.user || null;
+    const shareTitle = user && user.nickName
+      ? `遛遛 | ${user.nickName} 邀你一起 citywalk`
+      : '遛遛 | 邀你一起 citywalk';
     return {
-      title: room ? `${room.themeTitle}｜我们的同行漫步` : '我们的同行漫步',
+      title: shareTitle,
       path: `/pages/team-detail/team-detail?roomId=${encodeURIComponent(this.data.roomId)}`,
       imageUrl: room && room.coverImage ? room.coverImage : '',
     };

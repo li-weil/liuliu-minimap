@@ -20,6 +20,15 @@ function explainProfileSaveFailure(error, fallbackTitle) {
   return fallbackTitle;
 }
 
+function buildProfileShareTitle(data = {}) {
+  const user = data.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 Page({
   data: {
     user: null,
@@ -35,6 +44,20 @@ Page({
   async onShow() {
     await app.ensureUserReady();
     await this.syncPageUser();
+  },
+
+  onShareAppMessage() {
+    return {
+      title: buildProfileShareTitle(this.data),
+      path: '/pages/index/index',
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: buildProfileShareTitle(this.data),
+      query: '',
+    };
   },
 
   resumePendingNavigation() {

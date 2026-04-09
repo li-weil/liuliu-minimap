@@ -44,6 +44,15 @@ function resolveWalkSortTimestamp(item) {
   return Number(item.createdAt || 0);
 }
 
+function buildHistoryShareTitle(data = {}) {
+  const user = data.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 Page({
   data: {
     activeTab: 'album',
@@ -83,6 +92,20 @@ Page({
       return;
     }
     this.fetchWalks();
+  },
+
+  onShareAppMessage() {
+    return {
+      title: buildHistoryShareTitle(this.data),
+      path: '/pages/history/history',
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: buildHistoryShareTitle(this.data),
+      query: '',
+    };
   },
 
   async fetchWalks() {

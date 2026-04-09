@@ -2,6 +2,15 @@ const app = getApp();
 const { getTeamRoomDetail, joinTeamRoom } = require('../../services/team');
 const { isManualLogoutSuppressed } = require('../../services/user');
 
+function buildTeamJoinShareTitle(data = {}) {
+  const user = app.globalData.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 Page({
   data: {
     loading: true,
@@ -15,6 +24,13 @@ Page({
   onLoad(query) {
     this.setData({ roomId: query.roomId || query.id || '' });
     this.fetchRoom();
+  },
+
+  onShareAppMessage() {
+    return {
+      title: buildTeamJoinShareTitle(this.data),
+      path: `/pages/team-join/team-join?roomId=${encodeURIComponent(this.data.roomId)}`,
+    };
   },
 
   async fetchRoom() {

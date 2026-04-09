@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "成就详情"
+  "navigationBarTitleText": "成就详情",
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true
 }

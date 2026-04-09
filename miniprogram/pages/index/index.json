@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "探索",
+  "enableShareAppMessage": true,
+  "enableShareTimeline": true,
   "usingComponents": {
     "theme-card": "/components/theme-card/theme-card",
     "privacy-consent": "/components/privacy-consent/privacy-consent"

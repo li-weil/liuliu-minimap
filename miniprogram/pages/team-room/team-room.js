@@ -1,5 +1,15 @@
 const { finishTeamWalk, getTeamRoomDetail, leaveTeamRoom, startTeamWalk } = require('../../services/team');
 
+function buildInviteShareTitle() {
+  const app = getApp();
+  const user = app.globalData.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 function explainRoomStatus(status) {
   if (status === 'active') {
     return '队友都已就位，点击进入记录页开始共同完成任务。';
@@ -48,7 +58,7 @@ Page({
   onShareAppMessage() {
     const room = this.data.room;
     return {
-      title: room ? `${room.themeTitle}｜一起同行漫步吧` : '一起同行漫步吧',
+      title: buildInviteShareTitle(),
       path: `/pages/team-join/team-join?roomId=${encodeURIComponent(this.data.roomId)}`,
       imageUrl: room && room.coverImage ? room.coverImage : '',
     };

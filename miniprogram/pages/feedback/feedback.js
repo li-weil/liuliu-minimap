@@ -43,6 +43,16 @@ function explainSubmitFailure(error) {
   return `提交失败：${rawMessage}`;
 }
 
+function buildFeedbackShareTitle() {
+  const app = getApp();
+  const user = app.globalData.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 Page({
   data: {
     submitting: false,
@@ -70,6 +80,13 @@ Page({
       targetNickName: decodeQueryValue(query.targetNickName || ''),
       sceneLabel: decodeQueryValue(query.sceneLabel || '', '同行协作'),
     });
+  },
+
+  onShareAppMessage() {
+    return {
+      title: buildFeedbackShareTitle(),
+      path: '/pages/index/index',
+    };
   },
 
   handleCategoryTap(event) {

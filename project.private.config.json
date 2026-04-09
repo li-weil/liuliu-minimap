@@ -4,11 +4,18 @@
     "miniprogram": {
       "list": [
         {
-          "name": "pages/audio-test/audio-test",
-          "pathName": "pages/audio-test/audio-test",
+          "name": "pages/index/index",
+          "pathName": "pages/index/index",
           "query": "",
           "scene": null,
           "launchMode": "default"
+        },
+        {
+          "name": "pages/audio-test/audio-test",
+          "pathName": "pages/audio-test/audio-test",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "pages/font-test/font-test",

@@ -1,3 +1,4 @@
 {
-  "navigationBarTitleText": "同行房间"
+  "navigationBarTitleText": "同行房间",
+  "enableShareAppMessage": true
 }

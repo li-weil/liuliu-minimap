@@ -494,6 +494,15 @@ function getFileInfo(filePath) {
   });
 }
 
+function buildRecordShareTitle(data = {}) {
+  const user = app.globalData.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 Page({
   data: {
     activeMission: '',
@@ -597,6 +606,13 @@ Page({
 
   onHide() {
     this.stopWalkStatusPolling();
+  },
+
+  onShareAppMessage() {
+    return {
+      title: buildRecordShareTitle(this.data),
+      path: '/pages/index/index',
+    };
   },
 
   async restoreWalkContext(walkId) {

@@ -198,6 +198,27 @@ function extractErrorMessage(error, fallback) {
   return String((error && error.errMsg) || (error && error.message) || fallback || '操作失败');
 }
 
+function buildHomeShareTitle(data = {}) {
+  const locationName = data.locationName || '这座城市';
+  const currentTheme = data.currentTheme || null;
+  const themeTitle = currentTheme && currentTheme.title ? currentTheme.title : '城市漫步主题';
+
+  if (data.journeyMode === 'team') {
+    return `一起去 ${locationName} 遛遛`;
+  }
+
+  return `我在 ${locationName} 遛遛`;
+}
+
+function buildBrandedHomeShareTitle(data = {}) {
+  const user = app.globalData.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 function explainNearbyPoiError(error) {
   const message = extractErrorMessage(error, '周边地点加载失败');
 
@@ -320,6 +341,20 @@ Page({
   onReady() {
     this.mapCtx = wx.createMapContext('explore-map', this);
     this.locationResolveToken = 0;
+  },
+
+  onShareAppMessage() {
+    return {
+      title: buildBrandedHomeShareTitle(this.data),
+      path: '/pages/index/index',
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: buildBrandedHomeShareTitle(this.data),
+      query: '',
+    };
   },
 
   buildMapState({ latitude, longitude, placeName }) {

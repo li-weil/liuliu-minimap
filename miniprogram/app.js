@@ -5,6 +5,7 @@ const {
   useCloudMediaStorage,
   useCloudWalkStorage,
 } = require('./utils/config');
+const { applyPlaybackAudioOptions } = require('./utils/audio');
 const { getDefaultDraft, loadDraftStore, removeDraft, saveDraft } = require('./utils/draft');
 const { listMyTeamWalks } = require('./services/team');
 const { listMyWalks } = require('./services/walk');
@@ -60,6 +61,7 @@ App({
     }
 
     this.loadBrandFonts();
+    applyPlaybackAudioOptions();
     this.userReadyPromise = this.bootstrapUser();
     setTimeout(() => {
       this.checkActiveWalkReminder();

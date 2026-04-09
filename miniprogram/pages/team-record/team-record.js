@@ -226,6 +226,16 @@ function getFileInfo(filePath) {
   });
 }
 
+function buildTeamRecordShareTitle(data = {}) {
+  const app = getApp();
+  const user = app.globalData.user || null;
+  if (user && user.nickName) {
+    return `遛遛 | ${user.nickName} 邀你一起 citywalk`;
+  }
+
+  return '遛遛 | 邀你一起 citywalk';
+}
+
 Page({
   data: {
     loading: true,
@@ -290,6 +300,13 @@ Page({
       });
     }
     this.fetchRoom({ showLoading: true });
+  },
+
+  onShareAppMessage() {
+    return {
+      title: buildTeamRecordShareTitle(this.data),
+      path: `/pages/team-join/team-join?roomId=${encodeURIComponent(this.data.roomId)}`,
+    };
   },
 
   onShow() {

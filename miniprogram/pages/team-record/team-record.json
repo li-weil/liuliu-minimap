@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "团队记录",
+  "enableShareAppMessage": true,
   "usingComponents": {
     "privacy-consent": "/components/privacy-consent/privacy-consent"
   }

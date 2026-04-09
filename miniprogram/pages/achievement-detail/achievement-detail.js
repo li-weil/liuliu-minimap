@@ -25,10 +25,12 @@ Page({
 
   onShareAppMessage() {
     const achievement = this.data.achievement;
+    const user = app.globalData.user || null;
+    const shareTitle = user && user.nickName
+      ? `遛遛 | ${user.nickName} 邀你一起 citywalk`
+      : '遛遛 | 邀你一起 citywalk';
     return {
-      title: achievement
-        ? `${achievement.title}｜${achievement.description}`
-        : this.data.shareTitle,
+      title: shareTitle,
       path: achievement
         ? `/pages/achievement-detail/achievement-detail?id=${encodeURIComponent(achievement.id)}`
         : '/pages/history/history',
@@ -38,10 +40,12 @@ Page({
 
   onShareTimeline() {
     const achievement = this.data.achievement;
+    const user = app.globalData.user || null;
+    const shareTitle = user && user.nickName
+      ? `遛遛 | ${user.nickName} 邀你一起 citywalk`
+      : '遛遛 | 邀你一起 citywalk';
     return {
-      title: achievement
-        ? `${achievement.title}｜我的城市漫步成就`
-        : this.data.shareTitle,
+      title: shareTitle,
       query: achievement ? `id=${encodeURIComponent(achievement.id)}` : '',
       imageUrl: achievement && achievement.asset ? achievement.asset : '',
     };

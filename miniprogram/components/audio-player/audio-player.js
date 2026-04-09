@@ -1,4 +1,4 @@
-const { formatAudioClock } = require('../../utils/audio');
+const { applyPlaybackAudioOptions, formatAudioClock } = require('../../utils/audio');
 
 Component({
   properties: {
@@ -49,6 +49,8 @@ Component({
       if (this.audioContext || !wx.createInnerAudioContext) {
         return;
       }
+
+      applyPlaybackAudioOptions();
 
       const audioContext = wx.createInnerAudioContext();
       audioContext.autoplay = false;

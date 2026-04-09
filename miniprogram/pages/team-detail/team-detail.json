@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "团队结果",
+  "enableShareAppMessage": true,
   "usingComponents": {
     "audio-player": "/components/audio-player/audio-player",
     "checkin-card": "/components/checkin-card/checkin-card",
