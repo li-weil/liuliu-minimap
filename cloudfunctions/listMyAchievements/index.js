@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk');
 const { recalculateUserAchievements } = require('./achievement');
+const { ACHIEVEMENTS } = require('./achievement');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -16,8 +17,21 @@ exports.main = async () => {
   try {
     const doc = await db.collection('userAchievements').doc(openid).get();
     if (doc && doc.data) {
+      const storedAchievements = Array.isArray(doc.data.achievements) ? doc.data.achievements : [];
+      if (storedAchievements.length !== ACHIEVEMENTS.length) {
+        const rebuilt = await recalculateUserAchievements({ db, _, openid });
+        return {
+          achievements: rebuilt.achievements || [],
+          summary: rebuilt.summary || {
+            unlockedCount: 0,
+            totalCount: 0,
+            completionRate: 0,
+          },
+          updatedAt: rebuilt.updatedAt || 0,
+        };
+      }
       return {
-        achievements: Array.isArray(doc.data.achievements) ? doc.data.achievements : [],
+        achievements: storedAchievements,
         summary: doc.data.summary || {
           unlockedCount: 0,
           totalCount: 0,

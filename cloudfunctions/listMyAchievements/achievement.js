@@ -17,6 +17,7 @@ const ACHIEVEMENTS = [
     progressLabel: '单次里程',
     target: 5000,
     type: 'distance',
+    milestones: [1000, 2000, 3000, 4000, 5000],
     asset: 'cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/achievements/cat_marathon.png',
     sort: 2,
   },
@@ -84,6 +85,46 @@ const ACHIEVEMENTS = [
     asset: 'cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/achievements/winter_first_walk.png',
     sort: 8,
   },
+  {
+    id: 'first_team_walk',
+    title: '一起喵喵',
+    description: '完成第一次同行漫步',
+    progressLabel: '同行漫步',
+    target: 1,
+    type: 'boolean',
+    asset: 'cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/achievements/first_team_walk.png',
+    sort: 9,
+  },
+  {
+    id: 'seven_day_streak',
+    title: '圆满喵周',
+    description: '连续 7 天坚持漫步',
+    progressLabel: '连续天数',
+    target: 7,
+    type: 'count',
+    asset: 'cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/achievements/seven_day_streak.png',
+    sort: 10,
+  },
+  {
+    id: 'lucky_can_drop',
+    title: '开罐有奖',
+    description: '每次完成漫步有 5% 概率掉落',
+    progressLabel: '幸运掉落',
+    target: 1,
+    type: 'boolean',
+    asset: 'cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/achievements/lucky_can_drop.png',
+    sort: 11,
+  },
+  {
+    id: 'first_color_walk',
+    title: '给你点颜色喵',
+    description: '完成第一次色彩漫步',
+    progressLabel: '色彩漫步',
+    target: 1,
+    type: 'boolean',
+    asset: 'cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/achievements/first_color_walk.png',
+    sort: 12,
+  },
 ];
 
 function formatDate(dateInput) {
@@ -136,11 +177,59 @@ function getThemeCategory(record) {
   return String(record.themeCategory || (record.themeSnapshot && record.themeSnapshot.category) || '').trim();
 }
 
+function getDayKey(timestamp) {
+  if (!timestamp) {
+    return '';
+  }
+  const date = new Date(timestamp);
+  const yyyy = date.getFullYear();
+  const mm = `${date.getMonth() + 1}`.padStart(2, '0');
+  const dd = `${date.getDate()}`.padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getDayTimestamp(dayKey) {
+  if (!dayKey) {
+    return 0;
+  }
+  return new Date(`${dayKey}T00:00:00`).getTime();
+}
+
+function hashString(value) {
+  const text = String(value || '');
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function isLuckyDropRecord(record) {
+  if (!record) {
+    return false;
+  }
+  const token = [
+    record._id || record.id || '',
+    record.userId || record.ownerUserId || '',
+    record.createdAt || '',
+    record.endedAt || '',
+  ].join('|');
+  return (hashString(token) % 100) < 5;
+}
+
 function getRouteDistance(record) {
   if (!record || !record.routeStats) {
     return 0;
   }
   return Number(record.routeStats.distanceMeters || 0);
+}
+
+function getRecordEventTimestamp(record) {
+  return Number(
+    (record && (record.endedAt || record.createdAt))
+      || 0
+  );
 }
 
 function hasPhotos(record) {
@@ -190,16 +279,15 @@ function buildProgressText(item, progress) {
 
 function withPresentation(item, progress, unlocked, unlockedAt) {
   const cappedProgress = item.type === 'distance' ? progress : Math.min(progress, item.target);
-  const milestoneCount = Math.min(Math.max(Number(item.target || 1), 1), 6);
-  const milestones = Array.from({ length: milestoneCount }).map((_, index) => {
-    const value = item.type === 'distance'
-      ? Math.round((item.target / milestoneCount) * (index + 1))
-      : Math.max(1, Math.round((item.target / milestoneCount) * (index + 1)));
-    const previousValue = index === 0
-      ? 0
-      : item.type === 'distance'
-        ? Math.round((item.target / milestoneCount) * index)
-        : Math.max(1, Math.round((item.target / milestoneCount) * index));
+  const milestoneValues = Array.isArray(item.milestones) && item.milestones.length
+    ? item.milestones
+    : Array.from({ length: Math.min(Math.max(Number(item.target || 1), 1), 6) }).map((_, index, list) => (
+      item.type === 'distance'
+        ? Math.round((item.target / list.length) * (index + 1))
+        : Math.max(1, Math.round((item.target / list.length) * (index + 1)))
+    ));
+  const milestones = milestoneValues.map((value, index) => {
+    const previousValue = index === 0 ? 0 : milestoneValues[index - 1];
     return {
       index,
       label: formatProgressValue(item, value),
@@ -244,7 +332,7 @@ function resolveThresholdUnlock(sortedRecords, predicate, target, projectValue) 
 function computeAchievements(records = []) {
   const completedRecords = (Array.isArray(records) ? records : [])
     .filter(isCompletedRecord)
-    .sort((left, right) => Number(left.createdAt || 0) - Number(right.createdAt || 0));
+    .sort((left, right) => getRecordEventTimestamp(left) - getRecordEventTimestamp(right));
 
   const maxDistance = completedRecords.reduce((max, record) => Math.max(max, getRouteDistance(record)), 0);
   const maxDistanceRecord = completedRecords.find((record) => getRouteDistance(record) === maxDistance) || null;
@@ -261,11 +349,14 @@ function computeAchievements(records = []) {
     locationCounter.add(locationKey);
     distinctLocationProgress += 1;
     if (!distinctLocationUnlockedAt && distinctLocationProgress >= 10) {
-      distinctLocationUnlockedAt = Number(record.endedAt || record.createdAt || Date.now());
+      distinctLocationUnlockedAt = getRecordEventTimestamp(record) || Date.now();
     }
   });
 
   const shapeRecord = completedRecords.find((record) => getThemeCategory(record).includes('形状')) || null;
+  const colorRecord = completedRecords.find((record) => getThemeCategory(record).includes('色彩')) || null;
+  const teamRecord = completedRecords.find((record) => isTeamRecord(record)) || null;
+  const luckyRecord = completedRecords.find((record) => isLuckyDropRecord(record)) || null;
   const seasonRecordMap = completedRecords.reduce((accumulator, record) => {
     const season = getRecordSeason(record);
     if (season && !accumulator[season]) {
@@ -273,13 +364,57 @@ function computeAchievements(records = []) {
     }
     return accumulator;
   }, {});
+  const recordDayEntries = completedRecords.reduce((accumulator, record) => {
+    const eventTimestamp = getRecordEventTimestamp(record);
+    const dayKey = getDayKey(eventTimestamp);
+    if (!dayKey || accumulator.some((item) => item.dayKey === dayKey)) {
+      return accumulator;
+    }
+    accumulator.push({ dayKey, timestamp: eventTimestamp });
+    return accumulator;
+  }, []).sort((left, right) => left.timestamp - right.timestamp);
+
+  let bestStreak = 0;
+  let currentStreak = 0;
+  let previousDayTimestamp = 0;
+  let streakUnlockedAt = null;
+  recordDayEntries.forEach((entry) => {
+    const dayTimestamp = getDayTimestamp(entry.dayKey);
+    if (!dayTimestamp) {
+      return;
+    }
+    const dayDelta = previousDayTimestamp
+      ? Math.round((dayTimestamp - previousDayTimestamp) / (24 * 60 * 60 * 1000))
+      : null;
+    if (dayDelta === 1) {
+      currentStreak += 1;
+    } else {
+      currentStreak = 1;
+    }
+    previousDayTimestamp = dayTimestamp;
+    if (currentStreak > bestStreak) {
+      bestStreak = currentStreak;
+    }
+    if (!streakUnlockedAt && currentStreak >= 7) {
+      streakUnlockedAt = entry.timestamp;
+    }
+  });
 
   const achievements = ACHIEVEMENTS.map((item) => {
     if (item.id === 'shape_master') {
-      return withPresentation(item, shapeRecord ? 1 : 0, !!shapeRecord, shapeRecord && (shapeRecord.endedAt || shapeRecord.createdAt));
+      return withPresentation(item, shapeRecord ? 1 : 0, !!shapeRecord, shapeRecord && getRecordEventTimestamp(shapeRecord));
+    }
+    if (item.id === 'first_color_walk') {
+      return withPresentation(item, colorRecord ? 1 : 0, !!colorRecord, colorRecord && getRecordEventTimestamp(colorRecord));
+    }
+    if (item.id === 'first_team_walk') {
+      return withPresentation(item, teamRecord ? 1 : 0, !!teamRecord, teamRecord && getRecordEventTimestamp(teamRecord));
+    }
+    if (item.id === 'lucky_can_drop') {
+      return withPresentation(item, luckyRecord ? 1 : 0, !!luckyRecord, luckyRecord && getRecordEventTimestamp(luckyRecord));
     }
     if (item.id === 'cat_marathon') {
-      return withPresentation(item, maxDistance, maxDistance >= item.target, maxDistanceRecord && (maxDistanceRecord.endedAt || maxDistanceRecord.createdAt));
+      return withPresentation(item, maxDistance, maxDistance >= item.target, maxDistanceRecord && getRecordEventTimestamp(maxDistanceRecord));
     }
     if (item.id === 'no_photo_five_walks') {
       return withPresentation(item, noPhotoResult.progress, noPhotoResult.unlocked, noPhotoResult.unlockedAt);
@@ -287,9 +422,12 @@ function computeAchievements(records = []) {
     if (item.id === 'ten_locations') {
       return withPresentation(item, distinctLocationProgress, distinctLocationProgress >= item.target, distinctLocationUnlockedAt);
     }
+    if (item.id === 'seven_day_streak') {
+      return withPresentation(item, bestStreak, bestStreak >= item.target, streakUnlockedAt);
+    }
     if (item.type === 'season') {
       const matchedRecord = seasonRecordMap[item.season] || null;
-      return withPresentation(item, matchedRecord ? 1 : 0, !!matchedRecord, matchedRecord && (matchedRecord.endedAt || matchedRecord.createdAt));
+      return withPresentation(item, matchedRecord ? 1 : 0, !!matchedRecord, matchedRecord && getRecordEventTimestamp(matchedRecord));
     }
     return withPresentation(item, 0, false, null);
   }).sort((left, right) => left.sort - right.sort);

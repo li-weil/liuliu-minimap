@@ -49,7 +49,7 @@
       <button class="ghost-btn detail-action-btn" bindtap="handleSetFeatured">
         {{featuredAchievementId === achievement.id ? '当前展示中' : '设为展示成就'}}
       </button>
-      <button class="primary-btn detail-action-btn" open-type="share">分享详情页</button>
+      <button class="primary-btn detail-action-btn" open-type="share">分享成就</button>
     </view>
   </view>
 </view>

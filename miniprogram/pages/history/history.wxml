@@ -3,7 +3,7 @@
     <view class="hero-topline">
       <view>
         <view class="section-title">足迹</view>
-        <view class="section-subtitle">{{user ? '走过的街角、收下的纪念、点亮的成就，都会留在这本属于你的足迹册里。' : (loginState === 'paused' ? '你的足迹册暂时合上了，回来之后，那些走过的街角和收下的纪念还会在这里等你。' : '等你第一次留下名字，这本足迹册就会开始记住你此后的每一次漫步。')}}</view>
+        <view class="section-subtitle">{{user ? '走过的街角、收下的纪念、点亮的成就，都会留在这本属于你的足迹册里' : (loginState === 'paused' ? '你的足迹册暂时合上了，回来之后，那些走过的街角和收下的纪念还会在这里等你' : '等你第一次留下名字，这本足迹册就会开始记住你此后的每一次漫步')}}</view>
       </view>
       <view wx:if="{{featuredAchievement}}" class="featured-chip">
         <view class="featured-chip-label">当前佩戴</view>
@@ -113,7 +113,7 @@
       </view>
       <view class="achievement-summary-meta">
         <view class="achievement-summary-count">{{achievementSummary.unlockedCount}}</view>
-        <view class="achievement-summary-label">总成就 {{achievementSummary.totalCount || 8}} 枚</view>
+        <view class="achievement-summary-label">总成就 {{achievementSummary.totalCount || achievements.length || 12}} 枚</view>
       </view>
     </view>
 
