@@ -53,10 +53,38 @@ exports.main = async (event) => {
   const now = Date.now();
 
   if (member.role === 'owner') {
+    const joinedMembersResult = await db.collection('teamWalkMembers')
+      .where({ roomId, status: 'joined' })
+      .get();
+    const joinedMembers = joinedMembersResult.data || [];
+    const nextMemberCount = joinedMembers.length;
     await db.collection('teamWalkRooms').doc(roomId).update({
       data: {
-        status: 'dissolved',
+        status: 'finished',
         endedAt: now,
+        teamSummary: room.teamSummary || `${member.nickName || '房主'} 结束了这次待出发的同行房间。`,
+        teamStats: {
+          ...(room.teamStats || {}),
+          memberCount: nextMemberCount,
+          totalMissionCount: Array.isArray(room.themeSnapshot && room.themeSnapshot.missions)
+            ? room.themeSnapshot.missions.length
+            : 0,
+          completedMissionCount: room.teamStats && room.teamStats.completedMissionCount
+            ? room.teamStats.completedMissionCount
+            : 0,
+          contributionCount: room.teamStats && room.teamStats.contributionCount
+            ? room.teamStats.contributionCount
+            : 0,
+          photoCount: room.teamStats && room.teamStats.photoCount
+            ? room.teamStats.photoCount
+            : 0,
+          videoCount: room.teamStats && room.teamStats.videoCount
+            ? room.teamStats.videoCount
+            : 0,
+          audioCount: room.teamStats && room.teamStats.audioCount
+            ? room.teamStats.audioCount
+            : 0,
+        },
       },
     });
     await db.collection('teamWalkActivities').add({

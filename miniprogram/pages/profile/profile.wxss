@@ -1,3 +1,7 @@
+.profile-page {
+  background: #f5f2ed;
+}
+
 .profile-hero,
 .profile-card,
 .profile-section {

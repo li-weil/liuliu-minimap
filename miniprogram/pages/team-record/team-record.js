@@ -116,17 +116,42 @@ function withMissionSelection(missionViews, activeMission) {
 }
 
 function explainSubmitFailure(error) {
-  const message = String((error && error.message) || (error && error.errMsg) || '').toLowerCase();
+  const raw = String((error && error.message) || (error && error.errMsg) || '').trim();
+  const message = raw.toLowerCase();
+  if (!raw) {
+    return '提交失败，请稍后重试';
+  }
   if (message.includes('nickname_risky')) {
-    return '昵称未通过安全校验，请先修改资料';
+    return '昵称未通过安全校验，请先修改资料后再同步。';
   }
   if (message.includes('note_text_risky')) {
-    return '文字内容可能不适宜展示，请调整后再提交';
+    return '文字内容可能不适宜展示，请调整后再提交。';
   }
   if (message.includes('permission_denied')) {
-    return '你暂时没有这个房间的提交权限';
+    return '你暂时没有这个房间的提交权限。';
   }
-  return '提交失败，请稍后重试';
+  if (message.includes('room_not_found') || message.includes('not_found')) {
+    return '当前房间不存在，可能已经被解散或删除。';
+  }
+  if (message.includes('room_not_active')) {
+    return '当前房间还没开始，或已经结束，暂时不能同步内容。';
+  }
+  if (message.includes('missing_room_id')) {
+    return '缺少房间编号，暂时无法同步。';
+  }
+  if (message.includes('missing_mission_key')) {
+    return '缺少任务编号，暂时无法同步。';
+  }
+  if (message.includes('function not found') || message.includes('cloud function')) {
+    return '提交云函数还没部署，请先上传 submitTeamContribution。';
+  }
+  if (message.includes('cloud.callfunction')) {
+    return `云函数调用失败：\n${raw}`;
+  }
+  if (message.includes('upload')) {
+    return `素材上传失败：\n${raw}`;
+  }
+  return `提交失败：\n${raw}`;
 }
 
 function explainMediaSelectionError(error, mediaType) {
@@ -909,9 +934,12 @@ Page({
       });
       wx.showToast({ title: '已同步到团队', icon: 'success' });
     } catch (error) {
-      const fallbackMessage = explainSubmitFailure(error);
-      const errorMessage = String((error && error.message) || '');
-      wx.showToast({ title: (errorMessage ? `提交失败：${errorMessage}` : fallbackMessage).slice(0, 20), icon: 'none', duration: 3000 });
+      wx.showModal({
+        title: '同步失败',
+        content: explainSubmitFailure(error),
+        showCancel: false,
+        confirmText: '知道了',
+      });
     } finally {
       wx.hideLoading();
       this.setData({

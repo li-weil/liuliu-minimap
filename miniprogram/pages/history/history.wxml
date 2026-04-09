@@ -42,6 +42,57 @@
   </view>
 
   <view wx:if="{{user && activeTab === 'album'}}">
+    <view class="section-card album-filter-panel">
+      <view class="album-filter-panel-head">
+        <view>
+          <view class="section-title">筛选记录</view>
+        </view>
+        <view
+          wx:if="{{albumStatusFilter !== 'all' || albumTypeFilter !== 'all'}}"
+          class="album-filter-reset"
+          bindtap="resetAlbumFilters"
+        >
+          清除筛选
+        </view>
+      </view>
+
+      <view class="album-filter-group">
+        <view class="album-filter-group-label">状态</view>
+        <view class="album-filter-row">
+          <view
+            wx:for="{{albumStatusChips}}"
+            wx:key="key"
+            class="album-filter-chip {{albumStatusFilter === item.key ? 'album-filter-chip-active' : ''}}"
+            bindtap="switchAlbumStatus"
+            data-status="{{item.key}}"
+          >
+            <text>{{item.label}}</text>
+            <text class="album-filter-count">{{item.count}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="album-filter-group">
+        <view class="album-filter-group-label">记录类型</view>
+        <view class="album-filter-row album-filter-row-secondary">
+          <view
+            wx:for="{{albumTypeChips}}"
+            wx:key="key"
+            class="album-filter-chip {{albumTypeFilter === item.key ? 'album-filter-chip-active' : ''}}"
+            bindtap="switchAlbumType"
+            data-type="{{item.key}}"
+          >
+            <text>{{item.label}}</text>
+            <text class="album-filter-count">{{item.count}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="album-filter-meta">
+        <view class="album-filter-result-count">{{albumResultCountLabel}}</view>
+      </view>
+    </view>
+
     <view wx:if="{{!loading && walks.length}}">
       <view class="album-list">
         <walk-card wx:for="{{walks}}" wx:key="_id" walk="{{item}}" bind:open="openDetail" />
@@ -49,8 +100,8 @@
     </view>
     <view wx:elif="{{loading}}" class="empty-copy">正在整理你的纪念卡册...</view>
     <view wx:else class="section-card history-placeholder">
-      <view class="section-title">纪念卡册</view>
-      <view class="section-subtitle">这里会放 AI 根据一次漫步内容生成的纪念卡，当前先留空。</view>
+      <view class="section-title">{{albumEmptyTitle}}</view>
+      <view class="section-subtitle">{{albumEmptySubtitle}}</view>
     </view>
   </view>
 

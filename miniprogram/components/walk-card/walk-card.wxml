@@ -3,7 +3,7 @@
     <view class="walk-card-title">{{walk.themeTitle}}</view>
     <view class="meta-row">
       <view class="meta-pill">{{walk.recordType === 'team' ? '同行' : (walk.isPublic ? '公开' : '私密')}}</view>
-      <view class="meta-pill">{{walk.recordType === 'team' ? (walk.status === 'finished' ? '已结束' : (walk.status === 'active' ? '进行中' : '待出发')) : (walk.status === 'active' ? '进行中' : '已结束')}}</view>
+      <view class="meta-pill">{{walk.albumStatusLabel || (walk.recordType === 'team' ? (walk.status === 'finished' ? '已完成' : (walk.status === 'active' ? '进行中' : '待出发')) : (walk.status === 'active' ? '进行中' : '已完成'))}}</view>
     </view>
   </view>
   <view class="meta-row walk-card-meta">
@@ -15,6 +15,6 @@
   <view wx:if="{{walk.noteText}}" class="walk-card-note">{{walk.noteText}}</view>
   <view class="walk-card-footer">
     <view class="walk-card-date">{{walk.createdAtLabel || walk.createdAt}}</view>
-    <view class="walk-card-link">{{walk.status === 'active' ? '查看详情并继续' : '查看详情'}}</view>
+    <view class="walk-card-link">{{walk.albumStatusKey === 'active' ? '查看详情并继续' : (walk.albumStatusKey === 'pending' ? '查看详情并准备' : '查看详情')}}</view>
   </view>
 </view>

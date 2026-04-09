@@ -38,7 +38,7 @@ exports.main = async (event) => {
     throw new Error('room_not_found');
   }
   const membersResult = await db.collection('teamWalkMembers').where({ roomId, status: 'joined' }).get();
-  const member = (membersResult.data || []).find((item) => item.userId === openid) || null;
+  const member = (membersResult.data || []).find((item) => item.userId === openid && !item.recordDeletedAt) || null;
   if (!member) {
     throw new Error('permission_denied');
   }

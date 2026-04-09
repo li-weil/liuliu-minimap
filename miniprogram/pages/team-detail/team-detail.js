@@ -1,5 +1,4 @@
-const { requestUpload } = require('../../services/api');
-const { deleteTeamWalk, getTeamWalkDetail, saveTeamMissionCard } = require('../../services/team');
+const { deleteTeamWalk, getTeamWalkDetail } = require('../../services/team');
 const { batchResolveCloudFileIds, isCloudFileId } = require('../../services/asset');
 const { ensurePlayableLocalAudio } = require('../../utils/audio');
 const { formatDate } = require('../../utils/format');
@@ -437,15 +436,8 @@ Page({
       return;
     }
     const room = this.data.room || {};
-    const storedCard =
-      room &&
-      room.missionCardMap &&
-      room.missionCardMap[group.mission] &&
-      room.missionCardMap[group.mission].cardImagePath
-        ? room.missionCardMap[group.mission].cardImagePath
-        : '';
     this.setData({
-      currentMissionCardSrc: storedCard,
+      currentMissionCardSrc: '',
       isRenderingMissionCard: false,
       missionCardPendingNote: false,
       missionCardPendingText: '',
@@ -484,32 +476,6 @@ Page({
     });
   },
 
-  async persistMissionCard(missionKey, tempFilePath) {
-    if (!this.data.roomId || !missionKey || !tempFilePath) {
-      return '';
-    }
-    const cardImagePath = await requestUpload(tempFilePath, { kind: 'image' });
-    const result = await saveTeamMissionCard({
-      roomId: this.data.roomId,
-      missionKey,
-      cardImagePath,
-    });
-    const room = this.data.room || {};
-    const missionCardMap = result && result.missionCardMap
-      ? result.missionCardMap
-      : {
-          ...(room.missionCardMap || {}),
-          [missionKey]: { cardImagePath, updatedAt: Date.now() },
-        };
-    this.setData({
-      room: {
-        ...room,
-        missionCardMap,
-      },
-    });
-    return cardImagePath;
-  },
-
   async handleMissionCardGenerated(event) {
     const tempFilePath = event.detail && event.detail.tempFilePath ? event.detail.tempFilePath : '';
     const mission = event.detail && event.detail.mission ? event.detail.mission : '';
@@ -526,14 +492,6 @@ Page({
         renderVersion: 0,
       },
     });
-    if (!activeMissionGroup || !activeMissionGroup.mission) {
-      return;
-    }
-    try {
-      await this.persistMissionCard(activeMissionGroup.mission, tempFilePath);
-    } catch (error) {
-      wx.showToast({ title: '卡片已生成，持久化失败', icon: 'none' });
-    }
   },
 
   openMissionCardModal(event) {
@@ -687,7 +645,7 @@ Page({
     const confirm = await new Promise((resolve) => {
       wx.showModal({
         title: '删除这条同行记录？',
-        content: '删除后将无法恢复，这场同行的成员、任务和动态记录都会一并移除。',
+        content: '删除后只会从你的纪念卡册和成就统计中移除，其他成员如果没有主动删除，仍然可以继续看见这条同行记录。',
         confirmText: '确认删除',
         confirmColor: '#c24f35',
         cancelText: '取消',
@@ -706,7 +664,7 @@ Page({
       if (!result || !result.ok) {
         throw new Error((result && result.reason) || 'delete_failed');
       }
-      wx.showToast({ title: '已删除', icon: 'success' });
+      wx.showToast({ title: '已从我的记录移除', icon: 'success' });
       setTimeout(() => {
         wx.navigateBack({
           fail: () => {

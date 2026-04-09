@@ -32,13 +32,17 @@ exports.main = async (event) => {
     .limit(1)
     .get();
   const member = (memberResult.data || [])[0] || null;
-  const allMembersResult = await db.collection('teamWalkMembers')
-    .where({ roomId, status: 'joined' })
-    .get();
-  const affectedUserIds = Array.from(new Set((allMembersResult.data || []).map((item) => item.userId).filter(Boolean)));
 
   if (!member) {
     return { ok: false, reason: 'permission_denied' };
+  }
+
+  if (member.recordDeletedAt) {
+    return {
+      ok: true,
+      id: roomId,
+      alreadyDeleted: true,
+    };
   }
 
   if (room.status !== 'finished') {
@@ -46,21 +50,14 @@ exports.main = async (event) => {
   }
 
   try {
-    await Promise.all([
-      db.collection('teamWalkRooms').doc(roomId).remove(),
-      db.collection('teamWalkMembers').where({ roomId }).remove(),
-      db.collection('teamWalkContributions').where({ roomId }).remove(),
-      db.collection('teamWalkActivities').where({ roomId }).remove(),
-    ]);
-    await Promise.all(
-      affectedUserIds.map((userId) => recalculateUserAchievements({ db, _, openid: userId }))
-    );
+    await db.collection('teamWalkMembers').doc(member._id).update({
+      data: {
+        recordDeletedAt: Date.now(),
+        recordDeletedBy: openid,
+      },
+    });
+    await recalculateUserAchievements({ db, _, openid });
   } catch (error) {
-    try {
-      await db.collection('teamWalkActivities').where({ roomId: _.eq(roomId) }).remove();
-    } catch (innerError) {
-      // Ignore cleanup fallback failure.
-    }
     return { ok: false, reason: 'delete_failed' };
   }
 

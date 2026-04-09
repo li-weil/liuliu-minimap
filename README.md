@@ -10,9 +10,12 @@
 - 纯粹模式与进阶模式双分支
 - 微信 `map` + 高德 SDK 的地图能力接入
 - 记录页任务打卡与轨迹记录
-- 足迹列表与详情页基础展示
+- 足迹页“纪念卡册 / 成就”双模块展示
+- 纪念卡册支持按“状态 + 记录类型”组合筛选记录
+- 单人足迹详情页支持一键分享给微信朋友，并在分享时自动开放该记录
 - 单人模式“开始即创建记录、保存即结束记录”的状态型链路
 - 同行模式“建房 -> 开始 -> 多人提交 -> 房主结束”的团队状态型链路
+- 探索页、足迹页、个人页主背景基色统一为 `#f5f2ed`
 - 小程序服务层对 Web 共用接口的适配准备
 
 当前项目仍保留两种后端运行方式：
@@ -42,6 +45,30 @@
 
 - 成就重算规则的单一源码在 [achievement-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/achievement-runtime.js)
 - 修改后执行 `node scripts/sync_cloud_achievement_runtime.js`，再统一部署相关云函数
+
+同行房间旧数据修复：
+
+- 如果历史里存在 `dissolved` 状态的旧同行记录，建议改用一次性云函数修复，而不是本地脚本直连云数据库。
+
+- 先部署云函数：
+
+`cloudfunctions/repairDissolvedTeamRooms`
+
+- 再在微信开发者工具里调用：
+
+```bash
+wx.cloud.callFunction({
+  name: 'repairDissolvedTeamRooms',
+  data: { dryRun: true, limit: 100 }
+})
+
+wx.cloud.callFunction({
+  name: 'repairDissolvedTeamRooms',
+  data: { dryRun: false, limit: 100 }
+})
+```
+
+- 这个云函数会把旧的 `dissolved` 同行房间批量改为 `finished`，补齐 `endedAt / teamSummary / teamStats`，让它们在纪念卡册里正常显示为“已结束”，并可继续删除。
 
 字体静态资源：
 
@@ -101,6 +128,7 @@ Web 后端模式：
 - 云函数模式下已经具备基于 `OPENID` 的登录、用户资料同步与个人历史隔离
 - 单人进行中记录会按 `walkId` 持久化草稿；若另一端已将该记录结束，当前记录页会自动退出并回到“足迹 - 纪念卡册”
 - 同行房间详情对未加入用户仅返回基础预览信息，不再暴露成员、贡献和动态流
+- 已结束同行记录支持“仅删除我自己的可见记录”，不会联动删除其他成员视角
 - 微信登录还没有完全统一到 Web 登录体系
 - 如果切 Web 模式，仍需补齐小程序 token 与鉴权链路
 

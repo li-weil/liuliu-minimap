@@ -1,4 +1,4 @@
-<view class="page-shell">
+<view class="page-shell profile-page">
   <view class="section-card profile-card">
     <view wx:if="{{checkingAccount && !user}}" class="profile-status-block">
       <view class="profile-status-title">正在翻找你的足迹册...</view>

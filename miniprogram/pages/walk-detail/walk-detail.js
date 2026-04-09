@@ -47,6 +47,19 @@ function queryCanDelete(walk, source) {
   return !!(walk.id || walk._id);
 }
 
+function queryCanShare(walk, source) {
+  if (!walk) {
+    return false;
+  }
+  if (source === 'feed' || source === 'share') {
+    return false;
+  }
+  if (walk.status !== 'finished') {
+    return false;
+  }
+  return !!(walk.id || walk._id);
+}
+
 function splitPoemLines(poem) {
   const normalized = String(poem || '').replace(/[。！？]+$/g, '');
   const lines = normalized
@@ -348,7 +361,6 @@ Page({
       title: '',
       imageSrc: '',
     },
-    isPublishingShare: false,
     isDeletingWalk: false,
     mapCenterLatitude: 39.908823,
     mapCenterLongitude: 116.39747,
@@ -395,9 +407,9 @@ Page({
   onShareAppMessage() {
     const walk = this.data.walk;
     return {
-      title: walk ? `${walk.themeTitle}｜我的城市漫步贴纸` : '城市漫步贴纸',
+      title: `遛遛｜邀请你看我的漫步记录` ,
       path: walk ? `/pages/walk-detail/walk-detail?id=${walk.id || walk._id}&source=share` : '/pages/history/history',
-      imageUrl: walk && walk.sticker ? walk.sticker.imageUrl : '',
+      imageUrl: walk && (walk.coverImage || (walk.sticker && walk.sticker.imageUrl) || ''),
     };
   },
 
@@ -414,6 +426,7 @@ Page({
             createdAtLabel: formatDate(result.walk.createdAt),
             missionItems,
             canDelete: queryCanDelete(result.walk, this.data.source),
+            canShare: queryCanShare(result.walk, this.data.source),
           }
         : null;
       const mapCenter = getMapCenter(walk && walk.routePoints, walk);
@@ -585,6 +598,7 @@ Page({
         createdAtLabel: formatDate(persistedWalk.createdAt),
         missionItems: buildMissionItems(persistedWalk),
         canDelete: queryCanDelete(persistedWalk, this.data.source),
+        canShare: queryCanShare(persistedWalk, this.data.source),
       },
     });
     return cardImagePath;
@@ -764,33 +778,36 @@ Page({
     }
   },
 
-  async handlePublishShare() {
+  handleShareTap() {
     if (!(this.data.walk && (this.data.walk.id || this.data.walk._id))) {
       wx.showToast({ title: '缺少漫步记录', icon: 'none' });
       return;
     }
     if (this.data.walk.isPublic) {
-      wx.showToast({ title: '已可分享给好友', icon: 'none' });
       return;
     }
-    this.setData({ isPublishingShare: true });
-    try {
-      const result = await publishWalkShare({ id: this.data.walk.id || this.data.walk._id });
-      if (result && result.walk) {
-        this.setData({
-          walk: {
-            ...this.data.walk,
-            ...result.walk,
-            sticker: decorateSticker(result.walk.sticker),
-          },
-        });
-      }
-      wx.showToast({ title: '已设为可分享给好友', icon: 'success' });
-    } catch (error) {
-      wx.showToast({ title: '发布分享失败', icon: 'none' });
-    } finally {
-      this.setData({ isPublishingShare: false });
-    }
+    this.setData({
+      walk: {
+        ...this.data.walk,
+        isPublic: true,
+      },
+    });
+    publishWalkShare({ id: this.data.walk.id || this.data.walk._id })
+      .then((result) => {
+        if (result && result.walk) {
+          this.setData({
+            walk: {
+              ...this.data.walk,
+              ...result.walk,
+              sticker: decorateSticker(result.walk.sticker),
+              canShare: queryCanShare(result.walk, this.data.source),
+            },
+          });
+        }
+      })
+      .catch(() => {
+        // Ignore publish failure here so the share sheet can proceed immediately.
+      });
   },
 
 async handleDeleteWalk() {

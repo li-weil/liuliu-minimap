@@ -6,6 +6,18 @@
   margin-top: 22rpx;
 }
 
+.share-action-btn {
+  width: calc(100% - 64rpx);
+  margin: 8rpx 32rpx 16rpx;
+  min-height: 92rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
 .mission-group {
   margin-bottom: 12rpx;
 }

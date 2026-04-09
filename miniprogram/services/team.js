@@ -40,10 +40,6 @@ function getTeamWalkDetail(payload = {}) {
   return callApi('getTeamWalkDetail', payload);
 }
 
-function saveTeamMissionCard(payload = {}) {
-  return callApi('saveTeamMissionCard', payload);
-}
-
 function updateTeamMemberDraftState(payload = {}) {
   return callApi('updateTeamMemberDraftState', payload);
 }
@@ -66,7 +62,6 @@ module.exports = {
   leaveTeamRoom,
   listMyTeamWalks,
   listTeamActivities,
-  saveTeamMissionCard,
   startTeamWalk,
   submitContentFeedback,
   submitTeamContribution,

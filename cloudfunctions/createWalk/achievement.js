@@ -333,7 +333,8 @@ async function loadAllUserTeamWalkRecords(db, _, openid) {
     db.collection('teamWalkMembers').where({ userId: openid, status: 'joined' }),
     'joinedAt'
   );
-  const roomIds = Array.from(new Set(memberships.map((item) => item.roomId).filter(Boolean)));
+  const visibleMemberships = memberships.filter((item) => !(item && item.recordDeletedAt));
+  const roomIds = Array.from(new Set(visibleMemberships.map((item) => item.roomId).filter(Boolean)));
   if (!roomIds.length) {
     return [];
   }

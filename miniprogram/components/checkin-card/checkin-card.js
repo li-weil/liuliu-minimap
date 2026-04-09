@@ -1,7 +1,3 @@
-const PAPER_TEXTURE = 'assets/images/checkin-card/paper-texture.png';
-const POSTMARK = 'assets/images/checkin-card/postmark-generated.png';
-const BARCODE = 'assets/images/checkin-card/barcode-generated.png';
-const CAT_HEAD = 'assets/images/checkin-card/cat-head-realistic.png';
 const { ensureCanvasCompatibleImage } = require('../../utils/media');
 
 const CARD_WIDTH = 327;
@@ -372,12 +368,6 @@ Component({
 
       ctx.fillStyle = 'rgba(255,255,255,0.38)';
       ctx.fillRect(0, 0, width, 56);
-
-      ctx.globalAlpha = 0.14;
-      if (this.paperTextureImage) {
-        ctx.drawImage(this.paperTextureImage.image, 0, 0, width, height);
-      }
-      ctx.globalAlpha = 1;
       ctx.restore();
     },
 
@@ -628,28 +618,26 @@ Component({
       this.drawMailBadge({ x: width - 122, y: 54, text: 'AIR', color: '#7f69ae', rotation: -0.28, width: 48, height: 24 });
       this.drawInkStamp({ x: 116, y: 40, radius: 21, text: 'POST' });
 
-      if (this.postmarkImage) {
-        ctx.translate(width - 78, 34);
-        ctx.rotate(-0.16);
-        ctx.globalAlpha = 0.28;
-        ctx.drawImage(this.postmarkImage.image, -42, -42, 84, 84);
-        ctx.globalAlpha = 1;
-      }
-
       ctx.restore();
     },
 
     drawCompanionAvatar(x, y, size) {
       const ctx = this.ctx;
-      if (!this.catHeadImage) {
-        return;
-      }
       ctx.save();
       ctx.beginPath();
       ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
-      ctx.drawImage(this.catHeadImage.image, x, y, size, size);
+      const avatarGradient = ctx.createLinearGradient(x, y, x + size, y + size);
+      avatarGradient.addColorStop(0, '#f5d9b5');
+      avatarGradient.addColorStop(1, '#e5a676');
+      ctx.fillStyle = avatarGradient;
+      ctx.fillRect(x, y, size, size);
+      ctx.fillStyle = '#fff7ef';
+      ctx.font = `bold ${Math.round(size * 0.34)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('66', x + size / 2, y + size / 2 + 1);
       ctx.restore();
 
       ctx.save();
@@ -711,7 +699,7 @@ Component({
             authorName,
             authorShort: authorName.slice(0, 1) || '友',
             userLabel: String((entry && entry.userLabel) || `${authorName} 的记录`).trim() || `${authorName} 的记录`,
-            catLabel: String((entry && entry.catLabel) || '66 的记录').trim() || '66 的记录',
+            catLabel: String((entry && entry.catLabel) || '小猫66 的记录').trim() || '小猫66 的记录',
             noteText: String((entry && entry.noteText) || '').trim(),
             companionNote: String((entry && entry.companionNote) || '').trim(),
             photoSources: this.normalizePhotoSources(entry && entry.photoList),
@@ -724,7 +712,7 @@ Component({
         authorName: '我',
         authorShort: '我',
         userLabel: '我的记录',
-        catLabel: '66 的记录',
+        catLabel: '小猫66 的记录',
         noteText: String(assets.noteText || '').trim(),
         companionNote: String(assets.companionNote || '').trim(),
         photoSources: this.normalizePhotoSources(assets.photoList),
@@ -736,7 +724,7 @@ Component({
       let y = startY;
       const userLabel = String(options.userLabel || '我的记录');
       const userSign = String(options.userSign || '我');
-      const catLabel = String(options.catLabel || '66 的记录');
+      const catLabel = String(options.catLabel || '小猫66 的记录');
       const catSign = String(options.catSign || '66');
 
       const sections = [
@@ -866,11 +854,6 @@ Component({
 
       ctx.fillStyle = 'rgba(255,255,255,0.14)';
       ctx.fillRect(SIDE_PADDING, photoTop, photoWidth, 42);
-      ctx.globalAlpha = 0.14;
-      if (this.paperTextureImage) {
-        ctx.drawImage(this.paperTextureImage.image, SIDE_PADDING, photoTop, photoWidth, photoHeight);
-      }
-      ctx.globalAlpha = 1;
       ctx.restore();
 
       ctx.save();
@@ -931,13 +914,6 @@ Component({
       this.drawSparkle(width - 144, footerY + 2, 3.6, 'rgba(201, 111, 74, 0.32)');
       this.drawMailBadge({ x: width - 74, y: footerY + 8, text: 'SORT', color: '#4d78b0', rotation: -0.14, width: 42, height: 18 });
 
-      if (this.barcodeImage) {
-        ctx.translate(width - 58, this.cardHeight - 42);
-        ctx.rotate(-0.12);
-        ctx.globalAlpha = 0.72;
-        ctx.drawImage(this.barcodeImage.image, -56, -20, 112, 40);
-        ctx.globalAlpha = 1;
-      }
       ctx.restore();
     },
 
@@ -955,10 +931,6 @@ Component({
       const width = this.canvasWidth || CARD_WIDTH;
       const contentWidth = width - SIDE_PADDING * 2;
 
-      this.paperTextureImage = await this.loadCanvasImage(PAPER_TEXTURE).catch(() => null);
-      this.postmarkImage = await this.loadCanvasImage(POSTMARK).catch(() => null);
-      this.barcodeImage = await this.loadCanvasImage(BARCODE).catch(() => null);
-      this.catHeadImage = await this.loadCanvasImage(CAT_HEAD).catch(() => null);
       const entryLayouts = await Promise.all(renderEntries.map(async (entry) => {
         const userNote = String(entry.noteText || '').trim() || placeholderText;
         const companionNote = String(entry.companionNote || '').trim() || '66 轻轻跟在一旁，把你停下来注视的那一刻也记在了心里。';
