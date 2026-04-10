@@ -13,7 +13,12 @@ function fetchNearbyPois(lat, lng) {
   return callApi('fetchNearbyPois', { lat, lng });
 }
 
+function getLocationContext(payload) {
+  return callApi('getLocationContext', payload);
+}
+
 module.exports = {
   fetchNearbyPois,
+  getLocationContext,
   searchLocations,
 };

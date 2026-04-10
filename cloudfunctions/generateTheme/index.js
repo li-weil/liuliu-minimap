@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk');
 const { chatJson } = require('./ai');
 const { retrieveContext, buildFallbackTheme, buildPrompt } = require('./rag');
+const { finalizeTheme, normalizeLocationSignals } = require('./runtime');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -38,15 +39,20 @@ function normalizeTheme(theme, walkMode) {
   };
 }
 
-function normalizeSelectedThemes(selectedThemes) {
+function normalizeSelectedThemes(selectedThemes, event) {
+  const limit = event && event.walkMode === 'pure' ? 1 : 2;
   return (Array.isArray(selectedThemes) ? selectedThemes : [])
     .map((item) => String(item || '').replace(/漫步/g, '').trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .slice(0, limit);
 }
 
-function isAnimalMission(mission) {
+function isNumberMission(mission) {
   const text = String(mission || '');
-  return /动物|猫|狗|鸟|雀|鸽|燕|鱼|昆虫|爪印|羽毛|尾巴|耳朵|胡须|像.*动物|动物痕迹/.test(text);
+  return /数字|数一数|数量|几个|多少|门牌|编号|楼层|步数|密码|罗马数字|汉字数字|英文数字|隐形数字/.test(text)
+    || /像(?:数字|[0-9０-９一二三四五六七八九十零两])/.test(text)
+    || /(?:凑齐|收集|找到|找出|寻找|记录|拍下|拍到|数清|观察).{0,8}(?:[0-9０-９]+|[一二三四五六七八九十零两])(?:个|片|只|扇|盏|层|步|次|组|处)/.test(text)
+    || /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|iv|vi|vii|viii|ix|x)\b/i.test(text);
 }
 
 function isShapeMission(mission) {
@@ -100,14 +106,14 @@ const themeRules = {
       '寻找一种有节奏的环境声，并写下它像什么',
     ],
   },
-  动物: {
-    matcher: isAnimalMission,
-    title: (locationName) => `${locationName || '这片街区'}的动物漫步`,
-    description: (locationName) => `沿着 ${locationName || '这片街区'} 的街巷，寻找真实动物、动物痕迹，或像动物的轮廓与神情。`,
+  数字: {
+    matcher: isNumberMission,
+    title: (locationName) => `${locationName || '这片街区'}的数字漫步`,
+    description: (locationName) => `在 ${locationName || '这片街区'} 寻找像数字的形状、可数的数量、数字变体或行动密码。`,
     fallbackMissions: [
-      '寻找一处像动物轮廓的街头形状，并说出它像什么动物',
-      '记录街区里真实出现的一只小动物，或它留下的痕迹',
-      '找到一处最像动物神情的细节，并拍下来',
+      '寻找一个像数字的街头形状，并说出它最像几',
+      '在眼前画面里凑齐3个同类元素，拍下它们并数清数量',
+      '找到一个数字变体或密码线索，如IV、三、Three或门牌号',
     ],
   },
   气味: {
@@ -134,6 +140,7 @@ function forceThemeAlignment(theme, event, fallbackTheme) {
     return theme;
   }
 
+  const locationSignals = normalizeLocationSignals(event);
   const fallbackMissions = Array.isArray(fallbackTheme.missions) ? fallbackTheme.missions : [];
   const currentMissions = Array.isArray(theme.missions) ? theme.missions : [];
   const alignedMissions = currentMissions.filter(rule.matcher);
@@ -152,10 +159,10 @@ function forceThemeAlignment(theme, event, fallbackTheme) {
   return {
     ...theme,
     category: onlyTheme,
-    title: new RegExp(onlyTheme).test(theme.title || '') ? theme.title : rule.title(event.locationName),
+    title: new RegExp(onlyTheme).test(theme.title || '') ? theme.title : rule.title(locationSignals.locationName),
     description: rule.matcher(theme.description || '')
       ? theme.description
-      : rule.description(event.locationName),
+      : rule.description(locationSignals.locationName),
     missions: completedMissions.slice(0, event.walkMode === 'advanced' ? 3 : 1),
   };
 }
@@ -172,13 +179,18 @@ exports.main = async (event) => {
     ), event.walkMode);
     const alignedTheme = forceThemeAlignment(theme, event, fallbackTheme);
     return {
-      theme: { ...fallbackTheme, ...alignedTheme },
+      theme: finalizeTheme({ ...fallbackTheme, ...alignedTheme }, event, fallbackTheme, {
+        categories: normalizeSelectedThemes(event.selectedThemes, event),
+      }),
       source: 'rag+ai',
       ragContext: includeDebugContext ? ragContext : undefined,
     };
   } catch (error) {
+    const alignedFallbackTheme = forceThemeAlignment(fallbackTheme, event, fallbackTheme);
     return {
-      theme: fallbackTheme,
+      theme: finalizeTheme(alignedFallbackTheme, event, fallbackTheme, {
+        categories: normalizeSelectedThemes(event.selectedThemes, event),
+      }),
       source: 'rag-fallback',
       ragContext: includeDebugContext ? ragContext : undefined,
       reason: error.message || 'generate_failed',

@@ -10,7 +10,7 @@ const {
 } = require('../../utils/constants');
 const { explainLocationError, getCurrentLocation } = require('../../utils/location');
 const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
-const { fetchNearbyPois, searchLocations } = require('../../services/map');
+const { fetchNearbyPois, getLocationContext, searchLocations } = require('../../services/map');
 const { createTeamRoom } = require('../../services/team');
 const { generateCombinedTheme, generateRandomTheme, generateTheme } = require('../../services/theme');
 const { createWalk } = require('../../services/walk');
@@ -92,6 +92,11 @@ function buildSelectedThemeCategories(selected) {
   return (selected || []).map((item) => (String(item).includes('漫步') ? String(item) : `${item}漫步`));
 }
 
+function normalizeCombineSelections(selected, walkMode) {
+  const limit = walkMode === 'pure' ? 1 : 2;
+  return Array.isArray(selected) ? selected.filter(Boolean).slice(0, limit) : [];
+}
+
 function pickRandomThemeCategory(categoryPool) {
   const categories = Array.isArray(categoryPool) ? categoryPool.filter(Boolean) : [];
   if (!categories.length) {
@@ -100,16 +105,256 @@ function pickRandomThemeCategory(categoryPool) {
   return String(categories[Math.floor(Math.random() * categories.length)]).replace(/漫步/g, '').trim() || '形状';
 }
 
+const TIME_PHASE_CONFIGS = [
+  {
+    label: '凌晨',
+    startHour: 0,
+    endHour: 4,
+    hints: ['人少，街面更空', '清扫和值守痕迹更明显', '任务应更保守、更安全'],
+  },
+  {
+    label: '清晨',
+    startHour: 5,
+    endHour: 7,
+    hints: ['地面可能偏湿', '街道像刚被重新整理', '声音稀疏但边缘很清楚'],
+  },
+  {
+    label: '上午',
+    startHour: 8,
+    endHour: 10,
+    hints: ['通勤和办事流动明显', '店铺正在进入工作状态', '穿行感比停留感更强'],
+  },
+  {
+    label: '午后',
+    startHour: 11,
+    endHour: 15,
+    hints: ['光照更直接', '停留与穿行并存', '颜色和阴影都更容易被看见'],
+  },
+  {
+    label: '黄昏',
+    startHour: 16,
+    endHour: 18,
+    hints: ['灯光开始出现', '回家与停留同时发生', '边缘和过渡最值得观察'],
+  },
+  {
+    label: '夜间',
+    startHour: 19,
+    endHour: 23,
+    hints: ['招牌和窗口更有存在感', '声音层次更容易分开', '停留点比白天更集中'],
+  },
+];
+
+function padDatePart(value) {
+  return `${value}`.padStart(2, '0');
+}
+
+function buildTimeContext(now = new Date()) {
+  const date = now instanceof Date ? now : new Date(now);
+  const hour = date.getHours();
+  const config = TIME_PHASE_CONFIGS.find((item) => hour >= item.startHour && hour <= item.endHour) || TIME_PHASE_CONFIGS[0];
+  return {
+    localTime: `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())} ${padDatePart(hour)}:${padDatePart(date.getMinutes())}`,
+    hour,
+    timePhase: config.label,
+    weekdayType: [0, 6].includes(date.getDay()) ? '周末' : '工作日',
+    timeHints: config.hints.slice(0, 3),
+  };
+}
+
+function dedupeStrings(values, limit = 6) {
+  const result = [];
+  (values || []).forEach((item) => {
+    const text = String(item || '').trim();
+    if (text && !result.includes(text) && result.length < limit) {
+      result.push(text);
+    }
+  });
+  return result;
+}
+
+function buildNearbyTokenText(places) {
+  return (places || [])
+    .map((item) => [item.name, item.address, item.type].filter(Boolean).join(' '))
+    .join(' ');
+}
+
+function inferNearbySceneLabel(nearbyPlaces, sceneTag = '') {
+  const text = `${sceneTag} ${buildNearbyTokenText(nearbyPlaces)}`;
+  if (/学校|大学|中学|小学|校园|宿舍|图书馆/.test(text)) {
+    return '校园边缘生活带';
+  }
+  if (/公园|湖|河|江|桥|绿地|步道|滨水/.test(text)) {
+    return '公园或滨水慢行带';
+  }
+  if (/菜市场|生鲜|超市|便利店|快递|药店|社区|卫生站|门诊/.test(text)) {
+    return '居民街区生活带';
+  }
+  if (/商场|广场|写字楼|酒店|影院|咖啡|连锁/.test(text)) {
+    return '商业街区停留带';
+  }
+  if (/夜市|酒吧|小吃|烧烤|餐馆|餐饮/.test(text)) {
+    return '夜间餐饮与烟火带';
+  }
+  if (sceneTag) {
+    return sceneTag;
+  }
+  return '街区日常活动带';
+}
+
+function inferActivityHints(nearbyPlaces, timeContext, dominantScene) {
+  const text = `${dominantScene} ${buildNearbyTokenText(nearbyPlaces)}`;
+  const hints = [];
+  if (/菜市场|生鲜|超市|便利店|餐馆|小吃|面包|咖啡|餐饮/.test(text)) {
+    hints.push(timeContext.timePhase === '黄昏' ? '顺路买晚饭' : '顺手停留采购');
+  }
+  if (/学校|大学|中学|小学|校园/.test(text)) {
+    hints.push(timeContext.timePhase === '黄昏' ? '下课和回家流动' : '上课或办事穿行');
+  }
+  if (/快递|驿站|生活服务|卫生站|药店|社区/.test(text)) {
+    hints.push('短暂停留办事');
+  }
+  if (/公园|湖|河|江|步道|滨水/.test(text)) {
+    hints.push(timeContext.timePhase === '夜间' ? '散步停留' : '慢行和驻足');
+  }
+  if (/商场|写字楼|广场|商业/.test(text)) {
+    hints.push(timeContext.weekdayType === '工作日' ? '通勤与下班切换' : '逛街与约见停留');
+  }
+
+  const phaseFallbackMap = {
+    凌晨: ['值守与清扫', '快速经过'],
+    清晨: ['晨练与通勤前准备', '路过但少停留'],
+    上午: ['办事穿行', '短暂停下确认方向'],
+    午后: ['找阴影或找座位', '慢一点的停留'],
+    黄昏: ['回家路上', '顺路停一下'],
+    夜间: ['亮灯后的停留', '吃饭或散步'],
+  };
+  (phaseFallbackMap[timeContext.timePhase] || []).forEach((item) => hints.push(item));
+  return dedupeStrings(hints, 4);
+}
+
+function buildNearbySummary(nearbyPlaces, sceneTag = '', timeContext = buildTimeContext()) {
+  const places = Array.isArray(nearbyPlaces) ? nearbyPlaces.filter(Boolean) : [];
+  const poiNames = dedupeStrings(places.map((item) => item.name), 6);
+  const poiTypes = dedupeStrings(
+    places.flatMap((item) => String(item.type || '').split(';').map((type) => type.trim()).filter(Boolean)),
+    5
+  );
+  const dominantScene = inferNearbySceneLabel(places, sceneTag);
+  return {
+    poiNames,
+    poiTypes,
+    dominantScene,
+    activityHints: inferActivityHints(places, timeContext, dominantScene),
+  };
+}
+
 function buildGenerationContext(pageData) {
-  if (!pageData || pageData.walkMode !== 'advanced') {
+  if (!pageData) {
     return {};
   }
 
+  if (pageData.lastGenerationContext) {
+    return pageData.lastGenerationContext;
+  }
+
+  const timeContext = buildTimeContext();
+  const sceneTag = pageData.locationContext || '';
+  const nearbySummary = buildNearbySummary(pageData.nearbyPlaces, sceneTag, timeContext);
+  const contextPacket = {
+    location: {
+      name: pageData.locationName || '当前位置',
+      address: pageData.locationAddress || '',
+      latitude: Number.isFinite(Number(pageData.latitude)) ? Number(pageData.latitude) : null,
+      longitude: Number.isFinite(Number(pageData.longitude)) ? Number(pageData.longitude) : null,
+      sceneTag,
+    },
+    time: timeContext,
+    weather: {
+      label: pageData.weather || '',
+      season: pageData.season || '',
+    },
+    userState: {
+      mood: pageData.mood || '',
+      preference: pageData.preference || '',
+      selectedThemes: [],
+      walkMode: pageData.walkMode || 'pure',
+    },
+    nearby: nearbySummary,
+  };
   return {
     weather: pageData.weather || '',
     season: pageData.season || '',
     mood: pageData.mood || '',
     preference: pageData.preference || '',
+    locationContext: sceneTag,
+    sceneTag,
+    timeContext,
+    nearbySummary,
+    contextPacket,
+  };
+}
+
+function formatDebugValue(value) {
+  if (Array.isArray(value)) {
+    return value.length ? value.join('、') : '未提供';
+  }
+  const text = String(value || '').trim();
+  return text || '未提供';
+}
+
+function buildGenerationDebugState(generationContext) {
+  const contextPacket = generationContext && generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
+    ? generationContext.contextPacket
+    : null;
+  if (!contextPacket) {
+    return {
+      lastGenerationContext: generationContext || null,
+      debugContextAvailable: false,
+      debugContextRows: [],
+      debugContextLines: [],
+    };
+  }
+
+  const rows = [
+    {
+      label: '地点',
+      value: formatDebugValue(contextPacket.location && contextPacket.location.name),
+    },
+    {
+      label: '场景标签',
+      value: formatDebugValue(contextPacket.location && contextPacket.location.sceneTag),
+    },
+    {
+      label: '时间段',
+      value: formatDebugValue(contextPacket.time && contextPacket.time.timePhase),
+    },
+    {
+      label: '时间线索',
+      value: formatDebugValue(contextPacket.time && contextPacket.time.timeHints),
+    },
+    {
+      label: '附近场景',
+      value: formatDebugValue(contextPacket.nearby && contextPacket.nearby.dominantScene),
+    },
+    {
+      label: '附近 POI',
+      value: formatDebugValue(contextPacket.nearby && contextPacket.nearby.poiNames),
+    },
+    {
+      label: '活动线索',
+      value: formatDebugValue(contextPacket.nearby && contextPacket.nearby.activityHints),
+    },
+    {
+      label: '主题输入',
+      value: formatDebugValue(contextPacket.userState && contextPacket.userState.selectedThemes),
+    },
+  ];
+
+  return {
+    lastGenerationContext: generationContext,
+    debugContextAvailable: true,
+    debugContextRows: rows,
+    debugContextLines: JSON.stringify(contextPacket, null, 2).split('\n'),
   };
 }
 
@@ -282,6 +527,7 @@ Page({
     season: SEASONS[0],
     preference: PREFERENCES[2],
     locationName: '当前位置',
+    locationContext: '',
     locationAddress: '',
     latitude: null,
     longitude: null,
@@ -302,6 +548,11 @@ Page({
     nearbyPlaces: [],
     nearbyExpanded: false,
     loadingNearbyPlaces: false,
+    lastGenerationContext: null,
+    debugContextAvailable: false,
+    debugContextRows: [],
+    debugContextLines: [],
+    showGenerationDebug: false,
     supportsNearbyPois: false,
     privacyPopup: createDefaultPrivacyPopup(),
   },
@@ -426,6 +677,7 @@ Page({
       latitude,
       longitude,
       locationName: placeName,
+      locationContext: '',
       locationAddress,
       searchResults: [],
       searchResultCount: 0,
@@ -436,6 +688,7 @@ Page({
       }),
       nearbyPlaces: [],
       nearbyExpanded: false,
+      lastGenerationContext: null,
     });
     return true;
   },
@@ -446,26 +699,53 @@ Page({
     }
   },
 
+  ensureExplorePointReadyForGeneration() {
+    if (this.data.hasConfirmedExplorePoint) {
+      return true;
+    }
+    wx.showToast({
+      title: '请先定位、搜索或设为探索点，再生成漫步主题',
+      icon: 'none',
+      duration: 2600,
+    });
+    return false;
+  },
+
   setOption(event) {
     const { field, value } = event.currentTarget.dataset;
-    this.setData({ [field]: value });
+    const nextState = { [field]: value };
+    if (field === 'walkMode') {
+      const combineSelections = normalizeCombineSelections(this.data.combineSelections, value);
+      nextState.combineSelections = combineSelections;
+      nextState.combineOptionViews = buildCombineOptionViews(combineSelections);
+    }
     if (field === 'walkMode' && this.data.currentTheme) {
       const nextTheme = trimTheme(this.data.currentTheme, value);
-      this.setData({ currentTheme: nextTheme });
+      nextState.currentTheme = nextTheme;
+      this.setData(nextState);
       app.globalData.currentTheme = nextTheme;
       this.syncDisplayMeta(nextTheme, this.data.currentThemeSource, value);
+      return;
     }
+    this.setData(nextState);
+  },
+
+  toggleGenerationDebug() {
+    this.setData({ showGenerationDebug: !this.data.showGenerationDebug });
   },
 
   toggleCombineSelection(event) {
     const value = event.currentTarget.dataset.value;
-    const current = new Set(this.data.combineSelections);
-    if (current.has(value)) {
-      current.delete(value);
-    } else if (current.size < 2 || !current.has(value)) {
-      current.add(value);
+    const current = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
+    const isPureMode = this.data.walkMode === 'pure';
+    let combineSelections = current;
+    if (current.includes(value)) {
+      combineSelections = current.filter((item) => item !== value);
+    } else if (isPureMode) {
+      combineSelections = [value];
+    } else {
+      combineSelections = current.concat(value).slice(0, 2);
     }
-    const combineSelections = Array.from(current).slice(0, 2);
     this.setData({ combineSelections, combineOptionViews: buildCombineOptionViews(combineSelections) });
   },
 
@@ -478,6 +758,11 @@ Page({
       amapSummary,
       contextResponse: null,
     });
+    const locationContextResult = await getLocationContext({
+      latitude: Number(location.latitude),
+      longitude: Number(location.longitude),
+      placeName: displayLocationName,
+    }).catch(() => null);
     if (token !== this.locationResolveToken) {
       return;
     }
@@ -485,6 +770,9 @@ Page({
       latitude: location.latitude,
       longitude: location.longitude,
       locationName: displayLocationName,
+      locationContext: locationContextResult && locationContextResult.context
+        ? String(locationContextResult.context).trim()
+        : (displayLocationName && displayLocationName !== '当前位置' ? displayLocationName : ''),
       locationAddress: amapSummary.address || location.address || '',
       searchResults: [],
       searchResultCount: 0,
@@ -495,6 +783,7 @@ Page({
       }),
       nearbyPlaces: [],
       nearbyExpanded: false,
+      lastGenerationContext: null,
     });
     this.loadNearbyPlaces(location.latitude, location.longitude).then(() => {
       if (token !== this.locationResolveToken) {
@@ -531,6 +820,112 @@ Page({
     } finally {
       this.setData({ loadingNearbyPlaces: false });
     }
+  },
+
+  async ensureGenerationLocationContext() {
+    if (this.data.locationContext) {
+      return this.data.locationContext;
+    }
+
+    const latitude = Number(this.data.latitude);
+    const longitude = Number(this.data.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return '';
+    }
+
+    try {
+      const result = await getLocationContext({
+        latitude,
+        longitude,
+        placeName: this.data.locationName,
+      });
+      const locationContext = result && result.context ? String(result.context).trim() : '';
+      if (locationContext) {
+        this.setData({ locationContext });
+      }
+      return locationContext;
+    } catch (error) {
+      return this.data.locationContext || '';
+    }
+  },
+
+  async ensureGenerationNearbyPlaces() {
+    if (Array.isArray(this.data.nearbyPlaces) && this.data.nearbyPlaces.length) {
+      return this.data.nearbyPlaces;
+    }
+
+    const latitude = Number(this.data.latitude);
+    const longitude = Number(this.data.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return [];
+    }
+
+    try {
+      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(latitude, longitude));
+      this.setData({
+        nearbyPlaces,
+        nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
+      });
+      return nearbyPlaces;
+    } catch (error) {
+      return [];
+    }
+  },
+
+  async buildGenerationPayload(basePayload = {}) {
+    const timeContext = buildTimeContext();
+    const [locationContext, nearbyPlaces] = await Promise.all([
+      this.ensureGenerationLocationContext(),
+      this.ensureGenerationNearbyPlaces(),
+    ]);
+    const sceneTag = locationContext || this.data.locationContext || '';
+    const nearbySummary = buildNearbySummary(
+      nearbyPlaces && nearbyPlaces.length ? nearbyPlaces : this.data.nearbyPlaces,
+      sceneTag,
+      timeContext
+    );
+    const normalizedSelectedThemes = Array.isArray(basePayload.selectedThemes)
+      ? basePayload.selectedThemes
+      : Array.isArray(basePayload.categories)
+        ? basePayload.categories
+        : [];
+    const contextPacket = {
+      location: {
+        name: this.data.locationName || '当前位置',
+        address: this.data.locationAddress || '',
+        latitude: Number.isFinite(Number(this.data.latitude)) ? Number(this.data.latitude) : null,
+        longitude: Number.isFinite(Number(this.data.longitude)) ? Number(this.data.longitude) : null,
+        sceneTag,
+      },
+      time: timeContext,
+      weather: {
+        label: this.data.weather || '',
+        season: this.data.season || '',
+      },
+      userState: {
+        mood: this.data.mood || '',
+        preference: this.data.preference || '',
+        selectedThemes: normalizedSelectedThemes,
+        walkMode: this.data.walkMode || 'pure',
+      },
+      nearby: nearbySummary,
+    };
+    const generationContext = {
+      mood: this.data.mood || '',
+      weather: this.data.weather || '',
+      season: this.data.season || '',
+      preference: this.data.preference || '',
+      locationContext: sceneTag,
+      sceneTag,
+      timeContext,
+      nearbySummary,
+      contextPacket,
+    };
+    return {
+      ...basePayload,
+      ...generationContext,
+      generationContext,
+    };
   },
 
   toggleNearbyPanel() {
@@ -752,13 +1147,18 @@ Page({
   },
 
   async handleGenerateTheme() {
+    if (!this.ensureExplorePointReadyForGeneration()) {
+      return;
+    }
     this.setData({ isGenerating: true });
     try {
-      const selectedThemes = buildSelectedThemeCategories(this.data.combineSelections);
+      const selectedThemes = buildSelectedThemeCategories(
+        normalizeCombineSelections(this.data.combineSelections, this.data.walkMode)
+      );
       const effectiveThemes = selectedThemes.length
         ? selectedThemes
         : buildSelectedThemeCategories([pickRandomThemeCategory(this.data.randomCategories)]);
-      const result = await generateTheme({
+      const payload = await this.buildGenerationPayload({
         mood: this.data.mood,
         weather: this.data.weather,
         season: this.data.season,
@@ -769,6 +1169,8 @@ Page({
         walkMode: this.data.walkMode,
         selectedThemes: effectiveThemes,
       });
+      this.setData(buildGenerationDebugState(payload.generationContext));
+      const result = await generateTheme(payload);
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });
       app.globalData.currentTheme = currentTheme;
@@ -786,18 +1188,27 @@ Page({
   },
 
   async handleRandomTheme() {
+    if (!this.ensureExplorePointReadyForGeneration()) {
+      return;
+    }
     this.setData({ isGenerating: true });
     try {
       const categoryPool = this.data.randomCategories;
       const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
-      const result = await generateRandomTheme({
+      const payload = await this.buildGenerationPayload({
         category,
+        mood: this.data.mood,
+        weather: this.data.weather,
+        season: this.data.season,
+        preference: this.data.preference,
         locationName: this.data.locationName,
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
         selectedThemes: [],
       });
+      this.setData(buildGenerationDebugState(payload.generationContext));
+      const result = await generateRandomTheme(payload);
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });
       app.globalData.currentTheme = currentTheme;
@@ -815,36 +1226,48 @@ Page({
   },
 
   async handleSelectedThemeGenerate() {
+    if (!this.ensureExplorePointReadyForGeneration()) {
+      return;
+    }
     this.setData({ isCombining: true });
     try {
-      const selections = this.data.combineSelections.length
-        ? this.data.combineSelections
+      const normalizedSelections = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
+      if (normalizedSelections.length !== this.data.combineSelections.length) {
+        this.setData({
+          combineSelections: normalizedSelections,
+          combineOptionViews: buildCombineOptionViews(normalizedSelections),
+        });
+      }
+      const selections = normalizedSelections.length
+        ? normalizedSelections
         : [pickRandomThemeCategory(this.data.randomCategories)];
-      const result = selections.length === 1
+      const useCombinedTheme = this.data.walkMode !== 'pure' && selections.length > 1;
+      const payload = await this.buildGenerationPayload({
+        mood: this.data.mood,
+        weather: this.data.weather,
+        season: this.data.season,
+        preference: this.data.preference,
+        locationName: this.data.locationName,
+        latitude: this.data.latitude,
+        longitude: this.data.longitude,
+        walkMode: this.data.walkMode,
+      });
+      this.setData(buildGenerationDebugState(payload.generationContext));
+      const result = !useCombinedTheme
         ? await generateTheme({
-          mood: this.data.mood,
-          weather: this.data.weather,
-          season: this.data.season,
-          preference: this.data.preference,
-          locationName: this.data.locationName,
-          latitude: this.data.latitude,
-          longitude: this.data.longitude,
-          walkMode: this.data.walkMode,
+          ...payload,
           selectedThemes: buildSelectedThemeCategories(selections),
         })
         : await generateCombinedTheme({
+          ...payload,
           categories: selections,
-          locationName: this.data.locationName,
-          latitude: this.data.latitude,
-          longitude: this.data.longitude,
-          walkMode: this.data.walkMode,
         });
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       this.setData({ currentTheme });
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(
         currentTheme,
-        result.source || (selections.length === 1 ? 'rag-fallback' : 'combined-fallback')
+        result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback')
       );
     } catch (error) {
       wx.showModal({
@@ -904,6 +1327,7 @@ Page({
         themeSnapshot: this.data.currentTheme,
         themeTitle: this.data.currentTheme.title,
         locationName: this.data.locationName,
+        locationContext: this.data.locationContext || generationContext.sceneTag || '',
         locationAddress: this.data.locationAddress,
         routePoints: [],
         missionsCompleted: [],
@@ -945,6 +1369,7 @@ Page({
         trackStoppedAt: null,
         locationName: this.data.locationName,
         locationAddress: this.data.locationAddress,
+        locationContext: this.data.locationContext || generationContext.sceneTag || '',
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         selectedMission: this.data.currentTheme.missions[0] || '',
@@ -1014,6 +1439,7 @@ Page({
         themeSnapshot: this.data.currentTheme,
         themeTitle: this.data.currentTheme.title,
         locationName: this.data.locationName,
+        locationContext: this.data.locationContext || generationContext.sceneTag || '',
         locationAddress: this.data.locationAddress,
         latitude: this.data.latitude,
         longitude: this.data.longitude,

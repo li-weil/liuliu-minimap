@@ -28,9 +28,6 @@ Component({
 
   methods: {
     handleStart() {
-      if (this.properties.startDisabled) {
-        return;
-      }
       this.triggerEvent('start');
     },
   },

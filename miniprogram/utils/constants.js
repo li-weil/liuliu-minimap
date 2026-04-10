@@ -20,11 +20,18 @@ const PRESET_THEMES = [
     missions: ['寻找一处醒目的红色', '拍下两种相邻的颜色', '记住让你停下来的那一抹色块'],
     vibeColor: '#b96a55',
   },
+  {
+    title: '数字漫步：街角暗号',
+    description: '在街头收集像数字的形状、数量和编号线索。',
+    category: '数字漫步',
+    missions: ['找一个像 0 的圆形细节', '凑齐 3 个同类元素并拍下', '找到一个门牌号或数字变体'],
+    vibeColor: '#8c7356',
+  },
 ];
 
-const RANDOM_THEME_CATEGORIES = ['形状漫步', '色彩漫步', '声音漫步', '动物漫步', '气味漫步'];
+const RANDOM_THEME_CATEGORIES = ['形状漫步', '色彩漫步', '声音漫步', '数字漫步', '气味漫步'];
 
-const COMBINE_THEME_OPTIONS = ['形状', '色彩', '声音', '动物', '气味'];
+const COMBINE_THEME_OPTIONS = ['形状', '色彩', '声音', '数字', '气味'];
 
 const MOODS = ['发呆', '元气满满', '忧郁', '愉悦', '未知'];
 const WEATHERS = ['晴朗', '多云', '雨天', '大风'];

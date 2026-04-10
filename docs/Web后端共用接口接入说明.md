@@ -82,6 +82,8 @@ Web 前端调用：
 - 小程序原本就有 `mood/weather/season/preference/locationName/locationContext/walkMode`
 - 与 Web 后端 `GenerateThemeRequest` 完全一致
 - 接入层已把响应重新包装成小程序当前页面能直接消费的 `{ theme, source }`
+- 小程序页面层已新增前置限制：必须先确认探索点，才会发起主题生成请求
+- 当前主题方向枚举已对齐为：`形状 / 色彩 / 声音 / 数字 / 气味`
 
 #### 2. 随机主题
 
@@ -103,6 +105,8 @@ Web 前端调用：
 - 小程序的“随机生成”本质是先随机出一个 `category`
 - Web 前端也是通过 `/api/v1/ai/themes/preset` 传 `category`
 - 当前接入层已把小程序的 `generateRandomTheme` 自动映射到 Web 的 `preset` 接口
+- 小程序页面层同样要求先确认探索点，再发起随机主题请求
+- 当前随机分类值包含：`数字漫步`
 
 #### 3. 组合主题
 
@@ -112,7 +116,7 @@ Web 前端调用：
 
 小程序当前功能：
 
-- 纯粹模式“组合生成”
+- 进阶模式“双主题组合生成”
 
 结论：
 
@@ -123,6 +127,10 @@ Web 前端调用：
 
 - 小程序当前传的 `categories/locationName/locationContext/walkMode`
 - 与后端 `CombineThemeRequest` 一致
+- 进阶模式下也必须先确认探索点，才会发起组合主题请求
+- 纯粹模式现在只允许单主题，因此不会再调用这个组合接口
+- 纯粹模式的“选择生成”统一走 `POST /api/v1/ai/themes/generate`
+- 当前组合分类值已包含：`数字`
 
 #### 4. 地点环境解析
 

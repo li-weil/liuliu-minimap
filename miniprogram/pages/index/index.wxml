@@ -81,7 +81,7 @@
       <view class="map-helper-copy">{{isMapDragging ? '慢慢移动，寻找最想走进去的那一片街景' : '把定位针停在此刻最想出发的地方'}}</view>
       <button class="primary-btn map-confirm-btn" bindtap="confirmMapCenterLocation">设为探索点</button>
     </view>
-    <view class="helper-copy">{{hasConfirmedExplorePoint ? '探索点已设定，可以开始这次漫步。' : '当前默认点仅用于展示，请先定位、搜索地点，或拖图后点“设为探索点”'}}</view>
+    <view class="helper-copy">{{hasConfirmedExplorePoint ? '探索点已设定，现在可以生成主题并开始这次漫步。' : '当前默认点仅用于展示，请先定位、搜索地点，或拖图后点“设为探索点”'}}</view>
 
     <view wx:if="{{supportsNearbyPois}}" class="nearby-panel">
       <view class="nearby-panel-head">
@@ -113,14 +113,14 @@
     <view class="section-card mode-card">
       <view class="section-title">漫步主题</view>
 
-      <view class="field-label section-label">主题选择（1 个或 2 个）</view>
+      <view class="field-label section-label">主题选择</view>
       <view class="pill-row selection-row">
         <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
       </view>
-      <view class="helper-copy">让主题先落下来，再从街道、光影和情绪里抽出今天的漫步线索</view>
+      <view class="helper-copy">先选定一个主题方向，再从街道、光影和情绪里抽出今天的漫步线索</view>
       <view class="action-grid">
-        <button class="ghost-btn action-tall-btn" bindtap="handleRandomTheme" loading="{{isGenerating}}">随机生成</button>
-        <button class="primary-btn action-tall-btn" bindtap="handleSelectedThemeGenerate" loading="{{isCombining}}">选择生成</button>
+        <button class="ghost-btn action-tall-btn {{!hasConfirmedExplorePoint ? 'action-btn-disabled' : ''}}" bindtap="handleRandomTheme" loading="{{isGenerating}}">随机生成</button>
+        <button class="primary-btn action-tall-btn {{!hasConfirmedExplorePoint ? 'action-btn-disabled' : ''}}" bindtap="handleSelectedThemeGenerate" loading="{{isCombining}}">选择生成</button>
       </view>
     </view>
 
@@ -163,9 +163,9 @@
       <view class="pill-row selection-row">
         <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
       </view>
-      <view class="helper-copy">AI 会综合天气、季节、状态、偏好和你选定的主题方向来生成任务内容</view>
+      <view class="helper-copy">先设定探索点，再让 AI 综合天气、季节、状态、偏好和主题方向生成任务内容</view>
 
-      <button class="primary-btn full-width-btn advanced-generate-btn" bindtap="handleGenerateTheme" loading="{{isGenerating}}">AI 生成</button>
+      <button class="primary-btn full-width-btn advanced-generate-btn {{!hasConfirmedExplorePoint ? 'action-btn-disabled' : ''}}" bindtap="handleGenerateTheme" loading="{{isGenerating}}">AI 生成</button>
     </view>
 
     <view class="display-card-shell">
@@ -178,6 +178,37 @@
         startSub="{{hasConfirmedExplorePoint ? (journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻') : '先设定探索点，再开始这次漫步'}}"
         bind:start="handleStartWalk"
       />
+    </view>
+  </view>
+
+  <view class="section-card debug-card">
+    <view class="debug-card-head">
+      <view>
+        <view class="section-title">生成调试</view>
+        <view class="section-subtitle">查看最近一次真正传给 AI 的 contextPacket，方便校验时间、附近和场景上下文</view>
+      </view>
+      <view class="debug-toggle {{showGenerationDebug ? 'debug-toggle-active' : ''}}" bindtap="toggleGenerationDebug">
+        {{showGenerationDebug ? '隐藏' : '显示'}}
+      </view>
+    </view>
+
+    <view wx:if="{{showGenerationDebug}}">
+      <view wx:if="{{debugContextAvailable}}">
+        <view class="debug-summary-grid">
+          <view wx:for="{{debugContextRows}}" wx:key="label" class="debug-summary-item">
+            <view class="debug-summary-label">{{item.label}}</view>
+            <view class="debug-summary-value">{{item.value}}</view>
+          </view>
+        </view>
+
+        <view class="debug-json-card">
+          <view class="debug-json-title">contextPacket</view>
+          <view class="debug-json-block">
+            <view wx:for="{{debugContextLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="debug-empty">还没有生成过主题。先点一次“AI 生成 / 随机生成 / 选择生成”，这里就会显示本次传给模型的上下文。</view>
     </view>
   </view>
 

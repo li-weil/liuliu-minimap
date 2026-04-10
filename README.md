@@ -8,6 +8,8 @@
 
 - 探索页主流程重构
 - 纯粹模式与进阶模式双分支
+- 纯粹模式主题选择已收敛为单选，进阶模式仍支持 1 到 2 个主题方向
+- 两种模式都必须先设定探索点（定位、搜索地点或将地图中心设为探索点）后，才能生成主题并开始漫步
 - 微信 `map` + 高德 SDK 的地图能力接入
 - 记录页任务打卡与轨迹记录
 - 足迹页“纪念卡册 / 成就”双模块展示
@@ -17,6 +19,7 @@
 - 同行模式“建房 -> 开始 -> 多人提交 -> 房主结束”的团队状态型链路
 - 探索页、足迹页、个人页主背景基色统一为 `#f5f2ed`
 - 小程序服务层对 Web 共用接口的适配准备
+- 漫步主题已统一为 `形状 / 色彩 / 声音 / 数字 / 气味`
 
 当前项目仍保留两种后端运行方式：
 
@@ -45,6 +48,17 @@
 
 - 成就重算规则的单一源码在 [achievement-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/achievement-runtime.js)
 - 修改后执行 `node scripts/sync_cloud_achievement_runtime.js`，再统一部署相关云函数
+- AI 主题生成共享运行时的单一源码在 [generation-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/generation-runtime.js)
+- 修改后执行 `node scripts/sync_cloud_generation_runtime.js`，再统一部署以下云函数：
+  - `generateTheme`
+  - `generateRandomTheme`
+  - `generateCombinedTheme`
+
+云环境部署时，记得同时检查云函数权限控制规则：
+
+- 推荐直接使用 [云开发环境重建说明.md](D:/liuliu-minimap/docs/云开发环境重建说明.md) 里的最终规则 JSON
+- 不建议继续使用 `auth.loginType != 'ANONYMOUS'` 这类未写进当前官方推荐示例的表达式
+- 至少要单独放开 `syncUser`、`fetchNearbyPois`、`getLocationContext`、`generateTheme`、`generateRandomTheme`、`generateCombinedTheme`
 
 同行房间旧数据修复：
 
@@ -79,6 +93,7 @@ wx.cloud.callFunction({
 ## 关键文档
 
 - [页面结构.md](D:/liuliu-minimap/docs/页面结构.md)
+- [数字漫步主题说明.md](D:/liuliu-minimap/docs/数字漫步主题说明.md)
 - [地图功能接入说明.md](D:/liuliu-minimap/docs/地图功能接入说明.md)
 - [Web后端共用接口接入说明.md](D:/liuliu-minimap/docs/Web后端共用接口接入说明.md)
 - [云函数登录系统说明.md](D:/liuliu-minimap/docs/云函数登录系统说明.md)
@@ -137,6 +152,7 @@ Web 后端模式：
 单人模式：
 
 1. 探索页生成主题后点击“开始这次漫步”
+   生成主题前必须先设定探索点
 2. 立即创建一条 `active` 状态的单人记录
 3. 记录页围绕这条记录持续编辑本地草稿
 4. 点击“完成本次漫步并保存”后，更新同一条记录并标记为 `finished`
@@ -144,6 +160,7 @@ Web 后端模式：
 同行模式：
 
 1. 探索页切到“同行”并生成主题
+   生成主题前必须先设定探索点
 2. 创建一个 `waiting` 状态的同行房间
 3. 队友加入后，房主开始同行，房间变为 `active`
 4. 成员围绕共享任务提交各自贡献

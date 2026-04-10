@@ -13,7 +13,7 @@
       <view class="mission-order">{{index + 1}}</view>
       <view class="mission-text">{{item}}</view>
     </view>
-    <button class="primary-btn theme-start-btn {{startDisabled ? 'theme-start-btn-disabled' : ''}}" bindtap="handleStart" disabled="{{startDisabled}}">
+    <button class="primary-btn theme-start-btn {{startDisabled ? 'theme-start-btn-disabled' : ''}}" bindtap="handleStart">
       <view class="theme-start-main">{{startMain}}</view>
       <view class="theme-start-sub">{{startSub}}</view>
     </button>
