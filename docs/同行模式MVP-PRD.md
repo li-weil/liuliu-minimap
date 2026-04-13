@@ -712,7 +712,6 @@ MVP 只做 `共享任务`，不做分工任务和协作任务。
 同时继续复用当前已有能力：
 
 - `generateTheme`
-- `generateRandomTheme`
 - `generateCombinedTheme`
 - 媒体上传能力
 - 用户登录与资料同步能力

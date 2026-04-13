@@ -12,7 +12,7 @@ const { explainLocationError, getCurrentLocation } = require('../../utils/locati
 const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
 const { fetchNearbyPois, getLocationContext, searchLocations } = require('../../services/map');
 const { createTeamRoom } = require('../../services/team');
-const { generateCombinedTheme, generateRandomTheme, generateTheme } = require('../../services/theme');
+const { generateCombinedTheme, generateTheme } = require('../../services/theme');
 const { createWalk } = require('../../services/walk');
 const { getBackendProvider } = require('../../services/api');
 const { isManualLogoutSuppressed } = require('../../services/user');
@@ -105,42 +105,360 @@ function pickRandomThemeCategory(categoryPool) {
   return String(categories[Math.floor(Math.random() * categories.length)]).replace(/漫步/g, '').trim() || '形状';
 }
 
+function normalizeGenerationThemeList(selectedThemes) {
+  return (Array.isArray(selectedThemes) ? selectedThemes : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function normalizeRandomSource(source) {
+  const normalized = String(source || '').trim();
+  if (normalized === 'rag+ai') {
+    return 'random+ai';
+  }
+  if (normalized === 'rag-fallback') {
+    return 'random-fallback';
+  }
+  return normalized || 'random-fallback';
+}
+
+function buildGeneratedThemeMeta(theme) {
+  const normalizedTheme = theme && typeof theme === 'object' ? theme : {};
+  return {
+    generatedThemeCategory: String(normalizedTheme.category || '').trim(),
+    generatedThemeTitle: String(normalizedTheme.title || '').trim(),
+  };
+}
+
+function normalizeGenerationValidationMeta(validation) {
+  const normalizedValidation = validation && typeof validation === 'object' ? validation : null;
+  if (!normalizedValidation) {
+    return null;
+  }
+  const reasons = dedupeStrings(
+    []
+      .concat(Array.isArray(normalizedValidation.reasons) ? normalizedValidation.reasons : [])
+      .concat(Array.isArray(normalizedValidation.aiReasons) ? normalizedValidation.aiReasons : []),
+    6
+  );
+  return {
+    stage: normalizedValidation.stage ? String(normalizedValidation.stage).trim() : '',
+    ok: !!normalizedValidation.ok,
+    hasAnchor: !!normalizedValidation.hasAnchor,
+    genericMissionCount: Number(normalizedValidation.genericMissionCount) || 0,
+    matchedMissionIndexes: Array.isArray(normalizedValidation.matchedMissionIndexes)
+      ? normalizedValidation.matchedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 5)
+      : [],
+    missingCategories: normalizeGenerationThemeList(normalizedValidation.missingCategories || []),
+    categories: normalizeGenerationThemeList(normalizedValidation.categories || []),
+    shouldRunSecondaryValidation: !!normalizedValidation.shouldRunSecondaryValidation,
+    secondaryValidationUsed: !!normalizedValidation.secondaryValidationUsed,
+    secondaryValidationError: normalizedValidation.secondaryValidationError
+      ? String(normalizedValidation.secondaryValidationError).trim()
+      : '',
+    aiOk: normalizedValidation.aiOk === undefined ? null : !!normalizedValidation.aiOk,
+    aiShouldRewrite: !!normalizedValidation.aiShouldRewrite,
+    aiScore: Number.isFinite(Number(normalizedValidation.aiScore))
+      ? Number(normalizedValidation.aiScore)
+      : (Number.isFinite(Number(normalizedValidation.score)) ? Number(normalizedValidation.score) : null),
+    reasons,
+  };
+}
+
+function buildValidationSummary(generationSource, generationValidation) {
+  if (!generationSource) {
+    return {
+      status: '未生成',
+      details: '尚未发起生成',
+      score: '未提供',
+      missingCategories: [],
+      reasons: [],
+    };
+  }
+  if (!generationValidation) {
+    return {
+      status: '云函数未返回',
+      details: '本次结果带有 source，但没有返回 validation，通常表示当前云函数还是旧版本',
+      score: '未提供',
+      missingCategories: [],
+      reasons: [],
+    };
+  }
+
+  const status = [
+    generationValidation.ok ? '通过' : '待修正',
+    generationValidation.secondaryValidationUsed
+      ? 'AI 复核'
+      : (generationValidation.stage === 'rule' ? '规则校验' : generationValidation.stage || ''),
+  ].filter(Boolean).join(' · ');
+  const details = [
+    generationValidation.hasAnchor ? '有在地锚点' : '缺少在地锚点',
+    generationValidation.genericMissionCount > 0 ? `泛化任务 ${generationValidation.genericMissionCount} 条` : '任务不泛',
+    generationValidation.aiOk === false ? 'AI 复核未通过' : '',
+    generationValidation.aiShouldRewrite ? 'AI 建议重写' : '',
+    generationValidation.secondaryValidationError ? 'AI 复核失败' : '',
+  ].filter(Boolean).join('；') || '未提供';
+
+  return {
+    status,
+    details,
+    score: generationValidation.aiScore !== null && generationValidation.aiScore !== undefined
+      ? generationValidation.aiScore
+      : '未提供',
+    missingCategories: generationValidation.missingCategories || [],
+    reasons: generationValidation.reasons || [],
+  };
+}
+
+function normalizeSceneScoreBreakdown(value = {}) {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+  return Object.keys(value).reduce((result, key) => {
+    const score = Number(value[key]);
+    if (Number.isFinite(score)) {
+      result[key] = score;
+    }
+    return result;
+  }, {});
+}
+
+function normalizeGenerationRagPlanMeta(ragPlan) {
+  const normalizedPlan = ragPlan && typeof ragPlan === 'object' ? ragPlan : null;
+  if (!normalizedPlan) {
+    return null;
+  }
+  return {
+    focusTheme: String(normalizedPlan.focusTheme || '').trim(),
+    focusThemes: normalizeGenerationThemeList(normalizedPlan.focusThemes || []),
+    targetThemes: normalizeGenerationThemeList(normalizedPlan.targetThemes || []),
+    chosenScene: String(normalizedPlan.chosenScene || '').trim(),
+    sceneId: String(normalizedPlan.sceneId || '').trim(),
+    dominantScene: String(normalizedPlan.dominantScene || '').trim(),
+    timePhase: String(normalizedPlan.timePhase || '').trim(),
+    primaryAnchors: dedupeStrings(normalizedPlan.primaryAnchors || [], 8),
+    recommendedAngles: dedupeStrings(normalizedPlan.recommendedAngles || [], 6),
+    antiPatterns: dedupeStrings(normalizedPlan.antiPatterns || [], 8),
+    supportingScenes: dedupeStrings(normalizedPlan.supportingScenes || [], 4),
+    categoryPlans: (Array.isArray(normalizedPlan.categoryPlans) ? normalizedPlan.categoryPlans : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return {
+          category: String(item.category || '').trim(),
+          preferredAngles: dedupeStrings(item.preferredAngles || [], 4),
+          anchors: dedupeStrings(item.anchors || [], 4),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 3),
+    missionBlueprints: (Array.isArray(normalizedPlan.missionBlueprints) ? normalizedPlan.missionBlueprints : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return {
+          slot: Number.isFinite(Number(item.slot)) ? Number(item.slot) : null,
+          angle: String(item.angle || '').trim(),
+          anchor: String(item.anchor || '').trim(),
+          skeleton: String(item.skeleton || '').trim(),
+          categoryFocus: String(item.categoryFocus || '').trim(),
+          categoryAngles: dedupeStrings(item.categoryAngles || [], 4),
+          examples: dedupeStrings(item.examples || [], 3),
+          cues: dedupeStrings(item.cues || [], 3),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 4),
+  };
+}
+
+function normalizeGenerationRagDebugMeta(ragDebug) {
+  const normalizedDebug = ragDebug && typeof ragDebug === 'object' ? ragDebug : null;
+  if (!normalizedDebug) {
+    return null;
+  }
+  return {
+    retrievalQuality: String(normalizedDebug.retrievalQuality || '').trim(),
+    themeCoverage: normalizeGenerationThemeList(normalizedDebug.themeCoverage || []),
+    anchorCoverage: dedupeStrings(normalizedDebug.anchorCoverage || [], 8),
+    diversityAngles: dedupeStrings(normalizedDebug.diversityAngles || [], 6),
+    antiPatterns: dedupeStrings(normalizedDebug.antiPatterns || [], 8),
+    selectedReferenceIds: dedupeStrings(normalizedDebug.selectedReferenceIds || [], 8),
+    sceneCoverage: (Array.isArray(normalizedDebug.sceneCoverage) ? normalizedDebug.sceneCoverage : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return {
+          id: String(item.id || '').trim(),
+          label: String(item.label || '').trim(),
+          score: Number.isFinite(Number(item.score)) ? Number(item.score) : null,
+          scoreBreakdown: normalizeSceneScoreBreakdown(item.scoreBreakdown),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 4),
+  };
+}
+
+function normalizeGenerationRagModelInputMeta(ragModelInput) {
+  return ragModelInput && typeof ragModelInput === 'object' ? ragModelInput : null;
+}
+
+function applyGeneratedThemeMetaToContext(generationContext, theme, source = '', validation = null, runtimeVersion = '', ragPlan = null, ragDebug = null, ragModelInput = null) {
+  const baseContext = generationContext && typeof generationContext === 'object' ? generationContext : {};
+  const contextPacket = baseContext.contextPacket && typeof baseContext.contextPacket === 'object'
+    ? baseContext.contextPacket
+    : {};
+  const userState = contextPacket.userState && typeof contextPacket.userState === 'object'
+    ? contextPacket.userState
+    : {};
+  const generatedThemeMeta = buildGeneratedThemeMeta(theme);
+  const normalizedValidation = normalizeGenerationValidationMeta(validation);
+  const normalizedRagPlan = normalizeGenerationRagPlanMeta(ragPlan);
+  const normalizedRagDebug = normalizeGenerationRagDebugMeta(ragDebug);
+  const normalizedRagModelInput = normalizeGenerationRagModelInputMeta(ragModelInput);
+  return {
+    ...baseContext,
+    ...generatedThemeMeta,
+    generationSource: source || baseContext.generationSource || '',
+    generationValidation: normalizedValidation,
+    generationRagPlan: normalizedRagPlan,
+    generationRagDebug: normalizedRagDebug,
+    generationRagModelInput: normalizedRagModelInput,
+    runtimeVersion: runtimeVersion || baseContext.runtimeVersion || '',
+    contextPacket: {
+      ...contextPacket,
+      userState: {
+        ...userState,
+        ...generatedThemeMeta,
+      },
+      validation: normalizedValidation,
+      rag: {
+        plan: normalizedRagPlan,
+        debug: normalizedRagDebug,
+        modelInput: normalizedRagModelInput,
+      },
+      runtimeVersion: runtimeVersion || contextPacket.runtimeVersion || '',
+    },
+  };
+}
+
+function inferSeasonFromDate(now = new Date()) {
+  const date = now instanceof Date ? now : new Date(now);
+  const month = date.getMonth() + 1;
+  if (month >= 3 && month <= 5) {
+    return '春';
+  }
+  if (month >= 6 && month <= 8) {
+    return '夏';
+  }
+  if (month >= 9 && month <= 11) {
+    return '秋';
+  }
+  return '冬';
+}
+
+function resolveModeScopedGenerationFields(pageData = {}, timeContext = buildTimeContext()) {
+  const walkMode = pageData.walkMode || 'pure';
+  const currentSeason = inferSeasonFromDate(timeContext && timeContext.localTime ? new Date(timeContext.localTime.replace(' ', 'T')) : new Date());
+  if (walkMode === 'pure') {
+    return {
+      mood: '',
+      weather: '',
+      season: currentSeason,
+      preference: '',
+    };
+  }
+  return {
+    mood: pageData.mood || '',
+    weather: pageData.weather || '',
+    season: pageData.season || currentSeason,
+    preference: pageData.preference || '',
+  };
+}
+
 const TIME_PHASE_CONFIGS = [
   {
     label: '凌晨',
     startHour: 0,
     endHour: 4,
-    hints: ['人少，街面更空', '清扫和值守痕迹更明显', '任务应更保守、更安全'],
+    hints: [
+      '路上人很少，空间像被拉开，空地和路口会显得更大',
+      '清扫、补货、值守、夜班交接这些痕迹更容易被看见',
+      '亮着的窗口、便利店和路灯会比白天更有存在感',
+      '声音来源更分散，脚步、风声、远处车流会被单独听出来',
+      '街面节奏偏慢，但偶尔出现的移动会显得很突然',
+      '任务应更保守、更安全，优先选择明亮、开放、有人值守的位置',
+    ],
   },
   {
     label: '清晨',
     startHour: 5,
     endHour: 7,
-    hints: ['地面可能偏湿', '街道像刚被重新整理', '声音稀疏但边缘很清楚'],
+    hints: [
+      '地面可能还带着湿气，水痕、树影和晨光会把边界勾出来',
+      '街道像刚被重新整理，卷闸门、早餐摊、晨练的人会慢慢出现',
+      '空气通常更轻，食物香、草木味和冷空气更容易分开感受到',
+      '声音还不密，鸟叫、清扫声、远处车辆声会各自占一块空间',
+      '人流正在从零散变成连续，停留和穿行的转换特别明显',
+      '适合观察“开始”的瞬间，比如开门、摆摊、亮灯、拉起卷帘',
+    ],
   },
   {
     label: '上午',
     startHour: 8,
     endHour: 10,
-    hints: ['通勤和办事流动明显', '店铺正在进入工作状态', '穿行感比停留感更强'],
+    hints: [
+      '通勤、上课、办事的人流更连续，路线感比停留感更强',
+      '店铺和窗口正在进入工作状态，招牌、货架、门口动作都会变多',
+      '街上的判断通常更快，人们更像是“路过并确认”而不是慢慢停下',
+      '共享单车、外卖、取件、问路这些短暂停顿会频繁出现',
+      '光线开始变硬，建筑立面、路边阴影和反光区域会更清楚',
+      '适合观察“白天秩序是怎么启动起来的”',
+    ],
   },
   {
     label: '午后',
     startHour: 11,
     endHour: 15,
-    hints: ['光照更直接', '停留与穿行并存', '颜色和阴影都更容易被看见'],
+    hints: [
+      '光照更直接，颜色、反光、阴影边界都会被放大',
+      '午饭、午休、办事间隙交织在一起，停留和穿行会同时存在',
+      '找座位、找阴凉、找一口吃的，这些动作会变成很具体的空间线索',
+      '商铺、食物、空调外机、树荫和玻璃幕墙会共同影响这片地方的体感',
+      '声音不会像早晚那样起伏明显，但会形成一种持续的背景层',
+      '适合观察“人在这里怎么躲热、休息、补充体力”',
+    ],
   },
   {
     label: '黄昏',
     startHour: 16,
     endHour: 18,
-    hints: ['灯光开始出现', '回家与停留同时发生', '边缘和过渡最值得观察'],
+    hints: [
+      '自然光和人造光正在交接，亮灯前后的变化会非常明显',
+      '放学、下班、买菜、等人、顺路吃点东西这些路径会叠在一起',
+      '街道会从“穿行”慢慢转向“停留”，门口和转角更容易聚人',
+      '招牌、橱窗、餐馆热气和路边摊位会开始占据注意力',
+      '影子拉长，边缘、过渡和颜色变化会比中午更有层次',
+      '适合观察“这片地方是怎么从白天过渡到晚上”的',
+    ],
   },
   {
     label: '夜间',
     startHour: 19,
     endHour: 23,
-    hints: ['招牌和窗口更有存在感', '声音层次更容易分开', '停留点比白天更集中'],
+    hints: [
+      '招牌、窗口、路灯和室内亮面会重新定义这片地方的中心',
+      '真正被留下来的人和只是经过的人会更容易区分出来',
+      '吃饭、散步、夜跑、等人、抽烟、收摊前后这些动作会变得更可见',
+      '声音层次更容易拆开，近处谈话、店内音乐、远处车流会一层层叠起来',
+      '白天不显眼的角落，到了夜里可能会因为一束光或一群人突然成立',
+      '适合观察“夜里谁还留在这里，以及他们为什么停下”',
+    ],
   },
 ];
 
@@ -152,14 +470,14 @@ function buildTimeContext(now = new Date()) {
   const date = now instanceof Date ? now : new Date(now);
   const hour = date.getHours();
   const config = TIME_PHASE_CONFIGS.find((item) => hour >= item.startHour && hour <= item.endHour) || TIME_PHASE_CONFIGS[0];
-  return {
-    localTime: `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())} ${padDatePart(hour)}:${padDatePart(date.getMinutes())}`,
-    hour,
-    timePhase: config.label,
-    weekdayType: [0, 6].includes(date.getDay()) ? '周末' : '工作日',
-    timeHints: config.hints.slice(0, 3),
-  };
-}
+    return {
+      localTime: `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())} ${padDatePart(hour)}:${padDatePart(date.getMinutes())}`,
+      hour,
+      timePhase: config.label,
+      weekdayType: [0, 6].includes(date.getDay()) ? '周末' : '工作日',
+      timeHints: config.hints.slice(0, 6),
+    };
+  }
 
 function dedupeStrings(values, limit = 6) {
   const result = [];
@@ -172,79 +490,283 @@ function dedupeStrings(values, limit = 6) {
   return result;
 }
 
+const NEARBY_QUERY_OPTIONS = {
+  limit: 18,
+  radius: 3500,
+};
+
+const NEARBY_SCENE_RULES = [
+  {
+    id: 'historic-tourist-core',
+    label: '历史景区游览带',
+    keywords: ['故宫', '博物院', '景山', '天安门', '午门', '神武门', '角楼', '太庙', '社稷', '钟楼', '鼓楼', '牌坊', '古建', '文物', '遗址', '景区', '游客服务', '售票处', '检票', '文创'],
+    sceneKeywords: ['历史', '景区', '古建', '游览', '文物'],
+    activityHints: {
+      default: ['沿着景区动线缓慢推进', '停下拍照后继续前进', '边看边找入口或下一段路线'],
+      清晨: ['排队前后的等待与入场准备', '安静时更容易看见古建轮廓'],
+      上午: ['游客开始成股流动', '排队入场和拍照停留更明显'],
+      午后: ['边走边看展陈或说明牌', '游客会在门口、牌坊、转角反复停下'],
+      黄昏: ['光线让古建边缘更突出', '游客流线会从深入游览转向出场停留'],
+      夜间: ['亮灯后的地标边缘更突出', '停下拍照和驻足观看会变多'],
+    },
+  },
+  {
+    id: 'museum-cultural',
+    label: '文博展览停留带',
+    keywords: ['博物馆', '美术馆', '纪念馆', '展览馆', '展馆', '文化宫', '图书馆', '书店', '画廊', '文创'],
+    sceneKeywords: ['展览', '文化', '文博', '书店'],
+    activityHints: {
+      default: ['在说明牌、橱窗或入口前短暂停留', '边看边走，停下来确认内容', '缓慢移动而不是快速穿行'],
+      上午: ['入馆、找展厅和看导览更明显'],
+      午后: ['停下来阅读说明或看展件的人会更多'],
+      黄昏: ['闭馆前后的停留和加快脚步会同时出现'],
+    },
+  },
+  {
+    id: 'civic-landmark',
+    label: '城市地标与广场游览带',
+    keywords: ['广场', '城楼', '纪念碑', '中轴', '地标', '门城楼', '观景台', '文化广场', '国博'],
+    sceneKeywords: ['广场', '地标', '中轴'],
+    activityHints: {
+      default: ['停下拍照、集合或确认方向', '人流会围着地标边走边停', '空间大，穿行和停留都会被放大'],
+      黄昏: ['等人、拍照和转场会叠在一起'],
+      夜间: ['亮面和灯光会重新定义视线中心'],
+    },
+  },
+  {
+    id: 'park-waterfront',
+    label: '公园或滨水慢行带',
+    keywords: ['公园', '湖', '河', '江', '桥', '绿地', '步道', '滨水', '湿地', '植物园'],
+    sceneKeywords: ['公园', '绿地', '步道', '滨水'],
+    activityHints: {
+      default: ['沿路慢行、拍照或短暂停留', '人会在树荫、长椅、视野开阔处停下', '走动节奏通常比商圈更慢'],
+      清晨: ['晨练和散步会比较明显'],
+      黄昏: ['散步、遛弯和找风口停留更明显'],
+      夜间: ['夜跑、散步和沿路短暂停下会更多'],
+    },
+  },
+  {
+    id: 'campus-education',
+    label: '校园与教育生活带',
+    keywords: ['学校', '大学', '中学', '小学', '校园', '图书馆', '教学楼', '宿舍', '学院'],
+    sceneKeywords: ['校园', '学校', '教育'],
+    activityHints: {
+      default: ['人会在楼门口、公告栏、自行车旁短暂停下', '穿行路线比较明确', '短时停留通常围绕上课、下课和办事'],
+      清晨: ['早课和晨间准备的穿行更明显'],
+      上午: ['上课、办事和进出楼门会比较连续'],
+      黄昏: ['下课和回住处的流动会叠在一起'],
+      夜间: ['自习结束后的散开和短暂停留更明显'],
+    },
+  },
+  {
+    id: 'residential-living',
+    label: '居民街区生活带',
+    keywords: ['社区', '小区', '居民', '便利店', '快递', '药店', '菜店', '生鲜', '超市', '卫生站', '门诊'],
+    sceneKeywords: ['居民', '社区', '生活'],
+    activityHints: {
+      default: ['短暂停下办事、买东西或取件', '路径更像顺路经过而不是专门停留', '门口、路边摊和便民点更容易形成停顿'],
+      上午: ['买菜、办事和取件更明显'],
+      午后: ['路过、补给和临时停一下会同时存在'],
+      黄昏: ['买晚饭、拿快递和回家前停一下会更多'],
+    },
+  },
+  {
+    id: 'commercial-office',
+    label: '商业办公停留带',
+    keywords: ['商场', '广场', '写字楼', '办公', '商业', '酒店', '影院', '连锁', '咖啡', '购物'],
+    sceneKeywords: ['商业', '办公', '商圈'],
+    activityHints: {
+      default: ['在入口、橱窗、咖啡店和等位点前停下', '穿行速度快，但停留点会很集中', '边走边确认目的地是常见动作'],
+      上午: ['通勤、会面和办事穿行更明显'],
+      午后: ['找座位、喝咖啡、短会面会更多'],
+      黄昏: ['下班、吃饭和约见会叠在一起'],
+      夜间: ['亮灯后的停留和逛街感会更突出'],
+    },
+  },
+  {
+    id: 'food-market',
+    label: '餐饮与市井烟火带',
+    keywords: ['餐馆', '餐饮', '小吃', '烧烤', '夜市', '酒吧', '咖啡', '面包', '早餐', '集市', '菜市场'],
+    sceneKeywords: ['烟火', '餐饮', '夜市'],
+    activityHints: {
+      default: ['找吃的、等位、边走边闻味道', '门口、摊位和热气集中的地方最容易聚人', '停留通常围绕吃、看和选'],
+      清晨: ['早餐摊、开门和第一波采购更明显'],
+      午后: ['吃饭、买饮料和顺手停一下会并存'],
+      黄昏: ['顺路买晚饭、排队和找座位会叠在一起'],
+      夜间: ['收摊前后的热闹、停留和路过会同时存在'],
+    },
+  },
+  {
+    id: 'transit-hub',
+    label: '交通换乘流动带',
+    keywords: ['地铁', '车站', '公交', '换乘', '出入口', '铁路', '站台', '候车', '交通枢纽'],
+    sceneKeywords: ['交通', '换乘', '车站'],
+    activityHints: {
+      default: ['确认方向、进出站和快速穿行更明显', '停顿通常很短，多发生在入口、闸机和站牌旁', '流动感会压过停留感'],
+      上午: ['通勤高峰的穿行和换乘会更集中'],
+      午后: ['办事往返和临时停下确认路线会更多'],
+      黄昏: ['回程换乘和等人会叠在一起'],
+      夜间: ['末班前后的匆忙感和等待感更明显'],
+    },
+  },
+  {
+    id: 'medical-service',
+    label: '医院与民生服务带',
+    keywords: ['医院', '门诊', '急诊', '诊所', '卫生服务', '体检', '药房', '药店'],
+    sceneKeywords: ['医疗', '门诊', '医院'],
+    activityHints: {
+      default: ['排队、问询、短暂停下确认流程会更明显', '人流移动通常围绕入口、窗口和等候区', '停留带着明确目的性'],
+      上午: ['挂号、取药和问路会更频繁'],
+      午后: ['办完事后快速离开的人会变多'],
+      夜间: ['值守、急诊和短时停留会更突出'],
+    },
+  },
+];
+
 function buildNearbyTokenText(places) {
   return (places || [])
-    .map((item) => [item.name, item.address, item.type].filter(Boolean).join(' '))
+    .map((item) => [item.name, item.address, item.district, item.typeRaw || item.type, item.typePrimary, item.typeSecondary].filter(Boolean).join(' '))
     .join(' ');
 }
 
-function inferNearbySceneLabel(nearbyPlaces, sceneTag = '') {
-  const text = `${sceneTag} ${buildNearbyTokenText(nearbyPlaces)}`;
-  if (/学校|大学|中学|小学|校园|宿舍|图书馆/.test(text)) {
-    return '校园边缘生活带';
-  }
-  if (/公园|湖|河|江|桥|绿地|步道|滨水/.test(text)) {
-    return '公园或滨水慢行带';
-  }
-  if (/菜市场|生鲜|超市|便利店|快递|药店|社区|卫生站|门诊/.test(text)) {
-    return '居民街区生活带';
-  }
-  if (/商场|广场|写字楼|酒店|影院|咖啡|连锁/.test(text)) {
-    return '商业街区停留带';
-  }
-  if (/夜市|酒吧|小吃|烧烤|餐馆|餐饮/.test(text)) {
-    return '夜间餐饮与烟火带';
-  }
-  if (sceneTag) {
-    return sceneTag;
-  }
-  return '街区日常活动带';
+function buildNearbyPlaceText(place = {}) {
+  return [
+    place.name,
+    place.address,
+    place.district,
+    place.typeRaw,
+    place.typePrimary,
+    place.typeSecondary,
+  ].filter(Boolean).join(' ');
 }
 
-function inferActivityHints(nearbyPlaces, timeContext, dominantScene) {
-  const text = `${dominantScene} ${buildNearbyTokenText(nearbyPlaces)}`;
+function getPoiTypeLabel(place = {}) {
+  return String(place.typeSecondary || place.typePrimary || place.type || '').trim();
+}
+
+function scoreNearbySceneRule(rule, nearbyPlaces, sceneTag = '') {
+  let score = 0;
+  const normalizedSceneTag = String(sceneTag || '');
+  (rule.sceneKeywords || []).forEach((keyword) => {
+    if (normalizedSceneTag.includes(keyword)) {
+      score += 10;
+    }
+  });
+  nearbyPlaces.forEach((place, index) => {
+    const text = buildNearbyPlaceText(place);
+    if (!text) {
+      return;
+    }
+    const distance = Number(place.distance);
+    const proximityWeight = Number.isFinite(distance)
+      ? distance <= 300
+        ? 1.45
+        : distance <= 800
+          ? 1.25
+          : distance <= 1500
+            ? 1.1
+            : 0.95
+      : index < 6
+        ? 1.2
+        : 1;
+    (rule.keywords || []).forEach((keyword) => {
+      if (text.includes(keyword)) {
+        const rankWeight = index < 4 ? 3.2 : index < 8 ? 2.2 : 1.4;
+        score += rankWeight * proximityWeight;
+      }
+    });
+  });
+  return score;
+}
+
+function inferNearbySceneSummary(nearbyPlaces, sceneTag = '') {
+  const places = Array.isArray(nearbyPlaces) ? nearbyPlaces.filter(Boolean).slice(0, 18) : [];
+  const ranked = NEARBY_SCENE_RULES
+    .map((rule) => ({
+      id: rule.id,
+      label: rule.label,
+      score: scoreNearbySceneRule(rule, places, sceneTag),
+    }))
+    .sort((left, right) => right.score - left.score);
+
+  const topMatch = ranked[0];
+  if (topMatch && topMatch.score > 0) {
+    return {
+      id: topMatch.id,
+      label: topMatch.label,
+      candidates: ranked.filter((item) => item.score > 0).slice(0, 3),
+    };
+  }
+
+  if (sceneTag) {
+    return {
+      id: 'scene-tag-fallback',
+      label: sceneTag,
+      candidates: [],
+    };
+  }
+
+  return {
+    id: 'street-daily',
+    label: '街区日常活动带',
+    candidates: [],
+  };
+}
+
+function inferActivityHints(nearbyPlaces, timeContext, dominantSceneSummary) {
+  const places = Array.isArray(nearbyPlaces) ? nearbyPlaces.filter(Boolean).slice(0, 18) : [];
+  const text = buildNearbyTokenText(places);
   const hints = [];
-  if (/菜市场|生鲜|超市|便利店|餐馆|小吃|面包|咖啡|餐饮/.test(text)) {
-    hints.push(timeContext.timePhase === '黄昏' ? '顺路买晚饭' : '顺手停留采购');
+  const matchedRule = NEARBY_SCENE_RULES.find((item) => item.id === (dominantSceneSummary && dominantSceneSummary.id));
+  if (matchedRule) {
+    const phaseHints = matchedRule.activityHints && matchedRule.activityHints[timeContext.timePhase];
+    const defaultHints = matchedRule.activityHints && matchedRule.activityHints.default;
+    (phaseHints || defaultHints || []).forEach((item) => hints.push(item));
   }
-  if (/学校|大学|中学|小学|校园/.test(text)) {
-    hints.push(timeContext.timePhase === '黄昏' ? '下课和回家流动' : '上课或办事穿行');
+
+  if (/售票处|票务|检票|游客服务|入口|入园|入馆/.test(text)) {
+    hints.push('排队入场、找入口或核验会更明显');
   }
-  if (/快递|驿站|生活服务|卫生站|药店|社区/.test(text)) {
-    hints.push('短暂停留办事');
+  if (/博物馆|纪念馆|展览馆|书店|文化宫|图书馆|说明牌|文创/.test(text)) {
+    hints.push('停下看说明、看橱窗或慢慢浏览');
   }
-  if (/公园|湖|河|江|步道|滨水/.test(text)) {
-    hints.push(timeContext.timePhase === '夜间' ? '散步停留' : '慢行和驻足');
+  if (/故宫|景区|公园|广场|地标|观景/.test(text)) {
+    hints.push('拍照、回望和短暂停下确认方向');
   }
-  if (/商场|写字楼|广场|商业/.test(text)) {
-    hints.push(timeContext.weekdayType === '工作日' ? '通勤与下班切换' : '逛街与约见停留');
+  if (/地铁|公交|车站|换乘|出入口/.test(text)) {
+    hints.push('快步换乘和短暂停下确认路线');
+  }
+  if (/餐馆|餐饮|小吃|咖啡|面包|夜市|菜市场/.test(text)) {
+    hints.push(timeContext.timePhase === '黄昏' ? '顺路买吃的、等位或边走边停' : '找吃的、短暂停留或边走边选');
+  }
+  if (/便利店|快递|药店|卫生站|门诊|社区/.test(text)) {
+    hints.push('顺手办事、取件或买东西后再离开');
   }
 
   const phaseFallbackMap = {
-    凌晨: ['值守与清扫', '快速经过'],
-    清晨: ['晨练与通勤前准备', '路过但少停留'],
-    上午: ['办事穿行', '短暂停下确认方向'],
-    午后: ['找阴影或找座位', '慢一点的停留'],
-    黄昏: ['回家路上', '顺路停一下'],
-    夜间: ['亮灯后的停留', '吃饭或散步'],
+    凌晨: ['值守与清扫更容易被看见', '多数人会快速经过，不会久留'],
+    清晨: ['街道正在启动，开门和第一波流动会更明显', '停留通常比白天更短但更清楚'],
+    上午: ['办事穿行和顺路停一下会并存', '确认方向后继续前进的动作会很多'],
+    午后: ['找阴影、找座位和补给会更具体', '停留点通常围绕入口、树荫和窗口'],
+    黄昏: ['回程、等人和顺路停一下会叠在一起', '门口和转角最容易形成停顿'],
+    夜间: ['亮面和人群会重新定义停留中心', '留下来的人和只是经过的人更容易区分'],
   };
   (phaseFallbackMap[timeContext.timePhase] || []).forEach((item) => hints.push(item));
-  return dedupeStrings(hints, 4);
+  return dedupeStrings(hints, 5);
 }
 
 function buildNearbySummary(nearbyPlaces, sceneTag = '', timeContext = buildTimeContext()) {
-  const places = Array.isArray(nearbyPlaces) ? nearbyPlaces.filter(Boolean) : [];
-  const poiNames = dedupeStrings(places.map((item) => item.name), 6);
-  const poiTypes = dedupeStrings(
-    places.flatMap((item) => String(item.type || '').split(';').map((type) => type.trim()).filter(Boolean)),
-    5
-  );
-  const dominantScene = inferNearbySceneLabel(places, sceneTag);
+  const places = Array.isArray(nearbyPlaces) ? nearbyPlaces.filter(Boolean).slice(0, 18) : [];
+  const poiNames = dedupeStrings(places.map((item) => item.name), 8);
+  const poiTypes = dedupeStrings(places.map((item) => getPoiTypeLabel(item)), 8);
+  const dominantSceneSummary = inferNearbySceneSummary(places, sceneTag);
   return {
     poiNames,
     poiTypes,
-    dominantScene,
-    activityHints: inferActivityHints(places, timeContext, dominantScene),
+    dominantScene: dominantSceneSummary.label,
+    dominantSceneId: dominantSceneSummary.id,
+    sceneCandidates: dominantSceneSummary.candidates,
+    activityHints: inferActivityHints(places, timeContext, dominantSceneSummary),
   };
 }
 
@@ -258,8 +780,10 @@ function buildGenerationContext(pageData) {
   }
 
   const timeContext = buildTimeContext();
+  const modeScopedFields = resolveModeScopedGenerationFields(pageData, timeContext);
   const sceneTag = pageData.locationContext || '';
   const nearbySummary = buildNearbySummary(pageData.nearbyPlaces, sceneTag, timeContext);
+  const generatedThemeMeta = buildGeneratedThemeMeta(pageData.currentTheme);
   const contextPacket = {
     location: {
       name: pageData.locationName || '当前位置',
@@ -270,26 +794,28 @@ function buildGenerationContext(pageData) {
     },
     time: timeContext,
     weather: {
-      label: pageData.weather || '',
-      season: pageData.season || '',
+      label: modeScopedFields.weather,
+      season: modeScopedFields.season,
     },
     userState: {
-      mood: pageData.mood || '',
-      preference: pageData.preference || '',
+      mood: modeScopedFields.mood,
+      preference: modeScopedFields.preference,
       selectedThemes: [],
       walkMode: pageData.walkMode || 'pure',
+      ...generatedThemeMeta,
     },
     nearby: nearbySummary,
   };
   return {
-    weather: pageData.weather || '',
-    season: pageData.season || '',
-    mood: pageData.mood || '',
-    preference: pageData.preference || '',
+    weather: modeScopedFields.weather,
+    season: modeScopedFields.season,
+    mood: modeScopedFields.mood,
+    preference: modeScopedFields.preference,
     locationContext: sceneTag,
     sceneTag,
     timeContext,
     nearbySummary,
+    ...generatedThemeMeta,
     contextPacket,
   };
 }
@@ -302,20 +828,321 @@ function formatDebugValue(value) {
   return text || '未提供';
 }
 
+function formatRagSceneCoverage(sceneCoverage) {
+  return (Array.isArray(sceneCoverage) ? sceneCoverage : [])
+    .map((item) => {
+      if (!item) {
+        return '';
+      }
+      const score = item.score !== null && item.score !== undefined ? `分数:${item.score}` : '分数:未提供';
+      return [item.label || item.id || '', item.id ? `id:${item.id}` : '', score].filter(Boolean).join(' · ');
+    })
+    .filter(Boolean);
+}
+
+function formatRagMissionBlueprints(missionBlueprints) {
+  return (Array.isArray(missionBlueprints) ? missionBlueprints : [])
+    .map((item) => {
+      if (!item) {
+        return '';
+      }
+      return [
+        item.slot ? `#${item.slot}` : '',
+        item.angle ? `角度:${item.angle}` : '',
+        item.anchor ? `锚点:${item.anchor}` : '',
+        item.skeleton ? `骨架:${item.skeleton}` : '',
+        item.categoryFocus ? `主题:${item.categoryFocus}` : '',
+        item.cues && item.cues.length ? `线索:${item.cues.join('/')}` : '',
+      ].filter(Boolean).join(' · ');
+    })
+    .filter(Boolean);
+}
+
+function formatRagCategoryPlans(categoryPlans) {
+  return (Array.isArray(categoryPlans) ? categoryPlans : [])
+    .map((item) => {
+      if (!item) {
+        return '';
+      }
+      return [
+        item.category || '',
+        item.preferredAngles && item.preferredAngles.length ? `角度:${item.preferredAngles.join('/')}` : '',
+        item.anchors && item.anchors.length ? `锚点:${item.anchors.join('/')}` : '',
+      ].filter(Boolean).join(' · ');
+    })
+    .filter(Boolean);
+}
+
+function buildRagExplainRows(ragPlan, ragDebug) {
+  const plan = ragPlan || {};
+  const debug = ragDebug || {};
+  const rows = [
+    {
+      group: 'RAG 计划',
+      label: 'targetThemes',
+      value: formatDebugValue(plan.targetThemes || []),
+      help: '本次检索必须服务的主题。用户显式选择主题时，这里应和主题输入一致，例如数字漫步应显示“数字”。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'chosenScene',
+      value: formatDebugValue(plan.chosenScene),
+      help: '最终选中的主场景文案，应该优先来自附近摘要里的 dominantScene 或最高分场景候选。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'sceneId',
+      value: formatDebugValue(plan.sceneId),
+      help: '最终选中主场景的内部 ID，用来排查 chosenScene 是否和 sceneCandidates 的第一名一致。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'supportingScenes',
+      value: formatDebugValue(plan.supportingScenes || []),
+      help: '次要参考场景，只作为补充语境，不应该盖过 chosenScene。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'recommendedAngles',
+      value: formatDebugValue(plan.recommendedAngles || []),
+      help: '建议任务切入角度，来自被召回的任务模板，用来减少任务重复。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'primaryAnchors',
+      value: formatDebugValue(plan.primaryAnchors || []),
+      help: '模型应优先落到的附近锚点，通常来自 POI、场景线索和模板 cues。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'antiPatterns',
+      value: formatDebugValue(plan.antiPatterns || []),
+      help: '这次生成应避免的写法，比如空泛观察、散文腔或偏离主题。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'categoryPlans',
+      value: formatDebugValue(formatRagCategoryPlans(plan.categoryPlans)),
+      help: '组合主题专用。说明每个主题方向各自应该抓哪些角度和锚点。',
+    },
+    {
+      group: 'RAG 计划',
+      label: 'missionBlueprints',
+      value: formatDebugValue(formatRagMissionBlueprints(plan.missionBlueprints)),
+      help: '随机或组合链路的任务蓝图，描述每条任务建议使用的角度、锚点和骨架。',
+    },
+    {
+      group: 'RAG 调试',
+      label: 'retrievalQuality',
+      value: formatDebugValue(debug.retrievalQuality),
+      help: '检索质量粗略标记。high 表示有召回任务模板，low 表示参考资料不足。',
+    },
+    {
+      group: 'RAG 调试',
+      label: 'themeCoverage',
+      value: formatDebugValue(debug.themeCoverage || []),
+      help: '检索实际覆盖到的主题方向，用来检查是否漏掉用户选择。',
+    },
+    {
+      group: 'RAG 调试',
+      label: 'sceneCoverage',
+      value: formatDebugValue(formatRagSceneCoverage(debug.sceneCoverage)),
+      help: '场景候选和分数。第一项通常应该对应 plan.chosenScene / sceneId。',
+    },
+    {
+      group: 'RAG 调试',
+      label: 'anchorCoverage',
+      value: formatDebugValue(debug.anchorCoverage || []),
+      help: 'RAG 认为可用的在地锚点，应和附近 POI、活动线索或主场景有关。',
+    },
+    {
+      group: 'RAG 调试',
+      label: 'diversityAngles',
+      value: formatDebugValue(debug.diversityAngles || []),
+      help: '用于拉开任务差异的角度集合，进阶模式尤其应该有多个不同角度。',
+    },
+    {
+      group: 'RAG 调试',
+      label: 'selectedReferenceIds',
+      value: formatDebugValue(debug.selectedReferenceIds || []),
+      help: '被召回的任务模板 ID，方便回查知识库里到底用了哪些参考。',
+    },
+    {
+      group: 'RAG 入模',
+      label: 'modelInput',
+      value: formatDebugValue(ragPlan || ragDebug ? '已提供，见下方 rag.modelInput 原文' : ''),
+      help: '这是真正放进 prompt 的 RAG 参考对象。单主题通常是 ragContext；随机/组合通常是 referenceContext + generationPlan。',
+    },
+  ];
+  return rows
+    .filter((item) => item.value !== '未提供')
+    .map((item) => ({
+      ...item,
+      key: `${item.group}-${item.label}`,
+    }));
+}
+
 function buildGenerationDebugState(generationContext) {
   const contextPacket = generationContext && generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
     ? generationContext.contextPacket
     : null;
+  const generationSource = generationContext && generationContext.generationSource
+    ? String(generationContext.generationSource)
+    : '';
+  const generationValidation = generationContext && generationContext.generationValidation && typeof generationContext.generationValidation === 'object'
+    ? generationContext.generationValidation
+    : (contextPacket && contextPacket.validation && typeof contextPacket.validation === 'object'
+      ? contextPacket.validation
+      : null);
+  const generationRagPlan = generationContext && generationContext.generationRagPlan && typeof generationContext.generationRagPlan === 'object'
+    ? generationContext.generationRagPlan
+    : (contextPacket && contextPacket.rag && contextPacket.rag.plan && typeof contextPacket.rag.plan === 'object'
+      ? contextPacket.rag.plan
+      : null);
+  const generationRagDebug = generationContext && generationContext.generationRagDebug && typeof generationContext.generationRagDebug === 'object'
+    ? generationContext.generationRagDebug
+    : (contextPacket && contextPacket.rag && contextPacket.rag.debug && typeof contextPacket.rag.debug === 'object'
+      ? contextPacket.rag.debug
+      : null);
+  const generationRagModelInput = generationContext && generationContext.generationRagModelInput && typeof generationContext.generationRagModelInput === 'object'
+    ? generationContext.generationRagModelInput
+    : (contextPacket && contextPacket.rag && contextPacket.rag.modelInput && typeof contextPacket.rag.modelInput === 'object'
+      ? contextPacket.rag.modelInput
+      : null);
+  const runtimeVersion = generationContext && generationContext.runtimeVersion
+    ? String(generationContext.runtimeVersion)
+    : (contextPacket && contextPacket.runtimeVersion ? String(contextPacket.runtimeVersion) : '');
   if (!contextPacket) {
     return {
       lastGenerationContext: generationContext || null,
       debugContextAvailable: false,
       debugContextRows: [],
+      debugRagRows: [],
       debugContextLines: [],
+      debugRagPlanLines: [],
+      debugRagDebugLines: [],
+      debugRagModelInputLines: [],
     };
   }
 
+  const validationSummary = buildValidationSummary(generationSource, generationValidation);
+  const ragThemes = generationRagPlan
+    ? dedupeStrings(
+      []
+        .concat(generationRagPlan.focusThemes || [])
+        .concat(generationRagPlan.targetThemes || [])
+        .concat(generationRagDebug && generationRagDebug.themeCoverage ? generationRagDebug.themeCoverage : []),
+      6
+    )
+    : [];
+  const ragSceneValue = generationRagPlan
+    ? dedupeStrings(
+      []
+        .concat(generationRagPlan.chosenScene || [])
+        .concat(generationRagPlan.dominantScene || [])
+        .concat(generationRagPlan.supportingScenes || [])
+        .concat(generationRagDebug && generationRagDebug.sceneCoverage
+          ? generationRagDebug.sceneCoverage.map((item) => item.label || item.id)
+          : []),
+      6
+    )
+    : [];
+  const ragAngles = generationRagPlan
+    ? dedupeStrings(
+      []
+        .concat(generationRagPlan.recommendedAngles || [])
+        .concat(generationRagDebug && generationRagDebug.diversityAngles ? generationRagDebug.diversityAngles : []),
+      6
+    )
+    : [];
+  const ragAnchors = generationRagPlan
+    ? dedupeStrings(
+      []
+        .concat(generationRagPlan.primaryAnchors || [])
+        .concat(generationRagDebug && generationRagDebug.anchorCoverage ? generationRagDebug.anchorCoverage : []),
+      8
+    )
+    : [];
+  const ragAntiPatterns = generationRagPlan
+    ? dedupeStrings(
+      []
+        .concat(generationRagPlan.antiPatterns || [])
+        .concat(generationRagDebug && generationRagDebug.antiPatterns ? generationRagDebug.antiPatterns : []),
+      8
+    )
+    : [];
+  const ragQuality = generationRagDebug && generationRagDebug.retrievalQuality
+    ? generationRagDebug.retrievalQuality
+    : '';
+  const ragBlueprints = generationRagPlan && generationRagPlan.missionBlueprints && generationRagPlan.missionBlueprints.length
+    ? generationRagPlan.missionBlueprints.map((item) => {
+      const parts = [
+        item.slot ? `#${item.slot}` : '',
+        item.angle || '',
+        item.anchor ? `锚点:${item.anchor}` : '',
+        item.skeleton ? `骨架:${item.skeleton}` : '',
+      ].filter(Boolean);
+      return parts.join(' · ');
+    })
+    : [];
+
   const rows = [
+    {
+      label: '结果来源',
+      value: formatDebugValue(generationSource || '未生成'),
+    },
+    {
+      label: '运行时版本',
+      value: formatDebugValue(runtimeVersion || '未提供'),
+    },
+    {
+      label: '验证状态',
+      value: formatDebugValue(validationSummary.status),
+    },
+    {
+      label: '验证细节',
+      value: formatDebugValue(validationSummary.details),
+    },
+    {
+      label: '验证分数',
+      value: formatDebugValue(validationSummary.score),
+    },
+    {
+      label: '缺失主题',
+      value: formatDebugValue(validationSummary.missingCategories),
+    },
+    {
+      label: '复核原因',
+      value: formatDebugValue(validationSummary.reasons),
+    },
+    {
+      label: 'RAG 质量',
+      value: formatDebugValue(ragQuality || '未提供'),
+    },
+    {
+      label: 'RAG 主题',
+      value: formatDebugValue(ragThemes),
+    },
+    {
+      label: 'RAG 场景',
+      value: formatDebugValue(ragSceneValue),
+    },
+    {
+      label: 'RAG 角度',
+      value: formatDebugValue(ragAngles),
+    },
+    {
+      label: 'RAG 锚点',
+      value: formatDebugValue(ragAnchors),
+    },
+    {
+      label: 'RAG 反例',
+      value: formatDebugValue(ragAntiPatterns),
+    },
+    {
+      label: '任务蓝图',
+      value: formatDebugValue(ragBlueprints),
+    },
     {
       label: '地点',
       value: formatDebugValue(contextPacket.location && contextPacket.location.name),
@@ -348,13 +1175,21 @@ function buildGenerationDebugState(generationContext) {
       label: '主题输入',
       value: formatDebugValue(contextPacket.userState && contextPacket.userState.selectedThemes),
     },
+    {
+      label: '生成主题',
+      value: formatDebugValue(contextPacket.userState && contextPacket.userState.generatedThemeCategory),
+    },
   ];
 
   return {
     lastGenerationContext: generationContext,
     debugContextAvailable: true,
     debugContextRows: rows,
+    debugRagRows: buildRagExplainRows(generationRagPlan, generationRagDebug),
     debugContextLines: JSON.stringify(contextPacket, null, 2).split('\n'),
+    debugRagPlanLines: generationRagPlan ? JSON.stringify(generationRagPlan, null, 2).split('\n') : [],
+    debugRagDebugLines: generationRagDebug ? JSON.stringify(generationRagDebug, null, 2).split('\n') : [],
+    debugRagModelInputLines: generationRagModelInput ? JSON.stringify(generationRagModelInput, null, 2).split('\n') : [],
   };
 }
 
@@ -418,25 +1253,35 @@ function pickBestLocationName({ location, amapSummary, contextResponse }) {
 }
 
 function buildNearbyPlaceViews(results) {
-  return (results || []).slice(0, 12).map((item, index) => ({
-    id: item.id || item.link || `${item.title || 'poi'}-${index}`,
-    name: item.title || item.name || '附近地点',
-    address: item.address || item.district || '',
-    district: item.district || item.city || '',
-    type: item.type ? String(item.type).split(';')[0] : '',
-    latitude:
-      item.latitude !== undefined && item.latitude !== null
-        ? Number(item.latitude)
-        : item.lat !== undefined && item.lat !== null
-          ? Number(item.lat)
+  return (results || []).slice(0, NEARBY_QUERY_OPTIONS.limit).map((item, index) => {
+    const typeRaw = item.type ? String(item.type).trim() : '';
+    const typeParts = typeRaw.split(';').map((part) => part.trim()).filter(Boolean);
+    const typePrimary = typeParts[0] || '';
+    const typeSecondary = typeParts[1] || '';
+    return {
+      id: item.id || item.link || `${item.title || 'poi'}-${index}`,
+      name: item.title || item.name || '附近地点',
+      address: item.address || item.district || '',
+      district: item.district || item.city || '',
+      type: typeSecondary || typePrimary,
+      typeRaw,
+      typePrimary,
+      typeSecondary,
+      distance: Number.isFinite(Number(item.distance)) ? Number(item.distance) : null,
+      latitude:
+        item.latitude !== undefined && item.latitude !== null
+          ? Number(item.latitude)
+          : item.lat !== undefined && item.lat !== null
+            ? Number(item.lat)
           : null,
-    longitude:
-      item.longitude !== undefined && item.longitude !== null
-        ? Number(item.longitude)
-        : item.lng !== undefined && item.lng !== null
-          ? Number(item.lng)
-          : null,
-  })).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
+      longitude:
+        item.longitude !== undefined && item.longitude !== null
+          ? Number(item.longitude)
+          : item.lng !== undefined && item.lng !== null
+            ? Number(item.lng)
+            : null,
+    };
+  }).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
 }
 
 function extractErrorMessage(error, fallback) {
@@ -803,7 +1648,7 @@ Page({
 
     this.setData({ loadingNearbyPlaces: true });
     try {
-      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(Number(latitude), Number(longitude)));
+      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(Number(latitude), Number(longitude), NEARBY_QUERY_OPTIONS));
       this.setData({
         nearbyPlaces,
         nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
@@ -861,7 +1706,7 @@ Page({
     }
 
     try {
-      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(latitude, longitude));
+      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(latitude, longitude, NEARBY_QUERY_OPTIONS));
       this.setData({
         nearbyPlaces,
         nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
@@ -874,6 +1719,10 @@ Page({
 
   async buildGenerationPayload(basePayload = {}) {
     const timeContext = buildTimeContext();
+    const modeScopedFields = resolveModeScopedGenerationFields({
+      ...this.data,
+      ...basePayload,
+    }, timeContext);
     const [locationContext, nearbyPlaces] = await Promise.all([
       this.ensureGenerationLocationContext(),
       this.ensureGenerationNearbyPlaces(),
@@ -884,11 +1733,13 @@ Page({
       sceneTag,
       timeContext
     );
-    const normalizedSelectedThemes = Array.isArray(basePayload.selectedThemes)
-      ? basePayload.selectedThemes
-      : Array.isArray(basePayload.categories)
-        ? basePayload.categories
-        : [];
+    const normalizedSelectedThemes = normalizeGenerationThemeList(
+      Array.isArray(basePayload.selectedThemes)
+        ? basePayload.selectedThemes
+        : Array.isArray(basePayload.categories)
+          ? basePayload.categories
+          : []
+    );
     const contextPacket = {
       location: {
         name: this.data.locationName || '当前位置',
@@ -899,26 +1750,32 @@ Page({
       },
       time: timeContext,
       weather: {
-        label: this.data.weather || '',
-        season: this.data.season || '',
+        label: modeScopedFields.weather,
+        season: modeScopedFields.season,
       },
       userState: {
-        mood: this.data.mood || '',
-        preference: this.data.preference || '',
+        mood: modeScopedFields.mood,
+        preference: modeScopedFields.preference,
         selectedThemes: normalizedSelectedThemes,
         walkMode: this.data.walkMode || 'pure',
+        generatedThemeCategory: '',
+        generatedThemeTitle: '',
       },
       nearby: nearbySummary,
+      generation: {
+        seed: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      },
     };
     const generationContext = {
-      mood: this.data.mood || '',
-      weather: this.data.weather || '',
-      season: this.data.season || '',
-      preference: this.data.preference || '',
+      mood: modeScopedFields.mood,
+      weather: modeScopedFields.weather,
+      season: modeScopedFields.season,
+      preference: modeScopedFields.preference,
       locationContext: sceneTag,
       sceneTag,
       timeContext,
       nearbySummary,
+      generationSeed: contextPacket.generation.seed,
       contextPacket,
     };
     return {
@@ -1152,12 +2009,12 @@ Page({
     }
     this.setData({ isGenerating: true });
     try {
-      const selectedThemes = buildSelectedThemeCategories(
-        normalizeCombineSelections(this.data.combineSelections, this.data.walkMode)
-      );
+      const normalizedSelections = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
+      const selectedThemes = buildSelectedThemeCategories(normalizedSelections);
       const effectiveThemes = selectedThemes.length
         ? selectedThemes
         : buildSelectedThemeCategories([pickRandomThemeCategory(this.data.randomCategories)]);
+      const useCombinedTheme = this.data.walkMode === 'advanced' && normalizedSelections.length > 1;
       const payload = await this.buildGenerationPayload({
         mood: this.data.mood,
         weather: this.data.weather,
@@ -1167,14 +2024,32 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
-        selectedThemes: effectiveThemes,
+        selectedThemes: useCombinedTheme ? normalizedSelections : effectiveThemes,
       });
       this.setData(buildGenerationDebugState(payload.generationContext));
-      const result = await generateTheme(payload);
+      const result = useCombinedTheme
+        ? await generateCombinedTheme({
+          ...payload,
+          categories: normalizedSelections,
+        })
+        : await generateTheme(payload);
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
-      this.setData({ currentTheme });
+      const nextGenerationContext = applyGeneratedThemeMetaToContext(
+        payload.generationContext,
+        currentTheme,
+        result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback'),
+        result.validation || null,
+        result.runtimeVersion || '',
+        result.ragPlan || null,
+        result.ragDebug || null,
+        result.ragModelInput || null
+      );
+      this.setData({
+        currentTheme,
+        ...buildGenerationDebugState(nextGenerationContext),
+      });
       app.globalData.currentTheme = currentTheme;
-      this.syncDisplayMeta(currentTheme, result.source || 'rag-fallback');
+      this.syncDisplayMeta(currentTheme, result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback'));
     } catch (error) {
       wx.showModal({
         title: '主题生成失败',
@@ -1195,8 +2070,8 @@ Page({
     try {
       const categoryPool = this.data.randomCategories;
       const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
+      const selectedThemes = buildSelectedThemeCategories([category]);
       const payload = await this.buildGenerationPayload({
-        category,
         mood: this.data.mood,
         weather: this.data.weather,
         season: this.data.season,
@@ -1205,14 +2080,31 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
-        selectedThemes: [],
+        selectedThemes,
       });
       this.setData(buildGenerationDebugState(payload.generationContext));
-      const result = await generateRandomTheme(payload);
+      const result = await generateTheme({
+        ...payload,
+        selectedThemes,
+      });
+      const displaySource = normalizeRandomSource(result.source);
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
-      this.setData({ currentTheme });
+      const nextGenerationContext = applyGeneratedThemeMetaToContext(
+        payload.generationContext,
+        currentTheme,
+        displaySource,
+        result.validation || null,
+        result.runtimeVersion || '',
+        result.ragPlan || null,
+        result.ragDebug || null,
+        result.ragModelInput || null
+      );
+      this.setData({
+        currentTheme,
+        ...buildGenerationDebugState(nextGenerationContext),
+      });
       app.globalData.currentTheme = currentTheme;
-      this.syncDisplayMeta(currentTheme, result.source || 'random-fallback');
+      this.syncDisplayMeta(currentTheme, displaySource);
     } catch (error) {
       wx.showModal({
         title: '随机生成失败',
@@ -1251,6 +2143,7 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
+        selectedThemes: useCombinedTheme ? selections : buildSelectedThemeCategories(selections),
       });
       this.setData(buildGenerationDebugState(payload.generationContext));
       const result = !useCombinedTheme
@@ -1263,7 +2156,20 @@ Page({
           categories: selections,
         });
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
-      this.setData({ currentTheme });
+      const nextGenerationContext = applyGeneratedThemeMetaToContext(
+        payload.generationContext,
+        currentTheme,
+        result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback'),
+        result.validation || null,
+        result.runtimeVersion || '',
+        result.ragPlan || null,
+        result.ragDebug || null,
+        result.ragModelInput || null
+      );
+      this.setData({
+        currentTheme,
+        ...buildGenerationDebugState(nextGenerationContext),
+      });
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(
         currentTheme,

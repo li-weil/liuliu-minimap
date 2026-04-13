@@ -20,6 +20,7 @@
 - 探索页、足迹页、个人页主背景基色统一为 `#f5f2ed`
 - 小程序服务层对 Web 共用接口的适配准备
 - 漫步主题已统一为 `形状 / 色彩 / 声音 / 数字 / 气味`
+- AI 主题生成已接入结构化 `contextPacket`、统一 RAG 计划、规则校验与前端生成调试面板
 
 当前项目仍保留两种后端运行方式：
 
@@ -49,16 +50,22 @@
 - 成就重算规则的单一源码在 [achievement-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/achievement-runtime.js)
 - 修改后执行 `node scripts/sync_cloud_achievement_runtime.js`，再统一部署相关云函数
 - AI 主题生成共享运行时的单一源码在 [generation-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/generation-runtime.js)
-- 修改后执行 `node scripts/sync_cloud_generation_runtime.js`，再统一部署以下云函数：
+- AI 主题生成共享检索运行时的单一源码在 [generation-rag-runtime.js](D:/liuliu-minimap/cloudfunctions/shared/generation-rag-runtime.js)
+- 修改后执行 `node scripts/sync_cloud_generation_runtime.js`，会同步 `runtime.js` 和 `rag-runtime.js`，再统一部署以下云函数：
   - `generateTheme`
-  - `generateRandomTheme`
   - `generateCombinedTheme`
+
+说明：
+
+- 探索页“随机生成”现在已统一并入 `generateTheme`
+- 前端只负责随机挑一个主题方向，再走单主题生成链路
+- 旧的随机主题云函数已下线，不再部署独立随机生成云函数
 
 云环境部署时，记得同时检查云函数权限控制规则：
 
 - 推荐直接使用 [云开发环境重建说明.md](D:/liuliu-minimap/docs/云开发环境重建说明.md) 里的最终规则 JSON
 - 不建议继续使用 `auth.loginType != 'ANONYMOUS'` 这类未写进当前官方推荐示例的表达式
-- 至少要单独放开 `syncUser`、`fetchNearbyPois`、`getLocationContext`、`generateTheme`、`generateRandomTheme`、`generateCombinedTheme`
+- 至少要单独放开 `syncUser`、`fetchNearbyPois`、`getLocationContext`、`generateTheme`、`generateCombinedTheme`
 
 同行房间旧数据修复：
 
@@ -93,6 +100,9 @@ wx.cloud.callFunction({
 ## 关键文档
 
 - [页面结构.md](D:/liuliu-minimap/docs/页面结构.md)
+- [AI主题任务内容全流程说明.md](D:/liuliu-minimap/docs/AI主题任务内容全流程说明.md)
+- [AI主题任务RAG优化方案.md](D:/liuliu-minimap/docs/AI主题任务RAG优化方案.md)
+- [AI主题任务RAG优化具体实现.md](D:/liuliu-minimap/docs/AI主题任务RAG优化具体实现.md)
 - [数字漫步主题说明.md](D:/liuliu-minimap/docs/数字漫步主题说明.md)
 - [地图功能接入说明.md](D:/liuliu-minimap/docs/地图功能接入说明.md)
 - [Web后端共用接口接入说明.md](D:/liuliu-minimap/docs/Web后端共用接口接入说明.md)

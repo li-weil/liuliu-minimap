@@ -4,10 +4,6 @@ function generateTheme(payload) {
   return callApi('generateTheme', payload);
 }
 
-function generateRandomTheme(payload) {
-  return callApi('generateRandomTheme', payload);
-}
-
 function generateCombinedTheme(payload) {
   return callApi('generateCombinedTheme', payload);
 }
@@ -18,7 +14,6 @@ function verifyMission(payload) {
 
 module.exports = {
   generateCombinedTheme,
-  generateRandomTheme,
   generateTheme,
   verifyMission,
 };

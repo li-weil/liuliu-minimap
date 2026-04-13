@@ -297,19 +297,6 @@ const ENDPOINTS = {
       normalizeResponse: (data, requestData) => normalizeThemeResponse(data, requestData, data && data.provider ? 'rag+ai' : 'rag-fallback'),
     },
   },
-  generateRandomTheme: {
-    cloudName: 'generateRandomTheme',
-    web: {
-      path: '/ai/themes/preset',
-      method: 'POST',
-      normalizeRequest: (data) => ({
-        category: data.category,
-        locationName: data.locationName,
-        walkMode: data.walkMode,
-      }),
-      normalizeResponse: (data, requestData) => normalizeThemeResponse(data, requestData, data && data.provider ? 'random+ai' : 'random-fallback'),
-    },
-  },
   generateCombinedTheme: {
     cloudName: 'generateCombinedTheme',
     web: {

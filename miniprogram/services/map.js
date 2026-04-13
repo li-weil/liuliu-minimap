@@ -9,8 +9,13 @@ function searchLocations(query, location = null) {
   return searchAmapPois({ keyword: query, location });
 }
 
-function fetchNearbyPois(lat, lng) {
-  return callApi('fetchNearbyPois', { lat, lng });
+function fetchNearbyPois(lat, lng, options = {}) {
+  return callApi('fetchNearbyPois', {
+    lat,
+    lng,
+    limit: options.limit,
+    radius: options.radius,
+  });
 }
 
 function getLocationContext(payload) {

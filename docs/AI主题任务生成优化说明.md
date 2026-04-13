@@ -1,318 +1,187 @@
-# AI 主题任务生成优化说明
+# AI 主题任务生成优化实现说明
 
 ## 1. 文档目的
 
-本文档用于完善当前小程序中 AI 主题与任务生成方案，重点回答 4 件事：
+本文档用于说明当前“AI 生成主题与任务内容”优化已经如何落到代码里，并保留后续仍未完成的建议改进部分。
 
-- 当前链路已经做到什么
-- 当前输出为什么仍然不够好
-- 围绕“附近”的重建，下一版生成系统该如何补齐上下文
-- 如何分阶段落地，避免一次性大改带来不稳定
+它和下面两份文档的分工是：
 
-本轮方案的核心判断是：
+- [AI主题任务内容全流程说明.md](/D:/liuliu-minimap/docs/AI主题任务内容全流程说明.md)
+  - 讲完整业务链路：探索页、云函数、落库、记录页复用。
+- [AI主题任务RAG优化具体实现.md](/D:/liuliu-minimap/docs/AI主题任务RAG优化具体实现.md)
+  - 讲 RAG 检索、排序、计划、调试字段和验证机制。
+- 本文档
+  - 讲“生成优化”本身已经实现了什么，以及下一步还可以继续做什么。
 
-- 主题与任务生成不应只是“给大模型几个标签然后让它自由发挥”
-- 它应当优先重建用户“此时此地的附近感”
-- 所谓“附近”，不是抽象地点名，而是由时间、场景、周边业态、人流痕迹、天气和身体感受共同构成的当下关系
-
-产品价值参考：
+产品价值背景仍然是“附近”的重建：
 
 - [“附近”的重建参考文章](https://www.thepaper.cn/newsDetail_forward_24823590)
 
-对应代码入口：
+核心代码入口：
 
 - [探索页前端逻辑](/D:/liuliu-minimap/miniprogram/pages/index/index.js)
-- [主题生成云函数](/D:/liuliu-minimap/cloudfunctions/generateTheme/index.js)
-- [主题生成 RAG 逻辑](/D:/liuliu-minimap/cloudfunctions/generateTheme/rag.js)
-- [随机主题生成](/D:/liuliu-minimap/cloudfunctions/generateRandomTheme/index.js)
-- [组合主题生成](/D:/liuliu-minimap/cloudfunctions/generateCombinedTheme/index.js)
-- [附近 POI 获取](/D:/liuliu-minimap/cloudfunctions/fetchNearbyPois/index.js)
-- [地点语境提炼](/D:/liuliu-minimap/cloudfunctions/getLocationContext/index.js)
+- [探索页调试面板](/D:/liuliu-minimap/miniprogram/pages/index/index.wxml)
+- [主题服务层](/D:/liuliu-minimap/miniprogram/services/theme.js)
+- [接口映射层](/D:/liuliu-minimap/miniprogram/services/api.js)
+- [单主题生成云函数](/D:/liuliu-minimap/cloudfunctions/generateTheme/index.js)
+- [单主题 RAG prompt](/D:/liuliu-minimap/cloudfunctions/generateTheme/rag.js)
+- [组合主题生成云函数](/D:/liuliu-minimap/cloudfunctions/generateCombinedTheme/index.js)
+- [共享生成运行时](/D:/liuliu-minimap/cloudfunctions/shared/generation-runtime.js)
+- [共享 RAG 运行时](/D:/liuliu-minimap/cloudfunctions/shared/generation-rag-runtime.js)
+- [运行时同步脚本](/D:/liuliu-minimap/scripts/sync_cloud_generation_runtime.js)
 
-## 2. 当前链路现状
+---
 
-### 2.1 当前已经接入的生成能力
+## 2. 当前实现结论
 
-探索页当前有 3 条生成入口：
+当前生成系统已经完成以下收敛：
+
+1. 随机生成和选择生成已经统一后端。
+   - 随机生成只在前端随机选一个主题。
+   - 后端统一调用 `generateTheme`。
+   - `generateRandomTheme` 已删除，不再部署。
+
+2. 生成前已经构造统一 `contextPacket`。
+   - 包含地点、时间、季节、用户状态、附近 POI、附近场景等。
+   - 单主题、前端随机、组合生成都共用这套上下文。
+
+3. 当前时间已经进入生成上下文。
+   - 使用 `localTime / hour / timePhase / weekdayType / timeHints`。
+   - 时间段覆盖凌晨、清晨、上午、午后、黄昏、夜间。
+
+4. 附近 POI 已经进入生成链路。
+   - 生成前会补齐 `nearbyPlaces`。
+   - 再压缩成 `nearbySummary`。
+   - RAG 和 prompt 都会使用它。
+
+5. 地点语境已进入生成链路。
+   - `getLocationContext()` 会在探索点确认和生成前补齐时调用。
+   - 结果进入 `contextPacket.location.sceneTag`。
+
+6. 纯粹模式已经和进阶模式区分上下文。
+   - 纯粹模式会把 `mood / preference / weather.label` 置空。
+   - 纯粹模式仍然根据当前日期推断 `season`。
+   - 纯粹模式仍然传入 `selectedThemes` 和 `walkMode`。
+
+7. RAG 已经从“样例参考”升级为“生成计划”。
+   - 返回 `ragPlan / ragDebug / ragModelInput`。
+   - `ragModelInput` 不再把样例原句直接交给模型。
+   - 模型主要参考角度、线索、锚点、反例和检索分数。
+
+8. 校验机制已经统一。
+   - 纯粹模式、进阶模式、组合模式都走 `summarizeThemeValidation()`。
+   - 规则校验不过时，才按需触发 AI 二次复核。
+
+9. 探索页已经支持生成调试面板。
+   - 可查看 `contextPacket`。
+   - 可查看 `rag.plan`。
+   - 可查看 `rag.debug`。
+   - 可查看 `rag.modelInput`。
+   - 可查看 `validation` 和 `source`。
+
+10. 五个单主题已经完成一次统一排查与修正。
+   - 排查范围覆盖 `形状 / 色彩 / 声音 / 数字 / 气味`。
+   - 现在不只修“形状混数字”，而是统一处理“真正串味”和“规则误判”两类问题。
+   - 单主题 RAG 会尽量只向模型暴露与当前主题直接相关的 `sceneHints / angles / antiPatterns`。
+
+---
+
+## 3. 生成入口实现
+
+### 3.1 服务层
+
+主题服务层目前只保留三个接口：
+
+- `generateTheme(payload)`
+- `generateCombinedTheme(payload)`
+- `verifyMission(payload)`
+
+对应文件：
+
+- [miniprogram/services/theme.js](/D:/liuliu-minimap/miniprogram/services/theme.js)
+
+接口映射层只保留两个主题生成 endpoint：
 
 - `generateTheme`
-- `generateRandomTheme`
 - `generateCombinedTheme`
 
-这些能力已经具备以下基础：
+对应文件：
 
-- 支持 5 个主题方向
-- `形状`
-- `色彩`
-- `声音`
-- `数字`
-- `气味`
+- [miniprogram/services/api.js](/D:/liuliu-minimap/miniprogram/services/api.js)
 
-其中“数字”主题当前按 4 类线索组织：
+已删除旧接口：
 
-- 视觉联想：寻找像数字的形状
-- 数量统计：数清画面中的重复元素
-- 符号识别：识别罗马数字、汉字数字、英文数字等变体
-- 密码线索：把门牌号、楼层号、密码数字转成行动指令
-- 支持纯粹模式与进阶模式
-- 支持轻量本地知识库增强，而不是纯裸 prompt
-- 支持单主题对齐校正，尽量避免用户选了一个主题却跑偏到别的方向
-- 支持按地点名、天气、季节、偏好、心情等做轻量场景匹配
+- `generateRandomTheme`
+- `/ai/themes/preset`
 
-### 2.2 当前真正传给模型的主要信息
+### 3.2 随机生成
 
-目前 `generateTheme` 主链路里，模型主要使用的是这些输入：
+探索页 `handleRandomTheme()` 当前流程：
 
-- `mood`
-- `weather`
-- `season`
-- `preference`
-- `locationName`
-- `selectedThemes`
-- 本地 `ragContext`
+1. 校验是否已确认探索点。
+2. 从 `randomCategories` 随机挑一个主题。
+3. 转成 `selectedThemes`。
+4. 调用 `buildGenerationPayload()`。
+5. 调用 `generateTheme()`。
+6. 将 source 显示转换为 `random+ai / random-fallback`。
 
-对应代码：
+这表示随机生成和选择生成在后端生成逻辑上已经完全统一。
 
-- [前端传参](/D:/liuliu-minimap/miniprogram/pages/index/index.js#L754)
-- [RAG prompt 构造](/D:/liuliu-minimap/cloudfunctions/generateTheme/rag.js#L185)
+### 3.3 选择生成
 
-### 2.3 当前已经存在但尚未真正利用好的能力
+探索页 `handleSelectedThemeGenerate()` 当前流程：
 
-项目里已经有两条重要能力，但还没有真正进入主题生成闭环：
+1. 读取 `combineSelections`。
+2. 按 `walkMode` 限制主题数量。
+3. 纯粹模式或单主题时，调用 `generateTheme()`。
+4. 进阶模式双主题时，调用 `generateCombinedTheme()`。
 
-1. 附近 POI 查询
-   - 探索页会加载附近地点
-   - 但生成主题时没有把这些 POI 提交给主题生成云函数
-   - 代码见：
-     - [探索页加载附近 POI](/D:/liuliu-minimap/miniprogram/pages/index/index.js#L509)
-     - [附近 POI 云函数](/D:/liuliu-minimap/cloudfunctions/fetchNearbyPois/index.js#L74)
+### 3.4 AI 生成按钮
 
-2. 地点语境提炼
-   - 已有 `getLocationContext`
-   - 会根据经纬度与地点名返回如“大学校园 / 河岸步道 / 居民街区 / 商业中心”之类的短语
-   - 但目前没有真正接入主题生成链路
-   - 代码见：
-     - [地点语境云函数](/D:/liuliu-minimap/cloudfunctions/getLocationContext/index.js#L29)
+探索页 `handleGenerateTheme()` 当前流程：
 
-## 3. 当前问题诊断
+1. 如果进阶模式选择了两个主题，调用 `generateCombinedTheme()`。
+2. 否则调用 `generateTheme()`。
+3. 如果没有显式选择主题，前端会先随机补一个主题方向。
 
-本轮需要解决的问题，不是“模型不够聪明”，而是“上下文与输出约束不够像一个真实的附近”。
+---
 
-### 3.1 没有真正参考当前时间
+## 4. contextPacket 实现
 
-当前 prompt 没有显式传入：
+统一上下文在探索页 `buildGenerationPayload()` 中生成。
 
-- 当前本地时间
-- 当前小时
-- 当前时间段
-- 工作日或周末
-- 当前时段下典型的人流与空间状态
+它会先并行补齐：
 
-这会导致：
+- `ensureGenerationLocationContext()`
+- `ensureGenerationNearbyPlaces()`
 
-- 上午生成“夜色将落”的任务
-- 深夜生成“观察上学路上”的任务
-- 黄昏、夜间、清晨这些最有城市气质差异的时段没有被拉开
+然后输出：
 
-### 3.2 输出有明显“AI 味”
+- 平铺字段
+- `generationContext`
+- `generationContext.contextPacket`
 
-当前常见问题：
+### 4.1 location
 
-- 标题偏空泛、偏文艺，不够像真实入口
-- 描述和任务经常比实际需要更长
-- 句子结构重复，像同一模板轻微改写
-- 纯粹模式为了“更丰满”，容易变成长句和复合句
+`contextPacket.location` 包含：
 
-根源不是模型能力，而是：
+- `name`
+- `address`
+- `latitude`
+- `longitude`
+- `sceneTag`
 
-- prompt 对“层次感”的要求高于“清楚、短、能执行”
-- 现在更偏向生成文案，不够偏向生成任务
-- 缺少任务骨架和句式多样性控制
+字段来源：
 
-### 3.3 “地点感”仍主要停留在地点名
+- 探索页当前选点
+- 高德逆地理结果
+- `getLocationContext()` 的语境结果
 
-现在虽然有 `locationName`，但这不足以形成“附近感”。
+### 4.2 time
 
-仅有地点名的问题是：
+`contextPacket.time` 来自 `buildTimeContext()`。
 
-- 很多地点名本身抽象，例如“当前位置”“地图选点”“某某路”
-- 不能说明这里是居民街区、校园边缘、菜场周边还是河岸步道
-- 不能说明这里此时有怎样的人、店、流动和停留
-
-### 3.4 附近 POI 没有进入模型决策
-
-当前前端能够拉到附近 POI，但生成时没有透传。结果就是：
-
-- 模型不知道周围具体有什么
-- 任务只能依赖知识库中的通用场景和地点名猜测
-- “这片地方此刻才能成立”的任务很难稳定出现
-
-### 3.5 输出结构对阅读不够友好
-
-当前 UI 会直接展示：
-
-- `theme.description`
-- `theme.missions`
-
-对应组件：
-
-- [theme-card 组件](/D:/liuliu-minimap/miniprogram/components/theme-card/theme-card.wxml#L10)
-
-因此一旦 description 和 mission 都很长，用户会直接感受到：
-
-- 扫一眼读不明白
-- 不知道先做什么
-- 内容虽“丰富”，但不够利落
-
-## 4. 下一版生成方案的核心原则
-
-### 4.1 从“主题生成”转向“附近生成”
-
-下一版不是单纯优化措辞，而是调整生成系统的目标：
-
-- 不优先追求诗意
-- 不优先追求概念完整
-- 优先追求“这就是我现在周围会遇到的东西”
-
-可以把它理解为：
-
-- 先生成“此时此地的附近画像”
-- 再从这个画像里生出主题和任务
-
-### 4.2 主题必须服务任务，而不是反过来
-
-主题不应是单独炫技的一句文案。
-
-主题的作用应该是：
-
-- 帮用户快速进入状态
-- 让用户知道今天大概要看什么
-- 给任务一个统一的观察方向
-
-因此主题要：
-
-- 短
-- 清楚
-- 有当下感
-- 能和任务一眼对上
-
-### 4.3 纯粹模式要“少而明白”，不是“少而冗长”
-
-纯粹模式的目标不是把 3 条任务压缩成 1 条大段话，而是：
-
-- 只有一个核心动作
-- 但带一个明确观察提醒
-
-推荐理解为：
-
-- 一个入口
-- 一次停留
-- 一个可带走的发现
-
-### 4.4 先让模型知道“附近有什么”，再让它写“你该做什么”
-
-下一版上下文应优先包含：
-
-- 当前时间段
-- 周边 POI 及其业态摘要
-- 地点语境标签
-- 当前天气和空间氛围
-- 可能的人流活动线索
-
-模型不应自己臆测这些信息。
-
-## 5. 目标体验
-
-用户看到结果时，应有以下感受：
-
-- 一眼能懂，不需要读第二遍
-- 这条任务像是现在就能去做
-- 这条任务像是我眼前这片地方会发生的
-- 不是任何城市都能套用的泛化句子
-- 不像 AI 在写散文，而像有人替我指出了一个可进入的观察口
-
-坏例子：
-
-- 在时间褶皱中寻找流动的色彩边缘
-- 观察空间与感官如何在城市皮肤上彼此折返
-
-好例子：
-
-- 灯亮之前
-- 找一处刚开始亮灯的店门口，留意人是在停下还是加快脚步
-- 菜场散场后
-- 找一块刚被收拾过的地面，看看还留下了什么颜色和味道
-
-## 6. 新的上下文模型
-
-下一版建议把生成入参统一组装为一个 `contextPacket`，再由所有生成函数共用。
-
-### 6.1 建议的 contextPacket 结构
-
-```json
-{
-  "location": {
-    "name": "五道口",
-    "address": "海淀区成府路...",
-    "latitude": 39.99,
-    "longitude": 116.33,
-    "sceneTag": "校园边缘商业街",
-    "sceneConfidence": 0.84
-  },
-  "time": {
-    "localTime": "2026-04-10 18:24",
-    "hour": 18,
-    "timePhase": "黄昏",
-    "weekdayType": "工作日",
-    "timeHints": ["店招开始亮", "下班路上", "路边停留变多"]
-  },
-  "weather": {
-    "label": "多云",
-    "season": "春"
-  },
-  "userState": {
-    "mood": "发呆",
-    "preference": "市井烟火",
-    "selectedThemes": ["色彩", "气味"],
-    "walkMode": "pure"
-  },
-  "nearby": {
-    "poiNames": ["便利店", "菜市场", "小学", "面包店", "社区卫生站"],
-    "poiTypes": ["生活服务", "购物服务", "科教文化", "餐饮服务"],
-    "dominantScene": "居民街区边缘的小商业带",
-    "activityHints": ["买菜", "接送孩子", "短暂停留", "顺路打包"]
-  },
-  "rag": {
-    "scenes": [],
-    "referenceMissions": []
-  }
-}
-```
-
-### 6.2 这个结构的意义
-
-它把生成依据拆成 5 层：
-
-- `location`
-  - 你在哪
-- `time`
-  - 现在是什么时刻
-- `nearby`
-  - 周围有什么
-- `userState`
-  - 你今天想怎么走
-- `rag`
-  - 系统可参考哪些主题样例
-
-这样模型看到的就不是零散变量，而是一份“附近画像”。
-
-## 7. 时间上下文方案
-
-### 7.1 必须新增 timeContext
-
-建议前端在发起主题生成前，显式构造 `timeContext` 并传给云函数。
-
-建议字段：
+字段包括：
 
 - `localTime`
 - `hour`
@@ -320,468 +189,686 @@
 - `weekdayType`
 - `timeHints`
 
-### 7.2 推荐时间段划分
+当前时间段配置在 `TIME_PHASE_CONFIGS`。
 
-为了兼顾语义稳定性和任务可用性，建议用 6 档：
+每个时间段都有更丰富的描述，例子：
 
-- `清晨`
-  - 05:00-07:59
-- `上午`
-  - 08:00-10:59
-- `午后`
-  - 11:00-15:59
-- `黄昏`
-  - 16:00-18:59
-- `夜间`
-  - 19:00-22:59
-- `凌晨`
-  - 23:00-04:59
+- 凌晨：人少、值守、清扫、补货、亮着的窗口、安全保守。
+- 清晨：湿气、晨光、早餐摊、晨练、街道启动。
+- 上午：通勤、办事、店铺进入工作状态、短暂停顿。
+- 午后：直接光照、找阴凉、午饭午休、体感线索。
+- 黄昏：回程、等人、亮灯前后、门口与转角停顿。
+- 夜间：招牌、窗口、便利店、夜宵、亮面和声音层次。
 
-### 7.3 每个时段应给模型的典型线索
+### 4.3 weather
 
-这些线索不一定直接展示给用户，但应进入 prompt：
+`contextPacket.weather` 包含：
 
-- 清晨
-  - 地面可能偏湿
-  - 保洁痕迹明显
-  - 人少，声音稀疏
-- 上午
-  - 通勤和办事流动明显
-  - 店铺逐步进入工作状态
-- 午后
-  - 光照最直接
-  - 停留与穿行并存
-- 黄昏
-  - 灯光刚出现
-  - 回家与停留同时发生
-  - 空间边缘感最强
-- 夜间
-  - 招牌、窗口、便利店、夜宵摊更有存在感
-  - 声音层次更清晰
-- 凌晨
-  - 人少
-  - 物流、值守、清扫痕迹更明显
-  - 任务要更保守、更安全
+- `label`
+- `season`
 
-### 7.4 时间策略的业务价值
+纯粹模式规则：
 
-有了时间上下文后，模型更容易写出：
+- `label` 置空
+- `season` 由当前日期推断
 
-- 黄昏适合“观察刚亮灯的边缘”
-- 夜间适合“看光如何把路边分层”
-- 清晨适合“看被刚刚恢复秩序的街道”
+进阶模式规则：
 
-这比单纯写“色彩漫步”“声音漫步”更贴近“附近”的真实变化。
+- `label` 来自用户选择
+- `season` 优先来自用户选择，没有则由日期推断
 
-## 8. 附近 POI 上下文方案
+### 4.4 userState
 
-### 8.1 不是直接把原始 POI 全量喂给模型
+`contextPacket.userState` 包含：
 
-不建议直接传整个高德返回 JSON。
+- `mood`
+- `preference`
+- `selectedThemes`
+- `walkMode`
+- `generatedThemeCategory`
+- `generatedThemeTitle`
 
-原因：
+纯粹模式规则：
 
-- 信息噪声大
-- token 消耗高
-- 模型容易抓错重点
+- `mood` 置空
+- `preference` 置空
+- `selectedThemes` 保留
+- `walkMode` 保留
 
-### 8.2 正确做法是生成 nearbySummary
+### 4.5 nearby
 
-建议在前端或云函数侧先把 POI 压缩成一个可读摘要：
+`contextPacket.nearby` 来自 `buildNearbySummary()`。
 
-```json
-{
-  "poiNames": ["罗森", "紫光园", "社区菜市场", "人大附中", "快递站"],
-  "poiTypes": ["便利店", "餐饮", "购物服务", "科教文化", "生活服务"],
-  "dominantScene": "居民区与校园之间的小型生活带",
-  "activityHints": ["买晚饭", "取快递", "接送", "临时停留"]
-}
-```
+字段包括：
 
-### 8.3 nearbySummary 最值得保留的字段
+- `poiNames`
+- `poiTypes`
+- `dominantScene`
+- `dominantSceneId`
+- `sceneCandidates`
+- `activityHints`
 
-- 最近 5 到 8 个有辨识度的 POI 名称
-- 出现频率最高的 POI 类型
-- 一个简短的业态判断
-- 一组人的活动线索
+其中：
 
-### 8.4 这部分能带来的直接收益
+- `poiNames` 来自附近 POI 名称，最多保留 8 个去重结果。
+- `poiTypes` 来自 POI 类型，优先取 `typeSecondary / typePrimary / type`。
+- `dominantScene` 来自本地场景规则评分，不是地图接口直接返回字段。
+- `sceneCandidates` 是候选场景前三名。
+- `activityHints` 由场景规则、POI 文本和当前时间段共同推断。
 
-加入 nearbySummary 后，模型就更容易写出：
+---
 
-- 菜场周边的“散场后”
-- 校园边缘的“下课路上”
-- 便利店与小餐馆之间的“顺手停留”
-- 河岸步道的“只属于傍晚的停顿”
+## 5. 附近场景推断实现
 
-这会显著减少“任何城市都能套用”的泛化任务。
+探索页当前维护 `NEARBY_SCENE_RULES`，用于把 POI 和地点语境推断为“附近场景”。
 
-## 9. 地点语境方案
+当前覆盖场景包括：
 
-### 9.1 让 getLocationContext 正式接入生成链路
+- 历史景区游览带
+- 文博展览停留带
+- 城市地标与广场游览带
+- 公园或滨水慢行带
+- 校园与教育生活带
+- 居民街区生活带
+- 商业办公停留带
+- 餐饮与市井烟火带
+- 交通换乘流动带
+- 医院与民生服务带
 
-当前 `getLocationContext` 已实现，但未真正进入主题生成主链路。
+评分逻辑：
 
-建议把它升级为统一上下文组装的一部分：
+- `sceneTag` 命中场景关键词会加分。
+- POI 名称、地址、类型命中场景关键词会加分。
+- 距离越近权重越高。
+- 排名越靠前的 POI 权重越高。
 
-1. 前端确认探索点
-2. 拉附近 POI
-3. 调 `getLocationContext`
-4. 生成 `contextPacket`
-5. 调主题生成函数
+如果出现 `dominantScene` 和实际不搭，优先排查：
 
-### 9.2 sceneTag 要解决的问题
+- 附近 POI 是否足够多。
+- POI 类型是否太粗。
+- `sceneTag` 是否误导。
+- `sceneCandidates` 前几名分差是否很小。
+- 当前场景规则是否缺少对应类型。
 
-`locationName` 只能回答“这是哪儿”，但不能回答“这是什么样的地方”。
+---
 
-`sceneTag` 要回答的是：
+## 6. RAG 生成实现
 
-- 校园边缘商业街
-- 河岸步道
-- 居民街区内部
-- 老城区窄街巷
-- 夜间餐饮带
-- 社区菜场周边
+共享 RAG 入口：
 
-这一步对“附近感”的价值极高。
+- `buildUnifiedRetrievalContext()`
 
-### 9.3 场景标签建议作为硬约束而非仅供参考
+所在文件：
 
-建议 prompt 中不要只写“可参考 sceneTag”，而要写：
+- [cloudfunctions/shared/generation-rag-runtime.js](/D:/liuliu-minimap/cloudfunctions/shared/generation-rag-runtime.js)
 
-- 标题、描述和任务必须与 `sceneTag` 一致
-- 如果附近摘要与 `sceneTag` 冲突，以附近摘要为准
+两个云函数都会使用：
 
-## 10. 输出结构优化
+- `generateTheme`
+- `generateCombinedTheme`
 
-### 10.1 当前问题
+RAG 当前会输出：
 
-现在的输出结构是：
-
-- `title`
-- `description`
-- `category`
-- `missions`
-- `vibeColor`
-
-这个结构本身可以继续用，但要更严格限制长度与可读性。
-
-### 10.2 下一版建议长度约束
-
-- `title`
-  - 6 到 12 字优先
-- `description`
-  - 18 到 32 字优先
-- `mission`
-  - 单条 16 到 28 字优先
-
-### 10.3 纯粹模式建议
-
-纯粹模式不应继续强调“更长、更丰满”，而应强调：
-
-- 一句话主任务
-- 一句话观察提示
-
-如果暂时不改接口结构，可先把唯一 mission 生成成两短句拼接：
-
-- `找一处刚开始亮灯的店门口，留意人是在停下还是加快脚步`
-
-如果允许调整数据结构，推荐扩成：
-
-```json
-{
-  "title": "灯亮之前",
-  "description": "黄昏的街口，停留和赶路正在重新分开。",
-  "category": "色彩",
-  "missions": [
-    {
-      "action": "找一处刚开始亮灯的店门口",
-      "focus": "留意人是在停下还是加快脚步"
-    }
-  ]
-}
-```
-
-### 10.4 进阶模式建议
-
-进阶模式的 3 条任务要在结构上明显分工：
-
-- 一条看主体
-- 一条看关系
-- 一条看变化
-
-不要都写成：
-
-- 找一个...
-- 再找一个...
-- 再拍一个...
-
-## 11. 去 AI 味的生成策略
-
-### 11.1 不只改 prompt，要加任务骨架池
-
-建议建立可复用的任务骨架：
-
-- `寻找`
-- `比较`
-- `等待`
-- `跟随`
-- `停留`
-- `辨认`
-- `记录变化`
-- `判断来源`
-
-模型不再从零开始写任务，而是在骨架上填“附近细节”。
-
-### 11.2 每类骨架的作用
-
-- `寻找`
-  - 降低上手门槛
-- `比较`
-  - 让任务有层次，但不啰嗦
-- `等待`
-  - 引入时间感
-- `跟随`
-  - 让空间流动进入任务
-- `停留`
-  - 强化感受与观察深度
-- `判断来源`
-  - 特别适合气味、声音主题
-
-### 11.3 示例
-
-黄昏居民街区可生成：
-
-- 寻找型
-  - 找一处刚亮灯的门口
-- 比较型
-  - 比较亮灯前后哪一边更让人停下
-- 变化型
-  - 在同一个路口站 30 秒，看人流往哪一边收拢
-
-这样既有差异，也更像真实任务。
-
-## 12. Prompt 改写方向
-
-### 12.1 当前 prompt 的主要问题
-
-当前 prompt 偏向要求：
-
-- 诗意
-- 层次
-- 丰富
-- 不过短
-
-这容易把模型推向：
-
-- 更长
-- 更文学
-- 更抽象
-
-### 12.2 下一版 prompt 应强调的点
-
-建议把主指令改成以下方向：
-
-- 先依据 `time + scene + nearby` 写任务，不要凭空抒情
-- 任务必须像用户现在立刻可以做的事
-- 优先写动作和观察重点，少写抽象感受
-- 每条任务只能表达一个核心动作
-- 禁止出现空泛修辞堆叠
-- 禁止出现任何城市都成立的句子
-- 如果地点线索不足，优先保守、具体，而不是写空
-
-### 12.3 建议新增的硬性规则
-
-- 标题必须短，不要像一段诗句
-- description 不要和任务重复
-- 纯粹模式只允许 1 个核心动作
-- 黄昏、夜间、凌晨要明显体现时段差异
-- 凌晨任务要更安全、更克制
-- 如果给了 nearbySummary，任务至少 1 次明确呼应附近业态或场景线索
-
-## 13. 推荐的工程改造
-
-### 13.1 统一上下文组装层
-
-建议新增一个统一方法，例如：
-
-- `buildGenerationContextPacket(event)`
-
-职责：
-
-- 读取时间上下文
-- 拉或接收附近 POI 摘要
-- 合并地点语境
-- 合并用户输入和 RAG 结果
-- 输出统一 contextPacket
-
-这样 `generateTheme`、`generateRandomTheme`、`generateCombinedTheme` 都可复用。
-
-当前代码实现建议：
-
-- 共享源码放在 `cloudfunctions/shared/generation-runtime.js`
-- 通过 `scripts/sync_cloud_generation_runtime.js` 同步到各生成云函数目录
-- 各云函数只引用本地同步后的 `runtime.js`
-
-这样既能保持部署兼容，又能维持单一源码。
-
-推荐使用流程：
-
-1. 修改 `cloudfunctions/shared/generation-runtime.js`
-2. 运行 `node scripts/sync_cloud_generation_runtime.js`
-3. 确认以下文件已同步更新
-   - `cloudfunctions/generateTheme/runtime.js`
-   - `cloudfunctions/generateRandomTheme/runtime.js`
-   - `cloudfunctions/generateCombinedTheme/runtime.js`
-4. 重新部署以下云函数
-   - `generateTheme`
-   - `generateRandomTheme`
-   - `generateCombinedTheme`
-
-### 13.2 探索页新增传参
-
-建议在以下生成调用里统一补充：
-
+- `selectedThemes`
+- `requestedCategories`
 - `timeContext`
 - `nearbySummary`
-- `sceneTag`
+- `scenes`
+- `categories`
+- `referenceMissions`
+- `generationIntent`
+- `generationPlan`
+- `ragDebug`
 
-对应位置：
+最新补充行为：
 
-- [AI 生成调用](/D:/liuliu-minimap/miniprogram/pages/index/index.js#L754)
-- [随机生成调用](/D:/liuliu-minimap/miniprogram/pages/index/index.js#L793)
-- [选择生成调用](/D:/liuliu-minimap/miniprogram/pages/index/index.js#L824)
+- `referenceMissions.angle` 优先使用人类可读角度，不再优先暴露内部模板 id。
+- 单主题场景提示会先做主题过滤，再进入 `ragModelInput.scenes[].missionHints`。
+- 如果已经存在明确命中主题的场景提示，就不会再混入“中性但容易带偏”的提示。
 
-### 13.3 云函数侧新增兼容策略
+更多 RAG 细节见：
 
-为了平滑上线，建议：
+- [AI主题任务RAG优化具体实现.md](/D:/liuliu-minimap/docs/AI主题任务RAG优化具体实现.md)
 
-- 如果新字段不存在
-  - 按旧逻辑生成
-- 如果新字段存在
-  - 优先使用新上下文
+---
 
-这样不会影响旧版本前端。
+## 7. Prompt 优化实现
 
-### 13.4 后处理策略也要升级
+### 7.1 单主题 prompt
 
-当前后处理主要是“主题是否跑偏”。
+单主题 prompt 已经加入：
 
-下一版应再补 3 类检查：
+- 当前地点
+- 当前时间段
+- 时间线索
+- 附近场景
+- 附近 POI
+- 附近活动线索
+- 任务骨架
+- RAG 入模内容
+- RAG 计划
+- 变化种子 `generationSeed`
 
-- 长度检查
-  - 是否过长
-- 差异检查
-  - 3 条任务是否过于相似
-- 在地检查
-  - 是否真正使用了时间或附近线索
+关键约束：
 
-## 14. 分阶段实施建议
+- 必须明显体现地点语境、时间段和附近场景。
+- 如果用户选了主题，任务必须命中主题。
+- 未选声音时，不要把声音当任务重点。
+- 未选色彩时，不要把颜色、色块、反光、色温当核心动作。
+- 未选气味时，不要把闻味道、香气、热气、潮气当核心动作。
+- 数字主题必须直接涉及数字形状、数量统计、数字变体或数字行动线索。
+- 形状主题允许借光影帮助看清轮廓，但重点仍必须落在形状。
+- 数字主题允许出现“像数字的形状”，但重点必须落在数字判断，而不是只谈形状本身。
+- 任务要短、清楚、可执行。
+- 同一地点重复生成时，要根据 `generationSeed` 改变动作、锚点或观察角度。
+- 不要复用知识库样例句。
 
-### 14.1 第一阶段
+### 7.2 组合主题 prompt
+
+组合主题 prompt 已经加入：
+
+- 组合方向
+- 统一上下文块
+- RAG 参考上下文
+- 组合生成计划
+- categoryPlans
+- missionBlueprints
+- antiPatterns
+- 变化种子 `generationSeed`
+
+关键约束：
+
+- 两个主题要真正融合，不要各写各的。
+- 不要引入第三个无关主题。
+- 三个任务切入角度尽量不同。
+- 至少一个任务要呼应附近 POI 或活动线索。
+- 至少一个任务要体现两个方向交集。
+- RAG 只提供结构、角度、线索和锚点，不要照抄样例句。
+
+---
+
+## 8. 输出收口实现
+
+共享收口逻辑在：
+
+- `finalizeTheme()`
+
+所在文件：
+
+- [cloudfunctions/shared/generation-runtime.js](/D:/liuliu-minimap/cloudfunctions/shared/generation-runtime.js)
+
+它会处理：
+
+- 标题长度
+- 描述长度
+- 任务长度
+- 任务数量
+- 相似任务去重
+- fallback 任务补齐
+- 主题命中不足时用 fallback 补齐
+- 缺少在地锚点时补锚点任务
+
+当前数量规则：
+
+- 纯粹模式：1 条任务
+- 进阶模式：3 条任务
+
+当前长度倾向：
+
+- 标题尽量短。
+- 描述压到 32 字以内。
+- 纯粹模式任务不写成长段落。
+- 进阶模式任务尽量短而清楚。
+
+---
+
+## 9. 验证机制实现
+
+统一校验入口：
+
+- `summarizeThemeValidation()`
+
+它会检查：
+
+- 主题是否命中。
+- 是否有在地锚点。
+- 是否存在泛化任务。
+- 单主题是否混入未选方向。
+- 进阶模式任务之间是否过于相似。
+- 规则评分是否达到通过线。
+
+最新补充：
+
+- 校验现在会区分“真正跑偏”和“合理借词”。
+- 例如：
+  - 形状主题里“光影轮廓”不再被简单误判成色彩跑偏。
+  - 数字主题里“像数字的形状”不再被简单误判成形状跑偏。
+- 但如果形状任务写成“数清数量”，或气味任务写成“看色块 / 数灯箱”，仍会被判失败。
+
+### 9.1 纯粹模式
+
+纯粹模式校验倾向：
+
+- 至少 1 个主题命中。
+- 至少 1 个在地锚点。
+- 唯一任务不能泛化。
+
+### 9.2 进阶模式
+
+进阶模式校验倾向：
+
+- 至少 2 个任务能看出主题痕迹。
+- 至少 2 个任务带在地锚点。
+- 任务之间不能太像。
+
+### 9.3 组合模式
+
+组合模式会传入 `combined: true`。
+
+它会检查：
+
+- 多个主题是否整体被覆盖。
+- 是否引入第三个无关主题。
+- 是否任务过泛或锚点不足。
+
+### 9.4 AI 二次复核
+
+AI 二次复核不是每次都跑。
+
+触发条件：
+
+- 规则校验发现主题跑偏。
+- 在地锚点不足。
+- 任务过泛。
+- 单主题混入未选方向。
+- 进阶模式任务太像。
+- 规则评分低于通过线。
+
+二次复核可能返回：
+
+- `aiOk`
+- `aiScore`
+- `aiReasons`
+- `aiShouldRewrite`
+- `secondaryValidationUsed`
+- `secondaryValidationError`
+
+如果 AI 建议重写，并返回 `rewrittenTheme`，云函数会局部合并后再交给 `finalizeTheme()`。
+
+---
+
+## 10. 前端调试实现
+
+探索页已经加入“生成调试”开关。
+
+对应文件：
+
+- [miniprogram/pages/index/index.wxml](/D:/liuliu-minimap/miniprogram/pages/index/index.wxml)
+- [miniprogram/pages/index/index.wxss](/D:/liuliu-minimap/miniprogram/pages/index/index.wxss)
+- [miniprogram/pages/index/index.js](/D:/liuliu-minimap/miniprogram/pages/index/index.js)
+
+当前调试面板展示：
+
+- 摘要卡片
+- RAG 字段说明
+- `rag.plan`
+- `rag.debug`
+- `rag.modelInput`
+- `contextPacket`
+
+关键字段解释：
+
+- `source`
+  - 判断是 `rag+ai`、`rag-fallback`、`random+ai`、`random-fallback`、`combined+ai`、`combined-fallback`。
+- `validation`
+  - 判断是否通过规则校验，是否触发 AI 复核。
+- `runtimeVersion`
+  - 判断云函数是否是最新部署版本。
+- `rag.plan.targetThemes`
+  - 判断本次主题是否和用户选择一致。
+- `rag.plan.chosenScene`
+  - 判断 RAG 主场景是否符合附近。
+- `rag.debug.sceneCoverage`
+  - 判断候选场景分数和分数来源。
+- `rag.modelInput`
+  - 判断模型到底看到了哪些 RAG 内容。
+- `contextPacket`
+  - 判断本次真正传给 AI 的地点、时间、附近和用户状态是否正确。
+
+当前建议重点核对：
+
+- `rag.modelInput.scenes[].missionHints`
+  - 单主题下是否还混入了别的主题提示。
+- `rag.modelInput.referenceMissions[].angle`
+  - 是否已经是“轮廓节奏 / 天气显色 / 回响层次 / 数字变体 / 来源判断”这类可读角度。
+- `validation.offThemeMatches`
+  - 是否真的是跑偏，而不是合理借词被误判。
+
+---
+
+## 11. 同步脚本实现
+
+共享源码：
+
+- `cloudfunctions/shared/generation-runtime.js`
+- `cloudfunctions/shared/generation-rag-runtime.js`
+
+云函数运行副本：
+
+- `cloudfunctions/generateTheme/runtime.js`
+- `cloudfunctions/generateTheme/rag-runtime.js`
+- `cloudfunctions/generateCombinedTheme/runtime.js`
+- `cloudfunctions/generateCombinedTheme/rag-runtime.js`
+
+同步命令：
+
+```bash
+node scripts/sync_cloud_generation_runtime.js
+```
+
+当前脚本只同步：
+
+- `generateTheme`
+- `generateCombinedTheme`
+
+不会同步：
+
+- `generateRandomTheme`
+
+修改 shared runtime 后，需要：
+
+1. 运行同步脚本。
+2. 重新部署 `generateTheme`。
+3. 重新部署 `generateCombinedTheme`。
+
+如果云环境中仍有旧 `generateRandomTheme`，需要在云开发控制台或部署工具里手动下线。
+
+---
+
+## 12. 当前已解决的问题
+
+### 12.1 时间和任务不匹配
+
+已解决方式：
+
+- 前端传 `timeContext`。
+- 时间段细分为 6 档。
+- 每档都有更丰富 `timeHints`。
+- RAG 和 prompt 都使用时间上下文。
+
+### 12.2 纯粹模式太受进阶选项影响
+
+已解决方式：
+
+- 纯粹模式 `weather.label` 置空。
+- 纯粹模式 `preference` 置空。
+- 纯粹模式 `mood` 置空。
+- 纯粹模式仍保留季节、主题和模式。
+
+### 12.3 POI 已进入模型
+
+已解决方式：
+
+- 生成前确保附近 POI 存在。
+- 构造 `nearbySummary`。
+- 进入 `contextPacket.nearby`。
+- 进入 RAG 检索和 prompt。
+
+### 12.4 RAG 和实际情况对不上难排查
+
+已解决方式：
+
+- 增加 `sceneCandidates`。
+- 增加 `ragDebug.sceneCoverage`。
+- 增加分数拆解 `scoreBreakdown`。
+- 前端显示 `rag.plan / rag.debug / rag.modelInput`。
+
+### 12.5 生成内容像照着 sample 改
+
+已解决方式：
+
+- `ragModelInput` 去掉样例原句。
+- prompt 明确禁止复用样例句。
+- 保留角度、线索、锚点、反例和检索分数作为入模信息。
+
+### 12.6 随机生成和选择生成后端不一致
+
+已解决方式：
+
+- 删除 `generateRandomTheme`。
+- 删除服务层旧 endpoint。
+- 同步脚本不再同步旧随机云函数。
+- 前端随机选主题后调用 `generateTheme`。
+
+### 12.7 其他主题也存在串味与误判
+
+已解决方式：
+
+- 对 `形状 / 色彩 / 声音 / 数字 / 气味` 五个单主题统一做模板审计。
+- 为色彩、声音、数字、气味补齐可读 `angles` 与 `antiPatterns`。
+- 单主题场景提示增加主题过滤，减少把别的主题提示喂给模型。
+- 场景库里几条天然混双主题的 hint 已拆干净，例如景区数字提示、夜市形状提示、滨水色彩提示。
+- 校验新增“合理借词豁免”，避免把合法数字任务或合法形状任务误杀。
+
+---
+
+## 13. 仍未完全实现的建议改进
+
+### 13.1 扩充 POI 场景规则
+
+当前 `NEARBY_SCENE_RULES` 已覆盖 10 类场景，但还可以继续增加：
+
+- 夜间餐饮停留带
+- 雨天街区反光带
+- 旅游服务与排队等候带
+- 老旧社区修补带
+- 城市边缘混合业态带
+- 办公楼下短暂停留带
+- 商场内外过渡带
+- 学校放学接送带
 
 目标：
 
-- 最低成本提升结果质量
+- 降低 `dominantScene` 与实际直觉不搭的概率。
+- 让 `activityHints` 更像真实附近动作。
 
-建议实施：
+### 13.2 扩充主题 angle 库
 
-- 前端生成时补充 `timeContext`
-- 把当前 `nearbyPlaces` 压缩成 `nearbySummary` 后传给云函数
-- 把 `getLocationContext` 正式串进生成链路
-- prompt 收紧长度要求
-- 去掉“纯粹模式必须更丰满”的描述，改成“更清楚、更具体”
+每个主题还可以继续扩充更多角度。
 
-预期收益：
+形状：
 
-- 当下感明显提升
-- 纯粹模式更易读
-- 任务更像真实附近
+- 轮廓
+- 弧度
+- 重复
+- 边界
+- 对称
+- 临时形状
 
-### 14.2 第二阶段
+色彩：
+
+- 色块
+- 渐变
+- 冷暖
+- 反光
+- 明暗
+- 材质色差
+
+声音：
+
+- 连续背景声
+- 突发声
+- 回响
+- 节奏
+- 远近层次
+- 被动作触发的声音
+
+数字：
+
+- 像数字的形状
+- 数量统计
+- 数字变体
+- 数字行动线索
+- 排号与倒计时
+- 楼层、门牌、出口号
+
+气味：
+
+- 来源
+- 扩散
+- 停留
+- 冷热交界
+- 气味记忆
+- 食物、草木、消毒水、潮气等细分来源
+
+### 13.3 降低 fallback 重复感
+
+当前 AI 成功时已经尽量避免照抄样例，但 fallback 仍可能来自模板样例池。
+
+建议继续改进：
+
+- fallback 也改成“角度 + 锚点 + 骨架”的组合生成。
+- fallback 增加 `generationSeed` 参与随机。
+- fallback 针对同一地点保留最近输出去重。
+- fallback 将样例句拆成动作、对象、观察重点，而不是整句复用。
+
+### 13.4 建 bad case 库
+
+建议维护一份 bad case 表。
+
+字段可以包括：
+
+- 生成时间
+- 地点
+- 主题
+- walkMode
+- source
+- validation score
+- contextPacket
+- ragPlan
+- ragDebug
+- ragModelInput
+- 失败原因
+- 人工建议修复方向
 
 目标：
 
-- 统一三条生成链路的上下文结构
+- 不靠主观记忆优化 prompt。
+- 用实际失败样本反推 RAG 规则和模板库。
 
-建议实施：
+### 13.5 增加生成质量埋点
 
-- 抽出 `contextPacket`
-- 抽出统一 prompt builder
-- 抽出统一后处理逻辑
+建议后续记录：
 
-预期收益：
-
-- 三条生成链路的质量差异缩小
-- 后续改 prompt 不必三处分别维护
-
-### 14.3 第三阶段
+- `source`
+- `runtimeVersion`
+- `validation.ok`
+- `validation.score`
+- `ragDebug.retrievalQuality`
+- `ragPlan.targetThemes`
+- `ragPlan.chosenScene`
+- 是否用户重新生成
+- 是否用户开始漫步
 
 目标：
 
-- 让输出更稳定、更少 AI 味
+- 判断优化是否真的提升开始漫步转化。
+- 统计哪些主题、场景、时段最容易失败。
 
-建议实施：
+### 13.6 进一步优化 AI 二次复核
 
-- 建任务骨架池
-- 建时间段任务偏好规则
-- 建高频场景专项模板
+当前二次复核是按需触发，已经避免每次都多调一次模型。
 
-优先专项场景建议：
+后续可以继续优化：
 
-- 社区菜场傍晚
-- 校园边缘黄昏
-- 河岸步道夜间
-- 老街清晨
-- 夜市与便利店混合带
+- 只让 AI 复核具体失败项，不整包复核。
+- 把重写限制在失败任务上。
+- 将 AI 复核结果写入 bad case 库。
+- 对二次复核失败的结果返回更明确 `repairReason`。
 
-## 15. 验收标准
+### 13.7 Web 后端完全复刻小程序生成能力
 
-这轮优化不应只看“文案是否更好看”，而应看以下指标：
+当前 Web 共用接口的基础字段能对齐，但如果要完全复刻小程序当前效果，Web 后端需要继续兼容：
 
-### 15.1 主观验收
+- `generationContext.contextPacket`
+- `timeContext`
+- `nearbySummary`
+- `generationSeed`
+- `ragPlan`
+- `ragDebug`
+- `ragModelInput`
+- `validation`
 
-- 用户能否一眼看懂任务
-- 用户是否会觉得“这就是我附近”
-- 用户是否明显感受到黄昏和夜间生成结果不同
-- 用户是否不再频繁吐槽“太像 AI 写的”
+否则 Web 模式下可能只能做到“基础生成可用”，但无法完全复刻当前小程序云函数链路的上下文质量和调试能力。
 
-### 15.2 客观验收
+---
 
-- 纯粹模式平均任务字数下降
-- 任务首屏展示完整率提升
-- 用户生成后直接开始漫步的转化提升
-- 用户切换地点后重新生成的意愿提升
-- 任务重复度下降
+## 14. 验收建议
 
-### 15.3 内容抽检标准
+后续验收不应只看文案是否好看，而应按这几类检查。
 
-抽检 50 条结果时，应重点看：
+### 14.1 主题命中
 
-- 是否出现错时段任务
-- 是否出现和附近明显不符的任务
-- 是否出现 3 条任务只是同义改写
-- 是否出现纯粹模式长到一眼读不懂
+- 数字主题是否明确出现数字形状、数量、变体或行动线索。
+- 声音主题是否明确出现声音来源、层次或节奏。
+- 气味主题是否明确出现来源、扩散或停留。
+- 单主题是否混入未选方向。
+- 双主题是否真的融合，而不是各写各的。
 
-## 16. 结论
+### 14.2 时间命中
 
-当前系统已经有：
+- 清晨是否像清晨。
+- 黄昏是否像黄昏。
+- 夜间是否像夜间。
+- 凌晨是否更安全、更克制。
 
-- 主题方向
-- 基础 RAG
-- 单主题对齐
-- 随机与组合生成
+### 14.3 附近命中
 
-但它还没有真正建立“附近”的生成能力。
+- 任务是否呼应 POI、活动线索、场景标签。
+- `chosenScene` 是否和 `sceneCandidates` 合理。
+- `dominantScene` 是否和真实地点直觉一致。
 
-下一版最关键的升级不是换模型，而是补齐上下文：
+### 14.4 可读性
 
-- 把“现在几点、处于什么时段”告诉模型
-- 把“周围到底有什么 POI 和业态”告诉模型
-- 把“这里属于什么空间类型”告诉模型
-- 再用更短、更清楚、更像任务的输出约束去收口
+- 纯粹模式是否一眼能懂。
+- 任务是否短而明确。
+- description 是否没有重复任务。
+- 进阶模式 3 条任务是否角度不同。
+
+### 14.5 调试可解释性
+
+- 前端能否看到 `contextPacket`。
+- 前端能否看到 `rag.plan`。
+- 前端能否看到 `rag.debug`。
+- 前端能否看到 `rag.modelInput`。
+- validation 是否返回清楚的原因。
+
+---
+
+## 15. 结论
+
+当前 AI 主题任务生成优化已经从“方案讨论”进入“可调试的实现状态”。
+
+已经落地的核心变化是：
+
+- 不再维护独立随机生成后端。
+- 所有生成入口共享结构化上下文。
+- 时间、附近 POI、地点语境已经进入生成链路。
+- 纯粹模式和进阶模式有明确上下文差异。
+- RAG 不再只给模型 sample，而是给计划、角度、锚点和反例。
+- 规则校验和按需 AI 二次复核已经统一。
+- 前端能看到本次真正传给 AI 的上下文与 RAG 入模内容。
+
+后续最值得继续做的不是继续堆 prompt，而是：
+
+- 扩充场景规则。
+- 扩充主题角度库。
+- 降低 fallback 重复感。
+- 建 bad case 库。
+- 做生成质量埋点。
 
 一句话概括：
 
-- 不是让 AI 继续写更漂亮的话
-- 而是让 AI 更准确地指出“你此刻身边值得进入的那个附近”
+- 当前版本已经能让 AI 更像是在“此刻、此地、附近”里生成任务。
+- 当前版本也已经把五个单主题的串味问题做过一轮统一收敛。
+- 下一步要让它更稳定、更丰富，并且能被持续评估。

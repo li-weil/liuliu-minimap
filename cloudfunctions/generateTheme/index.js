@@ -1,11 +1,17 @@
 const cloud = require('wx-server-sdk');
 const { chatJson } = require('./ai');
-const { retrieveContext, buildFallbackTheme, buildPrompt } = require('./rag');
-const { finalizeTheme, normalizeLocationSignals } = require('./runtime');
+const { retrieveContext, buildFallbackTheme, buildPrompt, buildRagModelInput } = require('./rag');
+const {
+  finalizeTheme,
+  normalizeLocationSignals,
+  summarizeThemeValidation,
+  buildSecondaryValidationPrompt,
+} = require('./runtime');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const includeDebugContext = process.env.DEBUG_RAG_CONTEXT === 'true';
+const RUNTIME_VERSION = '2026-04-13-validation-r2';
 
 function normalizeMissionText(mission) {
   if (typeof mission === 'string') {
@@ -49,7 +55,7 @@ function normalizeSelectedThemes(selectedThemes, event) {
 
 function isNumberMission(mission) {
   const text = String(mission || '');
-  return /数字|数一数|数量|几个|多少|门牌|编号|楼层|步数|密码|罗马数字|汉字数字|英文数字|隐形数字/.test(text)
+  return /数字|数一数|数清|数出|计数|数量|几个|多少|门牌|编号|楼层|步数|密码|罗马数字|汉字数字|英文数字|隐形数字/.test(text)
     || /像(?:数字|[0-9０-９一二三四五六七八九十零两])/.test(text)
     || /(?:凑齐|收集|找到|找出|寻找|记录|拍下|拍到|数清|观察).{0,8}(?:[0-9０-９]+|[一二三四五六七八九十零两])(?:个|片|只|扇|盏|层|步|次|组|处)/.test(text)
     || /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|iv|vi|vii|viii|ix|x)\b/i.test(text);
@@ -57,22 +63,22 @@ function isNumberMission(mission) {
 
 function isShapeMission(mission) {
   const text = String(mission || '');
-  return /形状|轮廓|线条|弧|圆角|几何|对称|拱|边角|门洞|窗框/.test(text);
+  return /形状|轮廓|线条|弧|圆角|几何|对称|拱|边角|门洞|窗框|边界|负空间|方向线|轮廓节奏/.test(text);
 }
 
 function isColorMission(mission) {
   const text = String(mission || '');
-  return /色|颜色|色彩|红|蓝|黄|绿|渐变|撞色|明暗|色块/.test(text);
+  return /色|颜色|色彩|红|蓝|黄|绿|渐变|撞色|明暗|色块|反光|光影|色温|亮面|阴影|褪色|高光|配色|色阶/.test(text);
 }
 
 function isSoundMission(mission) {
   const text = String(mission || '');
-  return /声音|声|听|节奏|回响|风声|脚步|铃声|叫卖|环境声/.test(text);
+  return /声音|声|听|回响|风声|脚步|铃声|叫卖|环境声|提示音|广播|讲解|快门|交谈/.test(text);
 }
 
 function isSmellMission(mission) {
   const text = String(mission || '');
-  return /气味|味道|香|臭|闻|潮气|草木味|烟火味|食物香/.test(text);
+  return /气味|味道|香|臭|闻|潮气|草木味|烟火味|食物香|香味|热气|冷气|泥土味|机油味|雨水味|咖啡香|清洁味|酒气|烤物味/.test(text);
 }
 
 const themeRules = {
@@ -167,8 +173,77 @@ function forceThemeAlignment(theme, event, fallbackTheme) {
   };
 }
 
+function normalizeAiValidationResult(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+  return {
+    stage: 'ai-review',
+    ok: !!payload.ok,
+    score: Number.isFinite(Number(payload.score)) ? Number(payload.score) : null,
+    reasons: Array.isArray(payload.reasons) ? payload.reasons.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4) : [],
+    shouldRewrite: !!payload.shouldRewrite,
+    rewrittenTheme: payload.rewrittenTheme && typeof payload.rewrittenTheme === 'object' ? payload.rewrittenTheme : null,
+  };
+}
+
+async function maybeRunSecondaryValidation(theme, event, fallbackTheme, options) {
+  let validation = summarizeThemeValidation(theme, event, {
+    ...options,
+    allowSecondaryValidation: true,
+  });
+  if (!validation.shouldRunSecondaryValidation) {
+    return { theme, validation };
+  }
+
+  try {
+    const aiValidation = normalizeAiValidationResult(await chatJson(
+      '你是遛遛小程序的主题质检助手。只返回合法 JSON，不要输出额外解释。',
+      buildSecondaryValidationPrompt(theme, event, options)
+    ));
+    if (!aiValidation) {
+      return { theme, validation };
+    }
+    let nextTheme = theme;
+    if (aiValidation.shouldRewrite && aiValidation.rewrittenTheme) {
+      const rewrittenTheme = normalizeTheme({
+        ...theme,
+        ...aiValidation.rewrittenTheme,
+      }, event.walkMode);
+      nextTheme = finalizeTheme({ ...theme, ...rewrittenTheme }, event, fallbackTheme, options);
+      validation = summarizeThemeValidation(nextTheme, event, {
+        ...options,
+        allowSecondaryValidation: true,
+      });
+    }
+    return {
+      theme: nextTheme,
+      validation: {
+        ...validation,
+        ok: validation.ok && aiValidation.ok !== false,
+        stage: 'ai-review',
+        aiOk: aiValidation.ok,
+        aiScore: aiValidation.score,
+        aiReasons: aiValidation.reasons,
+        aiShouldRewrite: aiValidation.shouldRewrite,
+        secondaryValidationUsed: true,
+      },
+    };
+  } catch (error) {
+    return {
+      theme,
+      validation: {
+        ...validation,
+        secondaryValidationUsed: true,
+        secondaryValidationError: error.message || 'secondary_validation_failed',
+      },
+    };
+  }
+}
+
 exports.main = async (event) => {
   const ragContext = retrieveContext(event);
+  const ragModelInput = buildRagModelInput(ragContext);
   const fallbackTheme = normalizeTheme(buildFallbackTheme(event, ragContext), event.walkMode);
   const prompt = buildPrompt(event, ragContext);
 
@@ -178,20 +253,43 @@ exports.main = async (event) => {
       prompt
     ), event.walkMode);
     const alignedTheme = forceThemeAlignment(theme, event, fallbackTheme);
+    const finalizedTheme = finalizeTheme({ ...fallbackTheme, ...alignedTheme }, event, fallbackTheme, {
+      categories: normalizeSelectedThemes(event.selectedThemes, event),
+    });
+    const reviewResult = await maybeRunSecondaryValidation(finalizedTheme, event, fallbackTheme, {
+      categories: normalizeSelectedThemes(event.selectedThemes, event),
+    });
     return {
-      theme: finalizeTheme({ ...fallbackTheme, ...alignedTheme }, event, fallbackTheme, {
-        categories: normalizeSelectedThemes(event.selectedThemes, event),
-      }),
+      theme: reviewResult.theme,
       source: 'rag+ai',
+      validation: reviewResult.validation,
+      runtimeVersion: RUNTIME_VERSION,
+      ragPlan: ragContext.generationPlan || null,
+      ragDebug: ragContext.ragDebug || null,
+      ragModelInput: {
+        ragContext: ragModelInput,
+        generationPlan: ragContext.generationPlan || null,
+      },
       ragContext: includeDebugContext ? ragContext : undefined,
     };
   } catch (error) {
     const alignedFallbackTheme = forceThemeAlignment(fallbackTheme, event, fallbackTheme);
+    const finalizedFallback = finalizeTheme(alignedFallbackTheme, event, fallbackTheme, {
+      categories: normalizeSelectedThemes(event.selectedThemes, event),
+    });
     return {
-      theme: finalizeTheme(alignedFallbackTheme, event, fallbackTheme, {
+      theme: finalizedFallback,
+      source: 'rag-fallback',
+      validation: summarizeThemeValidation(finalizedFallback, event, {
         categories: normalizeSelectedThemes(event.selectedThemes, event),
       }),
-      source: 'rag-fallback',
+      runtimeVersion: RUNTIME_VERSION,
+      ragPlan: ragContext.generationPlan || null,
+      ragDebug: ragContext.ragDebug || null,
+      ragModelInput: {
+        ragContext: ragModelInput,
+        generationPlan: ragContext.generationPlan || null,
+      },
       ragContext: includeDebugContext ? ragContext : undefined,
       reason: error.message || 'generate_failed',
     };

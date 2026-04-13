@@ -63,6 +63,8 @@ function normalizePoi(item) {
     district: item.adname || item.district || '',
     city: item.cityname || item.city || '',
     type: item.type || '',
+    typecode: item.typecode || '',
+    distance: Number.isFinite(Number(item.distance)) ? Number(item.distance) : null,
     latitude: Number.isFinite(latitude) ? latitude : null,
     longitude: Number.isFinite(longitude) ? longitude : null,
   };
@@ -71,8 +73,8 @@ function normalizePoi(item) {
 exports.main = async (event) => {
   const latitude = Number(event.lat !== undefined ? event.lat : event.latitude);
   const longitude = Number(event.lng !== undefined ? event.lng : event.longitude);
-  const limit = Math.min(20, Math.max(1, Number(event.limit) || 12));
-  const radius = Math.min(5000, Math.max(500, Number(event.radius) || 3000));
+  const limit = Math.min(24, Math.max(1, Number(event.limit) || 18));
+  const radius = Math.min(5000, Math.max(500, Number(event.radius) || 3500));
 
   if (!AMAP_WEB_KEY) {
     throw new Error('missing_amap_web_key');

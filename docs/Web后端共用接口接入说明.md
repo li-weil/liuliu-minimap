@@ -80,7 +80,8 @@ Web 前端调用：
 说明：
 
 - 小程序原本就有 `mood/weather/season/preference/locationName/locationContext/walkMode`
-- 与 Web 后端 `GenerateThemeRequest` 完全一致
+- 当前又补充了 `generationContext.contextPacket / timeContext / nearbySummary / generationSeed` 等生成上下文字段
+- 与 Web 后端 `GenerateThemeRequest` 的基础字段一致；如果 Web 后端要完全复刻小程序效果，需要继续兼容这些扩展上下文
 - 接入层已把响应重新包装成小程序当前页面能直接消费的 `{ theme, source }`
 - 小程序页面层已新增前置限制：必须先确认探索点，才会发起主题生成请求
 - 当前主题方向枚举已对齐为：`形状 / 色彩 / 声音 / 数字 / 气味`
@@ -89,7 +90,8 @@ Web 前端调用：
 
 Web 前端调用：
 
-- `POST /api/v1/ai/themes/preset`
+- 当前小程序链路不再依赖独立预设主题接口
+- 随机主题由前端先选出 `category`，再复用单主题生成接口
 
 小程序当前功能：
 
@@ -97,14 +99,13 @@ Web 前端调用：
 
 结论：
 
-- 可以共用，但不是直接字段同名
-- 已接入为“随机主题 -> 预设主题接口”
+- 可以共用单主题生成接口
+- 不再需要维护单独的“随机主题 -> 预设主题接口”映射
 
 说明：
 
 - 小程序的“随机生成”本质是先随机出一个 `category`
-- Web 前端也是通过 `/api/v1/ai/themes/preset` 传 `category`
-- 当前接入层已把小程序的 `generateRandomTheme` 自动映射到 Web 的 `preset` 接口
+- 当前小程序“随机生成”已改为前端随机选择 `category` 后复用 `generateTheme`，不再经过独立随机生成接口
 - 小程序页面层同样要求先确认探索点，再发起随机主题请求
 - 当前随机分类值包含：`数字漫步`
 
@@ -365,7 +366,7 @@ Web 前端当前公开调用中没有：
 可统一部分：
 
 - 进阶 AI 生成
-- 预设主题生成
+- 前端随机选主题后复用单主题生成
 - 组合主题生成
 - 地点环境生成
 
@@ -455,7 +456,7 @@ Web 前端的保存结构更轻：
 当前已经切换为共用接口的能力包括：
 
 - 主题生成
-- 随机预设主题
+- 随机主题，前端随机选 `category` 后复用单主题生成接口
 - 组合主题
 - 地点环境
 - 地点搜索
