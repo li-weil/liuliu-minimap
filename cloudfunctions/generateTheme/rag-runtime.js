@@ -35,6 +35,50 @@ function tokenize(parts) {
     .filter(Boolean);
 }
 
+function getGenerationSeed(event) {
+  const generationContext = event && event.generationContext && typeof event.generationContext === 'object'
+    ? event.generationContext
+    : {};
+  const contextPacket = generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
+    ? generationContext.contextPacket
+    : {};
+  return String(
+    event.generationSeed
+    || generationContext.generationSeed
+    || (contextPacket.generation && contextPacket.generation.seed)
+    || ''
+  ).trim();
+}
+
+function hashStringToUnit(value) {
+  const text = String(value || '');
+  if (!text) {
+    return 0;
+  }
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10000) / 10000;
+}
+
+function seededJitter(seed, key, amplitude = 1) {
+  if (!seed) {
+    return 0;
+  }
+  return (hashStringToUnit(`${seed}|${key}`) - 0.5) * 2 * amplitude;
+}
+
+function rotateBySeed(values, seed) {
+  const source = Array.isArray(values) ? values.filter(Boolean) : [];
+  if (source.length <= 1 || !seed) {
+    return source;
+  }
+  const offset = Math.floor(hashStringToUnit(seed) * source.length) % source.length;
+  return source.slice(offset).concat(source.slice(0, offset));
+}
+
 function deriveThemeCategories(missionTemplates, explicitCategories) {
   const directCategories = normalizeCategoryList(explicitCategories || []);
   if (directCategories.length) {
@@ -166,7 +210,7 @@ function scoreScene(scene, context) {
     sceneText,
     timeFit,
     scoreBreakdown,
-    score: Object.values(scoreBreakdown).reduce((sum, value) => sum + value, 0),
+    score: Object.values(scoreBreakdown).reduce((sum, value) => sum + value, 0) + seededJitter(context.seed, `scene:${scene.id}`, 0.6),
   };
 }
 
@@ -190,6 +234,7 @@ function scoreTemplate(template, context, usedAngles = []) {
     nearby: nearbyCueMatch,
     diversity: diversityBonus,
     penalty: -antiPatternPenalty,
+    seed: seededJitter(context.seed, `template:${template.id}`, 0.9),
   };
   return {
     ...template,
@@ -307,14 +352,14 @@ function buildGenerationIntent(event, context) {
 function buildGenerationPlan(context) {
   const leadScene = context.scenes[0] || null;
   const leadReferences = context.referenceMissions.slice(0, 3);
-  const recommendedAngles = dedupeStrings(leadReferences.map((item) => item.angle), 4);
-  const primaryAnchors = dedupeStrings(
+  const recommendedAngles = rotateBySeed(dedupeStrings(leadReferences.map((item) => item.angle), 4), context.seed);
+  const primaryAnchors = rotateBySeed(dedupeStrings(
     []
       .concat(context.nearbySummary.poiNames || [])
       .concat(leadReferences.flatMap((item) => item.anchorTypes || []))
       .concat(leadReferences.flatMap((item) => item.cues || [])),
     6
-  );
+  ), context.seed);
   return {
     targetThemes: context.categories,
     chosenScene: leadScene ? (leadScene.displayLabel || leadScene.labels[0] || leadScene.id) : '',
@@ -377,6 +422,7 @@ function buildUnifiedRetrievalContext(event, options = {}) {
 
   const context = {
     tokens,
+    seed: getGenerationSeed(event),
     targetThemes: effectiveThemes.length ? effectiveThemes : themeCategories,
     timeContext,
     nearbySummary,

@@ -6,7 +6,7 @@ module.exports = {
   baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
 
   // 图像/视频理解模型
-  visionModel: 'qwen3.5-plus',
+  visionModel: 'qwen-turbo',
 
   // 音频理解模型
   audioModel: 'qwen3-omni-30b-a3b-captioner',

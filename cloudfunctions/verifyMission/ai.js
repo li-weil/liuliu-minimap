@@ -45,7 +45,7 @@ function getAiConfig() {
   return {
     apiKey: process.env.AI_API_KEY || fileConfig.apiKey || '',
     baseUrl: process.env.AI_BASE_URL || fileConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    visionModel: process.env.AI_VISION_MODEL || fileConfig.visionModel || 'qwen3.5-plus',
+    visionModel: process.env.AI_VISION_MODEL || fileConfig.visionModel || 'qwen-turbo',
     audioModel: process.env.AI_AUDIO_MODEL || fileConfig.audioModel || 'qwen3-omni-30b-a3b-captioner',
     textModel: process.env.AI_TEXT_MODEL || fileConfig.textModel || 'qwen-plus',
   };

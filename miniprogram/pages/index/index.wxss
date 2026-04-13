@@ -620,6 +620,38 @@
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
+.debug-loop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.debug-loop-card {
+  padding: 22rpx;
+  border-radius: 30rpx;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 242, 234, 0.94)),
+    #fff;
+  box-shadow:
+    inset 0 0 0 1rpx rgba(226, 216, 201, 0.9),
+    0 12rpx 28rpx rgba(75, 62, 39, 0.05);
+}
+
+.debug-loop-grid {
+  margin-bottom: 16rpx;
+}
+
+.debug-loop-json-card {
+  margin-top: 14rpx;
+}
+
+.debug-loop-attempt-meta {
+  margin-bottom: 10rpx;
+  font-size: 20rpx;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .debug-empty {
   margin-top: 18rpx;
   font-size: 24rpx;

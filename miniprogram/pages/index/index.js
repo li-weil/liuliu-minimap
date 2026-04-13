@@ -131,6 +131,29 @@ function buildGeneratedThemeMeta(theme) {
   };
 }
 
+function normalizeThemeSnapshotMeta(theme) {
+  const normalizedTheme = theme && typeof theme === 'object' ? theme : null;
+  if (!normalizedTheme) {
+    return null;
+  }
+  const title = String(normalizedTheme.title || '').trim();
+  const description = String(normalizedTheme.description || '').trim();
+  const missions = dedupeStrings(
+    Array.isArray(normalizedTheme.missions)
+      ? normalizedTheme.missions
+      : [],
+    6
+  );
+  if (!title && !description && !missions.length) {
+    return null;
+  }
+  return {
+    title,
+    description,
+    missions,
+  };
+}
+
 function normalizeGenerationValidationMeta(validation) {
   const normalizedValidation = validation && typeof validation === 'object' ? validation : null;
   if (!normalizedValidation) {
@@ -157,12 +180,282 @@ function normalizeGenerationValidationMeta(validation) {
     secondaryValidationError: normalizedValidation.secondaryValidationError
       ? String(normalizedValidation.secondaryValidationError).trim()
       : '',
+    precheckScore: Number.isFinite(Number(normalizedValidation.precheckScore))
+      ? Number(normalizedValidation.precheckScore)
+      : null,
+    precheckReasons: dedupeStrings(normalizedValidation.precheckReasons || [], 6),
     aiOk: normalizedValidation.aiOk === undefined ? null : !!normalizedValidation.aiOk,
     aiShouldRewrite: !!normalizedValidation.aiShouldRewrite,
     aiScore: Number.isFinite(Number(normalizedValidation.aiScore))
       ? Number(normalizedValidation.aiScore)
-      : (Number.isFinite(Number(normalizedValidation.score)) ? Number(normalizedValidation.score) : null),
+      : null,
+    aiFailedChecks: dedupeStrings(normalizedValidation.aiFailedChecks || [], 6),
+    aiFailedMissionIndexes: Array.isArray(normalizedValidation.aiFailedMissionIndexes)
+      ? normalizedValidation.aiFailedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
+      : [],
+    aiAbstractMissionIndexes: Array.isArray(normalizedValidation.aiAbstractMissionIndexes)
+      ? normalizedValidation.aiAbstractMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
+      : [],
+    aiRepeatedMissionIndexes: Array.isArray(normalizedValidation.aiRepeatedMissionIndexes)
+      ? normalizedValidation.aiRepeatedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
+      : [],
+    aiRewriteScope: String(normalizedValidation.aiRewriteScope || '').trim(),
+    aiAppliedRepairStrategy: String(normalizedValidation.aiAppliedRepairStrategy || '').trim(),
+    aiAppliedRepairIndexes: Array.isArray(normalizedValidation.aiAppliedRepairIndexes)
+      ? normalizedValidation.aiAppliedRepairIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
+      : [],
+    aiValidationComplete: normalizedValidation.aiValidationComplete === undefined
+      ? null
+      : !!normalizedValidation.aiValidationComplete,
+    aiValidationMissingFields: dedupeStrings(normalizedValidation.aiValidationMissingFields || [], 12),
+    aiRepairPromptCount: Number.isFinite(Number(normalizedValidation.aiRepairPromptCount))
+      ? Number(normalizedValidation.aiRepairPromptCount)
+      : 0,
+    aiLoopPassCount: Number.isFinite(Number(normalizedValidation.aiLoopPassCount))
+      ? Number(normalizedValidation.aiLoopPassCount)
+      : 0,
+    aiLoopRewriteCount: Number.isFinite(Number(normalizedValidation.aiLoopRewriteCount))
+      ? Number(normalizedValidation.aiLoopRewriteCount)
+      : 0,
+    aiLoopStopReason: String(normalizedValidation.aiLoopStopReason || '').trim(),
+    aiLoopPassSummaries: (Array.isArray(normalizedValidation.aiLoopPassSummaries)
+      ? normalizedValidation.aiLoopPassSummaries
+      : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return {
+          pass: Number.isFinite(Number(item.pass)) ? Number(item.pass) : null,
+          score: Number.isFinite(Number(item.score)) ? Number(item.score) : null,
+          ok: item.ok === undefined ? null : !!item.ok,
+          shouldRewrite: item.shouldRewrite === undefined ? null : !!item.shouldRewrite,
+          rewriteScope: String(item.rewriteScope || '').trim(),
+          missingFields: dedupeStrings(item.missingFields || [], 8),
+          repairPromptCount: Number.isFinite(Number(item.repairPromptCount)) ? Number(item.repairPromptCount) : 0,
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 6),
+    aiLoopDetails: (Array.isArray(normalizedValidation.aiLoopDetails)
+      ? normalizedValidation.aiLoopDetails
+      : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return {
+          pass: Number.isFinite(Number(item.pass)) ? Number(item.pass) : null,
+          validationComplete: item.review && item.review.validationComplete !== undefined
+            ? !!item.review.validationComplete
+            : item.validationComplete === undefined
+              ? null
+              : !!item.validationComplete,
+          missingFields: dedupeStrings(
+            []
+              .concat(item.review && Array.isArray(item.review.missingFields) ? item.review.missingFields : [])
+              .concat(Array.isArray(item.missingFields) ? item.missingFields : []),
+            12
+          ),
+          repairPromptCount: Number.isFinite(Number(item.review && item.review.repairPromptCount))
+            ? Number(item.review.repairPromptCount)
+            : Number.isFinite(Number(item.repairPromptCount))
+              ? Number(item.repairPromptCount)
+              : 0,
+          stopReason: String(item.stopReason || '').trim(),
+          appliedRepairStrategy: String(item.appliedRepairStrategy || '').trim(),
+          appliedRepairIndexes: Array.isArray(item.appliedRepairIndexes)
+            ? item.appliedRepairIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
+            : [],
+          inputTheme: normalizeThemeSnapshotMeta(item.inputTheme),
+          rewrittenTheme: normalizeThemeSnapshotMeta(item.rewrittenTheme),
+          precheck: item.precheck && typeof item.precheck === 'object'
+            ? {
+                stage: String(item.precheck.stage || '').trim(),
+                ok: item.precheck.ok === undefined ? null : !!item.precheck.ok,
+                score: Number.isFinite(Number(item.precheck.score)) ? Number(item.precheck.score) : null,
+                reasons: dedupeStrings(item.precheck.reasons || [], 8),
+                hasAnchor: item.precheck.hasAnchor === undefined ? null : !!item.precheck.hasAnchor,
+                anchorCount: Number.isFinite(Number(item.precheck.anchorCount)) ? Number(item.precheck.anchorCount) : 0,
+                genericMissionCount: Number.isFinite(Number(item.precheck.genericMissionCount))
+                  ? Number(item.precheck.genericMissionCount)
+                  : 0,
+                varietyRatio: Number.isFinite(Number(item.precheck.varietyRatio)) ? Number(item.precheck.varietyRatio) : null,
+                similarPairCount: Number.isFinite(Number(item.precheck.similarPairCount)) ? Number(item.precheck.similarPairCount) : 0,
+              }
+            : null,
+          review: item.review && typeof item.review === 'object'
+            ? {
+                stage: String(item.review.stage || '').trim(),
+                ok: item.review.ok === undefined ? null : !!item.review.ok,
+                score: Number.isFinite(Number(item.review.score)) ? Number(item.review.score) : null,
+                failedChecks: dedupeStrings(item.review.failedChecks || [], 8),
+                failedMissionIndexes: Array.isArray(item.review.failedMissionIndexes)
+                  ? item.review.failedMissionIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
+                  : [],
+                abstractMissionIndexes: Array.isArray(item.review.abstractMissionIndexes)
+                  ? item.review.abstractMissionIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
+                  : [],
+                repeatedMissionIndexes: Array.isArray(item.review.repeatedMissionIndexes)
+                  ? item.review.repeatedMissionIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
+                  : [],
+                reasons: dedupeStrings(item.review.reasons || [], 8),
+                reviewComment: String(item.review.reviewComment || '').trim(),
+                rewriteAdvice: String(item.review.rewriteAdvice || '').trim(),
+                shouldRewrite: item.review.shouldRewrite === undefined ? null : !!item.review.shouldRewrite,
+                rewriteScope: String(item.review.rewriteScope || '').trim(),
+                rewrittenTheme: normalizeThemeSnapshotMeta(item.review.rewrittenTheme),
+                fieldPresence: item.review.fieldPresence && typeof item.review.fieldPresence === 'object'
+                  ? item.review.fieldPresence
+                  : null,
+                fieldSources: item.review.fieldSources && typeof item.review.fieldSources === 'object'
+                  ? item.review.fieldSources
+                  : null,
+                raw: item.review.raw && typeof item.review.raw === 'object'
+                  ? item.review.raw
+                  : null,
+              }
+            : null,
+          reviewAttempts: (Array.isArray(item.reviewAttempts) ? item.reviewAttempts : [])
+            .map((attempt) => {
+              if (!attempt || typeof attempt !== 'object') {
+                return null;
+              }
+              return {
+                step: String(attempt.step || '').trim(),
+                missingFields: dedupeStrings(attempt.missingFields || [], 12),
+                payload: attempt.payload && typeof attempt.payload === 'object'
+                  ? attempt.payload
+                  : null,
+              };
+            })
+            .filter(Boolean)
+            .slice(0, 4),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 6),
+    aiReviewComment: String(normalizedValidation.aiReviewComment || '').trim(),
+    aiRewriteAdvice: String(normalizedValidation.aiRewriteAdvice || '').trim(),
+    aiFieldSources: normalizedValidation.aiFieldSources && typeof normalizedValidation.aiFieldSources === 'object'
+      ? {
+          score: String(normalizedValidation.aiFieldSources.score || '').trim(),
+          failedChecks: String(normalizedValidation.aiFieldSources.failedChecks || '').trim(),
+          reasons: String(normalizedValidation.aiFieldSources.reasons || '').trim(),
+          reviewComment: String(normalizedValidation.aiFieldSources.reviewComment || '').trim(),
+          rewriteAdvice: String(normalizedValidation.aiFieldSources.rewriteAdvice || '').trim(),
+          rewrittenTheme: String(normalizedValidation.aiFieldSources.rewrittenTheme || '').trim(),
+        }
+      : null,
+    aiSuggestedTheme: normalizedValidation.aiSuggestedTheme && typeof normalizedValidation.aiSuggestedTheme === 'object'
+      ? {
+          title: String(normalizedValidation.aiSuggestedTheme.title || '').trim(),
+          description: String(normalizedValidation.aiSuggestedTheme.description || '').trim(),
+          missions: dedupeStrings(
+            Array.isArray(normalizedValidation.aiSuggestedTheme.missions)
+              ? normalizedValidation.aiSuggestedTheme.missions
+              : [],
+            6
+          ),
+        }
+      : null,
+    aiOriginalTheme: normalizedValidation.aiOriginalTheme && typeof normalizedValidation.aiOriginalTheme === 'object'
+      ? {
+          title: String(normalizedValidation.aiOriginalTheme.title || '').trim(),
+          description: String(normalizedValidation.aiOriginalTheme.description || '').trim(),
+          missions: dedupeStrings(
+            Array.isArray(normalizedValidation.aiOriginalTheme.missions)
+              ? normalizedValidation.aiOriginalTheme.missions
+              : [],
+            6
+          ),
+        }
+      : null,
     reasons,
+  };
+}
+
+function normalizeGenerationFinalizationMeta(finalization) {
+  const normalizedFinalization = finalization && typeof finalization === 'object' ? finalization : null;
+  if (!normalizedFinalization) {
+    return null;
+  }
+  return {
+    stage: normalizedFinalization.stage ? String(normalizedFinalization.stage).trim() : '',
+    rewritten: !!normalizedFinalization.rewritten,
+    replacementCount: Number(normalizedFinalization.replacementCount) || 0,
+    anchoredReplacementCount: Number(normalizedFinalization.anchoredReplacementCount) || 0,
+    fallbackReplacementCount: Number(normalizedFinalization.fallbackReplacementCount) || 0,
+    aiRepairStrategy: String(normalizedFinalization.aiRepairStrategy || '').trim(),
+    aiLoopPassCount: Number.isFinite(Number(normalizedFinalization.aiLoopPassCount))
+      ? Number(normalizedFinalization.aiLoopPassCount)
+      : 0,
+    aiLoopRewriteCount: Number.isFinite(Number(normalizedFinalization.aiLoopRewriteCount))
+      ? Number(normalizedFinalization.aiLoopRewriteCount)
+      : 0,
+    aiLoopStopReason: String(normalizedFinalization.aiLoopStopReason || '').trim(),
+    aiRepairPromptCount: Number.isFinite(Number(normalizedFinalization.aiRepairPromptCount))
+      ? Number(normalizedFinalization.aiRepairPromptCount)
+      : 0,
+    aiValidationComplete: normalizedFinalization.aiValidationComplete === undefined
+      ? null
+      : !!normalizedFinalization.aiValidationComplete,
+    aiValidationMissingFields: dedupeStrings(normalizedFinalization.aiValidationMissingFields || [], 12),
+    aiOriginalTheme: normalizedFinalization.aiOriginalTheme && typeof normalizedFinalization.aiOriginalTheme === 'object'
+      ? normalizeThemeSnapshotMeta(normalizedFinalization.aiOriginalTheme)
+      : null,
+    aiLoopDetails: (Array.isArray(normalizedFinalization.aiLoopDetails)
+      ? normalizedFinalization.aiLoopDetails
+      : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return {
+          pass: Number.isFinite(Number(item.pass)) ? Number(item.pass) : null,
+          stopReason: String(item.stopReason || '').trim(),
+          appliedRepairStrategy: String(item.appliedRepairStrategy || '').trim(),
+          appliedRepairIndexes: Array.isArray(item.appliedRepairIndexes)
+            ? item.appliedRepairIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
+            : [],
+          inputTheme: normalizeThemeSnapshotMeta(item.inputTheme),
+          rewrittenTheme: normalizeThemeSnapshotMeta(item.rewrittenTheme),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 6),
+    aiRepairIndexes: Array.isArray(normalizedFinalization.aiRepairIndexes)
+      ? normalizedFinalization.aiRepairIndexes
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item))
+        .slice(0, 8)
+      : [],
+    aiFailedChecks: dedupeStrings(normalizedFinalization.aiFailedChecks || [], 8),
+    changedMissionIndexes: Array.isArray(normalizedFinalization.changedMissionIndexes)
+      ? normalizedFinalization.changedMissionIndexes
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item))
+        .slice(0, 8)
+      : [],
+    reasons: dedupeStrings(normalizedFinalization.reasons || [], 8),
+    beforeMissions: dedupeStrings(normalizedFinalization.beforeMissions || [], 6),
+    afterMissions: dedupeStrings(normalizedFinalization.afterMissions || [], 6),
+    changeLog: (Array.isArray(normalizedFinalization.changeLog) ? normalizedFinalization.changeLog : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        const missionIndex = Number(item.missionIndex);
+        return {
+          type: String(item.type || '').trim(),
+          missionIndex: Number.isInteger(missionIndex) ? missionIndex : null,
+          before: String(item.before || '').trim(),
+          after: String(item.after || '').trim(),
+          reason: String(item.reason || '').trim(),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 8),
   };
 }
 
@@ -180,7 +473,8 @@ function buildValidationSummary(generationSource, generationValidation) {
     return {
       status: '云函数未返回',
       details: '本次结果带有 source，但没有返回 validation，通常表示当前云函数还是旧版本',
-      score: '未提供',
+      score: 'AI 未提供',
+      precheckScore: '未提供',
       missingCategories: [],
       reasons: [],
     };
@@ -205,9 +499,14 @@ function buildValidationSummary(generationSource, generationValidation) {
     details,
     score: generationValidation.aiScore !== null && generationValidation.aiScore !== undefined
       ? generationValidation.aiScore
+      : 'AI 未提供',
+    precheckScore: generationValidation.precheckScore !== null && generationValidation.precheckScore !== undefined
+      ? generationValidation.precheckScore
       : '未提供',
     missingCategories: generationValidation.missingCategories || [],
-    reasons: generationValidation.reasons || [],
+    reasons: generationValidation.aiReasons && generationValidation.aiReasons.length
+      ? generationValidation.aiReasons
+      : [],
   };
 }
 
@@ -233,6 +532,7 @@ function normalizeGenerationRagPlanMeta(ragPlan) {
     focusTheme: String(normalizedPlan.focusTheme || '').trim(),
     focusThemes: normalizeGenerationThemeList(normalizedPlan.focusThemes || []),
     targetThemes: normalizeGenerationThemeList(normalizedPlan.targetThemes || []),
+    plannerMode: String(normalizedPlan.plannerMode || '').trim(),
     chosenScene: String(normalizedPlan.chosenScene || '').trim(),
     sceneId: String(normalizedPlan.sceneId || '').trim(),
     dominantScene: String(normalizedPlan.dominantScene || '').trim(),
@@ -272,6 +572,26 @@ function normalizeGenerationRagPlanMeta(ragPlan) {
       })
       .filter(Boolean)
       .slice(0, 4),
+    missionPlans: (Array.isArray(normalizedPlan.missionPlans) ? normalizedPlan.missionPlans : [])
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+        return {
+          slot: Number.isFinite(Number(item.slot)) ? Number(item.slot) : null,
+          theme: String(item.theme || '').trim(),
+          actionType: String(item.actionType || '').trim(),
+          actionInstruction: String(item.actionInstruction || '').trim(),
+          anchor: String(item.anchor || '').trim(),
+          scene: String(item.scene || '').trim(),
+          timePhase: String(item.timePhase || '').trim(),
+          observationAngle: String(item.observationAngle || '').trim(),
+          avoidPhrases: dedupeStrings(item.avoidPhrases || [], 6),
+          avoidRecentPatterns: dedupeStrings(item.avoidRecentPatterns || [], 4),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 4),
   };
 }
 
@@ -282,6 +602,10 @@ function normalizeGenerationRagDebugMeta(ragDebug) {
   }
   return {
     retrievalQuality: String(normalizedDebug.retrievalQuality || '').trim(),
+    plannerMode: String(normalizedDebug.plannerMode || '').trim(),
+    recentHistorySize: Number.isFinite(Number(normalizedDebug.recentHistorySize))
+      ? Number(normalizedDebug.recentHistorySize)
+      : null,
     themeCoverage: normalizeGenerationThemeList(normalizedDebug.themeCoverage || []),
     anchorCoverage: dedupeStrings(normalizedDebug.anchorCoverage || [], 8),
     diversityAngles: dedupeStrings(normalizedDebug.diversityAngles || [], 6),
@@ -308,7 +632,68 @@ function normalizeGenerationRagModelInputMeta(ragModelInput) {
   return ragModelInput && typeof ragModelInput === 'object' ? ragModelInput : null;
 }
 
-function applyGeneratedThemeMetaToContext(generationContext, theme, source = '', validation = null, runtimeVersion = '', ragPlan = null, ragDebug = null, ragModelInput = null) {
+function inferMissionActionType(text) {
+  const mission = String(text || '');
+  if (!mission) {
+    return '';
+  }
+  const patterns = [
+    ['停一下听', /停一下|停一停|先停|驻足|站一会/],
+    ['分辨来源', /分辨|判断.*(?:从哪里来|来源)|听清.*(?:哪里|哪边)/],
+    ['顺着找', /顺着|沿着|跟着/],
+    ['等一下', /等一下|等一会|等下一次|等待/],
+    ['回头再听', /回头/],
+    ['换个位置', /换个位置|换个站位|换个角度|换个方向|绕到|退后|走近|走远/],
+    ['比较', /比较|对照|差异/],
+    ['先猜再确认', /先猜|再确认|核对|验证/],
+    ['闻到后找来源', /闻|气味|味道|香气|潮气/],
+    ['找一个规则', /规则|顺序|提示|线索/],
+    ['找一处', /找一处|找一个|找到|寻找/],
+    ['记录', /记录|记下|拍下/],
+  ];
+  const matched = patterns.find((item) => item[1].test(mission));
+  return matched ? matched[0] : '';
+}
+
+function normalizeRecentMissionHistoryEntries(values, limit = 10) {
+  const result = [];
+  (Array.isArray(values) ? values : []).forEach((item) => {
+    const entry = item && typeof item === 'object'
+      ? item
+      : { mission: item };
+    const mission = String(entry.mission || entry.text || entry.label || '').trim();
+    if (!mission || result.some((existing) => existing.mission === mission)) {
+      return;
+    }
+    result.push({
+      mission,
+      title: String(entry.title || '').trim(),
+      category: String(entry.category || '').trim(),
+      actionType: String(entry.actionType || inferMissionActionType(mission)).trim(),
+      anchor: String(entry.anchor || '').trim(),
+      source: String(entry.source || '').trim(),
+    });
+  });
+  return result.slice(0, limit);
+}
+
+function appendThemeToRecentMissionHistory(history, theme, source = '') {
+  const currentTheme = theme && typeof theme === 'object' ? theme : {};
+  const themeEntries = (Array.isArray(currentTheme.missions) ? currentTheme.missions : [])
+    .map((mission) => String(mission || '').trim())
+    .filter(Boolean)
+    .map((mission) => ({
+      mission,
+      title: String(currentTheme.title || '').trim(),
+      category: String(currentTheme.category || '').trim(),
+      actionType: inferMissionActionType(mission),
+      anchor: '',
+      source: String(source || '').trim(),
+    }));
+  return normalizeRecentMissionHistoryEntries([].concat(themeEntries, history || []), 10);
+}
+
+function applyGeneratedThemeMetaToContext(generationContext, theme, source = '', validation = null, runtimeVersion = '', ragPlan = null, ragDebug = null, ragModelInput = null, errorReason = '') {
   const baseContext = generationContext && typeof generationContext === 'object' ? generationContext : {};
   const contextPacket = baseContext.contextPacket && typeof baseContext.contextPacket === 'object'
     ? baseContext.contextPacket
@@ -316,19 +701,26 @@ function applyGeneratedThemeMetaToContext(generationContext, theme, source = '',
   const userState = contextPacket.userState && typeof contextPacket.userState === 'object'
     ? contextPacket.userState
     : {};
+  const generationPacket = contextPacket.generation && typeof contextPacket.generation === 'object'
+    ? contextPacket.generation
+    : {};
   const generatedThemeMeta = buildGeneratedThemeMeta(theme);
   const normalizedValidation = normalizeGenerationValidationMeta(validation);
+  const normalizedFinalization = normalizeGenerationFinalizationMeta(theme && theme.finalization);
   const normalizedRagPlan = normalizeGenerationRagPlanMeta(ragPlan);
   const normalizedRagDebug = normalizeGenerationRagDebugMeta(ragDebug);
   const normalizedRagModelInput = normalizeGenerationRagModelInputMeta(ragModelInput);
+  const recentMissionHistory = appendThemeToRecentMissionHistory(generationPacket.recentMissionHistory || [], theme, source);
   return {
     ...baseContext,
     ...generatedThemeMeta,
     generationSource: source || baseContext.generationSource || '',
     generationValidation: normalizedValidation,
+    generationFinalization: normalizedFinalization,
     generationRagPlan: normalizedRagPlan,
     generationRagDebug: normalizedRagDebug,
     generationRagModelInput: normalizedRagModelInput,
+    generationErrorReason: String(errorReason || '').trim(),
     runtimeVersion: runtimeVersion || baseContext.runtimeVersion || '',
     contextPacket: {
       ...contextPacket,
@@ -336,7 +728,17 @@ function applyGeneratedThemeMetaToContext(generationContext, theme, source = '',
         ...userState,
         ...generatedThemeMeta,
       },
+      generation: {
+        ...generationPacket,
+        previousThemeTitle: String(theme && theme.title || '').trim(),
+        previousMissions: Array.isArray(theme && theme.missions)
+          ? theme.missions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+          : [],
+        recentMissionHistory,
+        errorReason: String(errorReason || '').trim(),
+      },
       validation: normalizedValidation,
+      finalization: normalizedFinalization,
       rag: {
         plan: normalizedRagPlan,
         debug: normalizedRagDebug,
@@ -429,7 +831,7 @@ const TIME_PHASE_CONFIGS = [
       '光照更直接，颜色、反光、阴影边界都会被放大',
       '午饭、午休、办事间隙交织在一起，停留和穿行会同时存在',
       '找座位、找阴凉、找一口吃的，这些动作会变成很具体的空间线索',
-      '商铺、食物、空调外机、树荫和玻璃幕墙会共同影响这片地方的体感',
+      '商铺、食物、空调外机、树荫会共同影响这片地方的体感',
       '声音不会像早晚那样起伏明显，但会形成一种持续的背景层',
       '适合观察“人在这里怎么躲热、休息、补充体力”',
     ],
@@ -828,6 +1230,59 @@ function formatDebugValue(value) {
   return text || '未提供';
 }
 
+function buildJsonLines(value) {
+  if (value === undefined || value === null || value === '') {
+    return [];
+  }
+  try {
+    return JSON.stringify(value, null, 2).split('\n');
+  } catch (error) {
+    return [String(value)];
+  }
+}
+
+function buildValidationLoopCards(generationValidation, generationFinalization) {
+  const loopDetails = generationValidation && Array.isArray(generationValidation.aiLoopDetails)
+    ? generationValidation.aiLoopDetails
+    : generationFinalization && Array.isArray(generationFinalization.aiLoopDetails)
+      ? generationFinalization.aiLoopDetails
+      : [];
+  return loopDetails.map((item, index) => {
+    const review = item.review || {};
+    const precheck = item.precheck || {};
+    const attempts = Array.isArray(item.reviewAttempts) ? item.reviewAttempts : [];
+    const summaryRows = [
+      { label: '轮次', value: formatDebugValue(item.pass || index + 1) },
+      { label: '结构预检', value: formatDebugValue(precheck.score !== null && precheck.score !== undefined ? precheck.score : '未提供') },
+      { label: 'AI 分数', value: formatDebugValue(review.score !== null && review.score !== undefined ? review.score : '未提供') },
+      { label: 'AI 结果', value: formatDebugValue(review.ok === null || review.ok === undefined ? '未提供' : (review.ok ? '通过' : '未通过')) },
+      { label: '建议改写', value: formatDebugValue(review.shouldRewrite === null || review.shouldRewrite === undefined ? '未提供' : (review.shouldRewrite ? '是' : '否')) },
+      { label: '改写范围', value: formatDebugValue(review.rewriteScope || '未提供') },
+      { label: '实际策略', value: formatDebugValue(item.appliedRepairStrategy || '未提供') },
+      { label: '修复序号', value: formatDebugValue(item.appliedRepairIndexes || []) },
+      { label: '缺失字段', value: formatDebugValue(item.missingFields || []) },
+      { label: '补全次数', value: formatDebugValue(item.repairPromptCount) },
+      { label: '停止原因', value: formatDebugValue(item.stopReason || '未提供') },
+    ];
+    return {
+      key: `validation-loop-${item.pass || index + 1}`,
+      title: `第 ${item.pass || index + 1} 轮`,
+      summaryRows,
+      inputThemeLines: buildJsonLines(item.inputTheme),
+      precheckLines: buildJsonLines(item.precheck),
+      reviewLines: buildJsonLines(item.review && item.review.raw ? item.review.raw : item.review),
+      rewrittenSuggestionLines: buildJsonLines(review.rewrittenTheme),
+      rewrittenThemeLines: buildJsonLines(item.rewrittenTheme),
+      attemptCards: attempts.map((attempt, attemptIndex) => ({
+        key: `validation-loop-${item.pass || index + 1}-attempt-${attemptIndex + 1}`,
+        title: attempt.step || `attempt-${attemptIndex + 1}`,
+        missingFields: formatDebugValue(attempt.missingFields || []),
+        lines: buildJsonLines(attempt.payload),
+      })),
+    };
+  });
+}
+
 function formatRagSceneCoverage(sceneCoverage) {
   return (Array.isArray(sceneCoverage) ? sceneCoverage : [])
     .map((item) => {
@@ -994,6 +1449,16 @@ function buildGenerationDebugState(generationContext) {
     : (contextPacket && contextPacket.validation && typeof contextPacket.validation === 'object'
       ? contextPacket.validation
       : null);
+  const generationErrorReason = generationContext && generationContext.generationErrorReason
+    ? String(generationContext.generationErrorReason)
+    : (contextPacket && contextPacket.generation && contextPacket.generation.errorReason
+      ? String(contextPacket.generation.errorReason)
+      : '');
+  const generationFinalization = generationContext && generationContext.generationFinalization && typeof generationContext.generationFinalization === 'object'
+    ? generationContext.generationFinalization
+    : (contextPacket && contextPacket.finalization && typeof contextPacket.finalization === 'object'
+      ? contextPacket.finalization
+      : null);
   const generationRagPlan = generationContext && generationContext.generationRagPlan && typeof generationContext.generationRagPlan === 'object'
     ? generationContext.generationRagPlan
     : (contextPacket && contextPacket.rag && contextPacket.rag.plan && typeof contextPacket.rag.plan === 'object'
@@ -1022,6 +1487,7 @@ function buildGenerationDebugState(generationContext) {
       debugRagPlanLines: [],
       debugRagDebugLines: [],
       debugRagModelInputLines: [],
+      debugValidationLoopCards: [],
     };
   }
 
@@ -1085,11 +1551,24 @@ function buildGenerationDebugState(generationContext) {
       return parts.join(' · ');
     })
     : [];
+  const finalizationSummary = generationFinalization
+    ? [
+      generationFinalization.rewritten ? '已改写' : '未改写',
+      generationFinalization.replacementCount > 0 ? `共改 ${generationFinalization.replacementCount} 处` : '',
+      generationFinalization.anchoredReplacementCount > 0 ? `锚点改写 ${generationFinalization.anchoredReplacementCount} 处` : '',
+      generationFinalization.fallbackReplacementCount > 0 ? `fallback 改写 ${generationFinalization.fallbackReplacementCount} 处` : '',
+      generationFinalization.aiRepairStrategy ? `AI 策略 ${generationFinalization.aiRepairStrategy}` : '',
+    ].filter(Boolean).join(' · ')
+    : '';
 
   const rows = [
     {
       label: '结果来源',
       value: formatDebugValue(generationSource || '未生成'),
+    },
+    {
+      label: '生成失败原因',
+      value: formatDebugValue(generationErrorReason || '未提供'),
     },
     {
       label: '运行时版本',
@@ -1104,7 +1583,11 @@ function buildGenerationDebugState(generationContext) {
       value: formatDebugValue(validationSummary.details),
     },
     {
-      label: '验证分数',
+      label: '结构预检分数',
+      value: formatDebugValue(validationSummary.precheckScore),
+    },
+    {
+      label: 'AI 分数',
       value: formatDebugValue(validationSummary.score),
     },
     {
@@ -1113,7 +1596,179 @@ function buildGenerationDebugState(generationContext) {
     },
     {
       label: '复核原因',
-      value: formatDebugValue(validationSummary.reasons),
+      value: formatDebugValue(validationSummary.reasons.length ? validationSummary.reasons : 'AI 未提供'),
+    },
+    {
+      label: 'AI 失败项',
+      value: formatDebugValue(generationValidation && generationValidation.aiFailedChecks),
+    },
+    {
+      label: '失败任务序号',
+      value: formatDebugValue(generationValidation && generationValidation.aiFailedMissionIndexes),
+    },
+    {
+      label: 'AI 校验完整性',
+      value: formatDebugValue(
+        generationValidation && generationValidation.aiValidationComplete === false
+          ? '不完整'
+          : generationValidation && generationValidation.aiValidationComplete === true
+            ? '完整'
+            : '未提供'
+      ),
+    },
+    {
+      label: 'AI 缺失字段',
+      value: formatDebugValue(generationValidation && generationValidation.aiValidationMissingFields),
+    },
+    {
+      label: 'AI 补全次数',
+      value: formatDebugValue(
+        generationValidation && Number.isFinite(Number(generationValidation.aiRepairPromptCount))
+          ? generationValidation.aiRepairPromptCount
+          : '未提供'
+      ),
+    },
+    {
+      label: 'AI 循环轮次',
+      value: formatDebugValue(
+        generationValidation && Number.isFinite(Number(generationValidation.aiLoopPassCount)) && generationValidation.aiLoopPassCount
+          ? generationValidation.aiLoopPassCount
+          : '未提供'
+      ),
+    },
+    {
+      label: 'AI 改写次数',
+      value: formatDebugValue(
+        generationValidation && Number.isFinite(Number(generationValidation.aiLoopRewriteCount))
+          ? generationValidation.aiLoopRewriteCount
+          : '未提供'
+      ),
+    },
+    {
+      label: 'AI 循环停止原因',
+      value: formatDebugValue(generationValidation && generationValidation.aiLoopStopReason),
+    },
+    {
+      label: '抽象任务序号',
+      value: formatDebugValue(generationValidation && generationValidation.aiAbstractMissionIndexes),
+    },
+    {
+      label: '重复任务序号',
+      value: formatDebugValue(generationValidation && generationValidation.aiRepeatedMissionIndexes),
+    },
+    {
+      label: '改写范围',
+      value: formatDebugValue(
+        generationValidation && generationValidation.aiRewriteScope
+          ? generationValidation.aiRewriteScope
+          : '未提供'
+      ),
+    },
+    {
+      label: '实际修复策略',
+      value: formatDebugValue(
+        generationValidation && generationValidation.aiAppliedRepairStrategy
+          ? generationValidation.aiAppliedRepairStrategy
+          : '未提供'
+      ),
+    },
+    {
+      label: '实际修复序号',
+      value: formatDebugValue(generationValidation && generationValidation.aiAppliedRepairIndexes),
+    },
+    {
+      label: 'AI 评语',
+      value: formatDebugValue(
+        generationValidation && generationValidation.aiReviewComment
+          ? generationValidation.aiReviewComment
+          : 'AI 未提供'
+      ),
+    },
+    {
+      label: '改写建议',
+      value: formatDebugValue(
+        generationValidation && generationValidation.aiRewriteAdvice
+          ? generationValidation.aiRewriteAdvice
+          : 'AI 未提供'
+      ),
+    },
+    {
+      label: '建议改写内容',
+      value: formatDebugValue(generationValidation && generationValidation.aiShouldRewrite
+        ? (
+          generationValidation.aiSuggestedTheme
+            ? JSON.stringify(generationValidation.aiSuggestedTheme, null, 2)
+            : 'AI 未提供'
+        )
+        : '无需改写'),
+    },
+    {
+      label: 'AI 改写前原始结果',
+      value: formatDebugValue(generationValidation && generationValidation.aiOriginalTheme
+        ? JSON.stringify(generationValidation.aiOriginalTheme, null, 2)
+        : '未提供'),
+    },
+    {
+      label: 'AI 字段来源',
+      value: formatDebugValue(generationValidation && generationValidation.aiFieldSources
+        ? [
+            `score:${generationValidation.aiFieldSources.score || 'missing'}`,
+            `failedChecks:${generationValidation.aiFieldSources.failedChecks || 'missing'}`,
+            `reasons:${generationValidation.aiFieldSources.reasons || 'missing'}`,
+            `comment:${generationValidation.aiFieldSources.reviewComment || 'missing'}`,
+            `advice:${generationValidation.aiFieldSources.rewriteAdvice || 'missing'}`,
+            `rewrite:${generationValidation.aiFieldSources.rewrittenTheme || 'missing'}`,
+          ]
+        : '未提供'),
+    },
+    {
+      label: 'Finalize 改写',
+      value: formatDebugValue(finalizationSummary || '未提供'),
+    },
+    {
+      label: '改写原因',
+      value: formatDebugValue(generationFinalization && generationFinalization.reasons),
+    },
+    {
+      label: 'Finalize AI 策略',
+      value: formatDebugValue(generationFinalization && generationFinalization.aiRepairStrategy),
+    },
+    {
+      label: 'Finalize AI 序号',
+      value: formatDebugValue(generationFinalization && generationFinalization.aiRepairIndexes),
+    },
+    {
+      label: 'Finalize AI 失败项',
+      value: formatDebugValue(generationFinalization && generationFinalization.aiFailedChecks),
+    },
+    {
+      label: 'Finalize 原始结果',
+      value: formatDebugValue(generationFinalization && generationFinalization.aiOriginalTheme
+        ? JSON.stringify(generationFinalization.aiOriginalTheme, null, 2)
+        : '未提供'),
+    },
+    {
+      label: 'Finalize AI 循环',
+      value: formatDebugValue(generationFinalization
+        ? [
+            generationFinalization.aiLoopPassCount ? `轮次:${generationFinalization.aiLoopPassCount}` : '',
+            Number.isFinite(Number(generationFinalization.aiLoopRewriteCount)) ? `改写:${generationFinalization.aiLoopRewriteCount}` : '',
+            Number.isFinite(Number(generationFinalization.aiRepairPromptCount)) ? `补全:${generationFinalization.aiRepairPromptCount}` : '',
+            generationFinalization.aiLoopStopReason ? `停止:${generationFinalization.aiLoopStopReason}` : '',
+          ].filter(Boolean)
+        : '未提供'),
+    },
+    {
+      label: 'Finalize AI 缺失字段',
+      value: formatDebugValue(generationFinalization && generationFinalization.aiValidationMissingFields),
+    },
+    {
+      label: '改写前任务',
+      value: formatDebugValue(generationFinalization && generationFinalization.beforeMissions),
+    },
+    {
+      label: '改写后任务',
+      value: formatDebugValue(generationFinalization && generationFinalization.afterMissions),
     },
     {
       label: 'RAG 质量',
@@ -1172,6 +1827,14 @@ function buildGenerationDebugState(generationContext) {
       value: formatDebugValue(contextPacket.nearby && contextPacket.nearby.activityHints),
     },
     {
+      label: '上一轮主题',
+      value: formatDebugValue(contextPacket.generation && contextPacket.generation.previousThemeTitle),
+    },
+    {
+      label: '上一轮任务',
+      value: formatDebugValue(contextPacket.generation && contextPacket.generation.previousMissions),
+    },
+    {
       label: '主题输入',
       value: formatDebugValue(contextPacket.userState && contextPacket.userState.selectedThemes),
     },
@@ -1190,6 +1853,7 @@ function buildGenerationDebugState(generationContext) {
     debugRagPlanLines: generationRagPlan ? JSON.stringify(generationRagPlan, null, 2).split('\n') : [],
     debugRagDebugLines: generationRagDebug ? JSON.stringify(generationRagDebug, null, 2).split('\n') : [],
     debugRagModelInputLines: generationRagModelInput ? JSON.stringify(generationRagModelInput, null, 2).split('\n') : [],
+    debugValidationLoopCards: buildValidationLoopCards(generationValidation, generationFinalization),
   };
 }
 
@@ -1740,6 +2404,16 @@ Page({
           ? basePayload.categories
           : []
     );
+    const existingRecentHistory = normalizeRecentMissionHistoryEntries(
+      this.data.lastGenerationContext
+      && this.data.lastGenerationContext.contextPacket
+      && this.data.lastGenerationContext.contextPacket.generation
+        ? this.data.lastGenerationContext.contextPacket.generation.recentMissionHistory
+        : []
+    );
+    const fallbackRecentHistory = !existingRecentHistory.length
+      ? appendThemeToRecentMissionHistory([], this.data.currentTheme || null, this.data.generationSource || '')
+      : existingRecentHistory;
     const contextPacket = {
       location: {
         name: this.data.locationName || '当前位置',
@@ -1764,6 +2438,13 @@ Page({
       nearby: nearbySummary,
       generation: {
         seed: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        previousThemeTitle: this.data.currentTheme && this.data.currentTheme.title
+          ? String(this.data.currentTheme.title).trim()
+          : '',
+        previousMissions: Array.isArray(this.data.currentTheme && this.data.currentTheme.missions)
+          ? this.data.currentTheme.missions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+          : [],
+        recentMissionHistory: fallbackRecentHistory,
       },
     };
     const generationContext = {
@@ -2042,7 +2723,8 @@ Page({
         result.runtimeVersion || '',
         result.ragPlan || null,
         result.ragDebug || null,
-        result.ragModelInput || null
+        result.ragModelInput || null,
+        result.reason || ''
       );
       this.setData({
         currentTheme,
@@ -2097,7 +2779,8 @@ Page({
         result.runtimeVersion || '',
         result.ragPlan || null,
         result.ragDebug || null,
-        result.ragModelInput || null
+        result.ragModelInput || null,
+        result.reason || ''
       );
       this.setData({
         currentTheme,
@@ -2164,7 +2847,8 @@ Page({
         result.runtimeVersion || '',
         result.ragPlan || null,
         result.ragDebug || null,
-        result.ragModelInput || null
+        result.ragModelInput || null,
+        result.reason || ''
       );
       this.setData({
         currentTheme,

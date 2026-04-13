@@ -66,11 +66,12 @@
 7. RAG 已经从“样例参考”升级为“生成计划”。
    - 返回 `ragPlan / ragDebug / ragModelInput`。
    - `ragModelInput` 不再把样例原句直接交给模型。
-   - 模型主要参考角度、线索、锚点、反例和检索分数。
+   - `ragModelInput` 现在只保留最小必要入模信息，如 `targetThemes / time / nearby / sceneCards / themeReferences`。
 
 8. 校验机制已经统一。
    - 纯粹模式、进阶模式、组合模式都走 `summarizeThemeValidation()`。
-   - 规则校验不过时，才按需触发 AI 二次复核。
+   - `summarizeThemeValidation()` 现在只做结构预检。
+   - 主题是否命中、是否跑偏、是否需要重写，改为每次都由 AI 复核判断。
 
 9. 探索页已经支持生成调试面板。
    - 可查看 `contextPacket`。
@@ -428,61 +429,56 @@ RAG 当前会输出：
 
 - `summarizeThemeValidation()`
 
-它会检查：
+它当前只做结构预检，不再承担最终主题判定。
 
-- 主题是否命中。
-- 是否有在地锚点。
-- 是否存在泛化任务。
-- 单主题是否混入未选方向。
+预检内容包括：
+
+- 任务条数是否正确。
+- 是否存在明显过泛任务。
 - 进阶模式任务之间是否过于相似。
-- 规则评分是否达到通过线。
+- 结构预检分数是否低于参考线。
 
-最新补充：
+不再作为硬规则检查的内容：
 
-- 校验现在会区分“真正跑偏”和“合理借词”。
-- 例如：
-  - 形状主题里“光影轮廓”不再被简单误判成色彩跑偏。
-  - 数字主题里“像数字的形状”不再被简单误判成形状跑偏。
-- 但如果形状任务写成“数清数量”，或气味任务写成“看色块 / 数灯箱”，仍会被判失败。
+- 任务里是否直接出现地点表述。
+- 是否必须显式带 POI 或场景锚点。
+- 是否靠关键词命中来判断最终主题是否正确。
 
 ### 9.1 纯粹模式
 
-纯粹模式校验倾向：
+纯粹模式结构预检倾向：
 
-- 至少 1 个主题命中。
-- 至少 1 个在地锚点。
+- 任务条数正确。
 - 唯一任务不能泛化。
 
 ### 9.2 进阶模式
 
-进阶模式校验倾向：
+进阶模式结构预检倾向：
 
-- 至少 2 个任务能看出主题痕迹。
-- 至少 2 个任务带在地锚点。
+- 任务条数正确。
 - 任务之间不能太像。
 
 ### 9.3 组合模式
 
 组合模式会传入 `combined: true`。
 
-它会检查：
+它在预检阶段主要检查：
 
-- 多个主题是否整体被覆盖。
-- 是否引入第三个无关主题。
-- 是否任务过泛或锚点不足。
+- 任务结构是否完整。
+- 是否任务过泛。
+- 是否任务之间过于相似。
 
 ### 9.4 AI 二次复核
 
-AI 二次复核不是每次都跑。
+现在不是“按需二次复核”，而是每次生成后都跑一次 AI 复核。
 
-触发条件：
+AI 复核负责：
 
-- 规则校验发现主题跑偏。
-- 在地锚点不足。
-- 任务过泛。
-- 单主题混入未选方向。
-- 进阶模式任务太像。
-- 规则评分低于通过线。
+- 判断是否真正命中主题。
+- 判断是否存在跨主题跑偏。
+- 判断任务是否仍然过泛。
+- 判断是否需要局部重写。
+- 结合上下文和时间段判断内容是否贴题。
 
 二次复核可能返回：
 
@@ -521,7 +517,7 @@ AI 二次复核不是每次都跑。
 - `source`
   - 判断是 `rag+ai`、`rag-fallback`、`random+ai`、`random-fallback`、`combined+ai`、`combined-fallback`。
 - `validation`
-  - 判断是否通过规则校验，是否触发 AI 复核。
+  - 判断结构预检和 AI 复核结果。
 - `runtimeVersion`
   - 判断云函数是否是最新部署版本。
 - `rag.plan.targetThemes`
@@ -537,12 +533,14 @@ AI 二次复核不是每次都跑。
 
 当前建议重点核对：
 
-- `rag.modelInput.scenes[].missionHints`
-  - 单主题下是否还混入了别的主题提示。
-- `rag.modelInput.referenceMissions[].angle`
-  - 是否已经是“轮廓节奏 / 天气显色 / 回响层次 / 数字变体 / 来源判断”这类可读角度。
-- `validation.offThemeMatches`
-  - 是否真的是跑偏，而不是合理借词被误判。
+- `rag.modelInput.targetThemes`
+  - 是否和当前选择主题一致。
+- `rag.modelInput.sceneCards`
+  - 是否仍混入明显无关场景提示。
+- `rag.modelInput.themeReferences`
+  - 是否已经只保留当前主题真正有用的角度和 cues。
+- `validation.aiReasons`
+  - AI 复核给出的失败或重写原因是否合理。
 
 ---
 
@@ -629,7 +627,7 @@ node scripts/sync_cloud_generation_runtime.js
 
 - `ragModelInput` 去掉样例原句。
 - prompt 明确禁止复用样例句。
-- 保留角度、线索、锚点、反例和检索分数作为入模信息。
+- `ragModelInput` 进一步瘦身，只保留 `targetThemes / time / nearby / sceneCards / themeReferences`。
 
 ### 12.6 随机生成和选择生成后端不一致
 
@@ -648,7 +646,8 @@ node scripts/sync_cloud_generation_runtime.js
 - 为色彩、声音、数字、气味补齐可读 `angles` 与 `antiPatterns`。
 - 单主题场景提示增加主题过滤，减少把别的主题提示喂给模型。
 - 场景库里几条天然混双主题的 hint 已拆干净，例如景区数字提示、夜市形状提示、滨水色彩提示。
-- 校验新增“合理借词豁免”，避免把合法数字任务或合法形状任务误杀。
+- 最终主题校验改为 AI 主校验，避免关键词误判。
+- 不再因为缺少地点表述就把任务判失败或强制改写。
 
 ---
 
@@ -777,11 +776,11 @@ node scripts/sync_cloud_generation_runtime.js
 
 ### 13.6 进一步优化 AI 二次复核
 
-当前二次复核是按需触发，已经避免每次都多调一次模型。
+当前 AI 复核已经改成每次都跑一次。
 
 后续可以继续优化：
 
-- 只让 AI 复核具体失败项，不整包复核。
+- 只让 AI 复核具体失败项，而不是整包复核。
 - 把重写限制在失败任务上。
 - 将 AI 复核结果写入 bad case 库。
 - 对二次复核失败的结果返回更明确 `repairReason`。
@@ -800,6 +799,42 @@ node scripts/sync_cloud_generation_runtime.js
 - `validation`
 
 否则 Web 模式下可能只能做到“基础生成可用”，但无法完全复刻当前小程序云函数链路的上下文质量和调试能力。
+
+### 13.8 推荐升级为“Grounding -> Plan -> Writing -> Validation”四层流水线
+
+当前已经做过一轮“减少 sample 影响、放宽单主题 RAG”的优化，但从最近表现看，系统仍然会在两种状态之间摇摆：
+
+- RAG 给得偏具体时，输出更稳，但容易反复落回少数句式
+- RAG 放得偏自由时，输出更活，但更容易抽象、重复或跑虚
+
+因此后续最推荐的方向，不是继续单纯加 prompt 或继续单纯删 RAG，而是把生成链路升级成四层：
+
+1. `Grounding`
+   - 只提供地点、时间、附近、场景、POI、活动线索和安全边界
+   - 不再直接给单主题写作层喂任务样例句
+
+2. `Plan`
+   - 显式决定这次的 `theme / scene / anchor / actionType / observationAngle / avoidPhrases`
+   - 同时读入 `recentMissionHistory`，先在计划层做跨次去重
+
+3. `Writing`
+   - 只根据 `missionPlan` 写标题、描述和任务
+   - 强制任务落到具体对象和明确动作上
+
+4. `Validation`
+   - AI 复核输出稳定的 `score / comment / rewriteAdvice / suggestedRewrite`
+   - 失败时尽量只改失败任务，而不是整包重来
+
+这个方向的完整设计见：
+
+- [AI主题任务RAG优化方案.md](/D:/liuliu-minimap/docs/AI主题任务RAG优化方案.md)
+
+如果后续继续做生成质量优化，优先级建议是：
+
+1. 单主题彻底改成 `Grounding + missionPlan` 生成
+2. 增加 `recentMissionHistory` 跨次去重
+3. 主题动作池与动作冷却机制
+4. AI 复核返回结构化分数、评语和建议改写内容
 
 ---
 
@@ -855,8 +890,8 @@ node scripts/sync_cloud_generation_runtime.js
 - 所有生成入口共享结构化上下文。
 - 时间、附近 POI、地点语境已经进入生成链路。
 - 纯粹模式和进阶模式有明确上下文差异。
-- RAG 不再只给模型 sample，而是给计划、角度、锚点和反例。
-- 规则校验和按需 AI 二次复核已经统一。
+- RAG 不再只给模型 sample，而是给精简后的入模上下文和生成计划。
+- 结构预检和每次 AI 复核已经统一。
 - 前端能看到本次真正传给 AI 的上下文与 RAG 入模内容。
 
 后续最值得继续做的不是继续堆 prompt，而是：

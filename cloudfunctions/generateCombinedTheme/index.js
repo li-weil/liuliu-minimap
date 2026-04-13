@@ -11,7 +11,7 @@ const {
 const { buildUnifiedRetrievalContext } = require('./rag-runtime');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-const RUNTIME_VERSION = '2026-04-13-validation-r1';
+const RUNTIME_VERSION = '2026-04-13-ai-validation-primary-r3';
 
 function shuffle(list) {
   const copied = [...list];
@@ -73,63 +73,24 @@ function buildCombinedReferenceContext(categories, event) {
 
   return {
     ragContext,
-    scenes: ragContext.scenes.map((scene) => ({
-      labels: scene.labels,
-      missionHints: scene.missionHints,
-    })),
-    themes: categories.map((category) => ({
-      category,
-      references: ragContext.referenceMissions
-        .filter((template) => template.category === category)
-        .map((template) => ({
-          cues: template.cues,
-          samples: template.samples,
-        })),
-    })),
   };
 }
 
 function buildModelCombinedReferenceContext(referenceContext) {
   const context = referenceContext && typeof referenceContext === 'object' ? referenceContext : {};
   const ragContext = context.ragContext && typeof context.ragContext === 'object' ? context.ragContext : null;
+  const targetThemes = uniqText(
+    ragContext && Array.isArray(ragContext.selectedThemes) && ragContext.selectedThemes.length
+      ? ragContext.selectedThemes
+      : (ragContext && Array.isArray(ragContext.categories) ? ragContext.categories : []),
+    3
+  );
   return {
-    scenes: Array.isArray(context.scenes) ? context.scenes : [],
-    themes: (Array.isArray(context.themes) ? context.themes : [])
-      .map((item) => ({
-        category: item.category,
-        references: (Array.isArray(item.references) ? item.references : [])
-          .map((reference) => ({
-            cues: reference.cues,
-          })),
-      })),
-    ragContext: ragContext ? {
-      selectedThemes: ragContext.selectedThemes,
-      requestedCategories: ragContext.requestedCategories,
-      locationContext: ragContext.locationContext,
-      sceneTag: ragContext.sceneTag,
-      timeContext: ragContext.timeContext,
-      nearbySummary: ragContext.nearbySummary,
-      scenes: ragContext.scenes,
-      categories: ragContext.categories,
-      referenceMissions: (Array.isArray(ragContext.referenceMissions) ? ragContext.referenceMissions : [])
-        .map((item) => ({
-          id: item.id,
-          category: item.category,
-          angle: item.angle,
-          cues: item.cues,
-          sceneFit: item.sceneFit,
-          timeFit: item.timeFit,
-          anchorTypes: item.anchorTypes,
-          antiPatterns: item.antiPatterns,
-          diversityTags: item.diversityTags,
-          retrievalScore: item.retrievalScore,
-          scoreBreakdown: item.scoreBreakdown,
-        })),
-      generationIntent: ragContext.generationIntent,
-      generationPlan: ragContext.generationPlan,
-      ragDebug: ragContext.ragDebug,
-    } : null,
-    note: '已移除知识库样例原句，模型只能参考角度、线索和锚点，不应照抄样例句。',
+    targetThemes,
+    time: buildCompactTimeModel(ragContext ? ragContext.timeContext : null),
+    nearby: buildCompactNearbyModel(ragContext ? ragContext.nearbySummary : null),
+    sceneCards: buildCompactSceneCards(ragContext, targetThemes),
+    themeReferences: buildCompactThemeReferences(ragContext, targetThemes),
   };
 }
 
@@ -142,6 +103,92 @@ function uniqText(values, limit = 10) {
     }
   });
   return result;
+}
+
+function buildCompactTimeModel(timeContext) {
+  const context = timeContext && typeof timeContext === 'object' ? timeContext : {};
+  return {
+    phase: context.timePhase || '',
+    hints: uniqText(context.timeHints || [], 4),
+  };
+}
+
+function buildCompactNearbyModel(nearbySummary) {
+  const summary = nearbySummary && typeof nearbySummary === 'object' ? nearbySummary : {};
+  return {
+    poiNames: uniqText(summary.poiNames || [], 5),
+    dominantScene: summary.dominantScene || '',
+    activityHints: uniqText(summary.activityHints || [], 4),
+  };
+}
+
+function buildCompactSceneCards(ragContext, categories) {
+  const allowedCategories = new Set(uniqText(categories, 3));
+  return (ragContext && Array.isArray(ragContext.scenes) ? ragContext.scenes : [])
+    .slice(0, 3)
+    .map((scene) => {
+      const labels = uniqText(scene.labels || [], 2);
+      return {
+        label: labels.join(' / '),
+        categories: uniqText(
+          (Array.isArray(scene.categories) ? scene.categories : []).filter((category) => {
+            return !allowedCategories.size || allowedCategories.has(category);
+          }),
+          3
+        ),
+        missionHints: uniqText(scene.missionHints || [], 3),
+      };
+    })
+    .filter((scene) => scene.label || scene.missionHints.length);
+}
+
+function buildCompactThemeReferences(ragContext, categories) {
+  return uniqText(categories, 3)
+    .map((category) => ({
+      category,
+      references: (Array.isArray(ragContext && ragContext.referenceMissions) ? ragContext.referenceMissions : [])
+        .filter((item) => item.category === category)
+        .slice(0, 3)
+        .map((item) => ({
+          angle: item.angle,
+          cues: uniqText(item.cues || [], 4),
+        })),
+    }))
+    .filter((item) => item.references.length);
+}
+
+function hashStringToUnit(value) {
+  const text = String(value || '');
+  if (!text) {
+    return 0;
+  }
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10000) / 10000;
+}
+
+function buildSeedStyleGuide(seed) {
+  const normalizedSeed = String(seed || '').trim();
+  if (!normalizedSeed) {
+    return [];
+  }
+  const actionStyles = [
+    '优先让三个任务分别落在“比较 / 判断来源 / 停留变化”上，不要都写成“找一处”。',
+    '优先让三个任务在动作上分开成“寻找 / 对照 / 解释相遇原因”，不要都写成同一种观察句。',
+    '优先把三条任务拆成“对象 / 关系 / 变化”三种结构，不要只换几个词。',
+  ];
+  const anchorStyles = [
+    '尽量更换锚点，不要三条都围绕同一个 POI 或入口句式。',
+    '至少有一条任务用活动线索做切口，而不是继续围绕建筑名词。',
+    '至少有一条任务从时间变化切入，而不是继续沿用静态描述。',
+  ];
+  return [
+    actionStyles[Math.floor(hashStringToUnit(`${normalizedSeed}|action`) * actionStyles.length) % actionStyles.length],
+    anchorStyles[Math.floor(hashStringToUnit(`${normalizedSeed}|anchor`) * anchorStyles.length) % anchorStyles.length],
+  ];
 }
 
 function classifyAngleHint(text) {
@@ -331,18 +378,147 @@ function buildGenerationPlan(categories, referenceContext, event) {
   };
 }
 
-function normalizeAiValidationResult(payload) {
+function normalizeAiSuggestedTheme(payload) {
   if (!payload || typeof payload !== 'object') {
     return null;
   }
+  const title = String(payload.title || '').trim();
+  const description = String(payload.description || '').trim();
+  const missions = Array.isArray(payload.missions)
+    ? payload.missions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+    : [];
+  if (!title && !description && !missions.length) {
+    return null;
+  }
+  return { title, description, missions };
+}
+
+function normalizeAiValidationResult(payload) {
+  const normalizedPayload = payload && typeof payload === 'object' ? payload : {};
+  const rawReasons = Array.isArray(normalizedPayload.reasons)
+    ? normalizedPayload.reasons.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4)
+    : [];
+  const failedChecks = Array.isArray(normalizedPayload.failedChecks)
+    ? normalizedPayload.failedChecks.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
+    : [];
+  const abstractMissionIndexes = Array.isArray(normalizedPayload.abstractMissionIndexes)
+    ? normalizedPayload.abstractMissionIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item)).slice(0, 6)
+    : [];
+  const repeatedMissionIndexes = Array.isArray(normalizedPayload.repeatedMissionIndexes)
+    ? normalizedPayload.repeatedMissionIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item)).slice(0, 6)
+    : [];
+  const ok = normalizedPayload.ok === undefined ? !normalizedPayload.shouldRewrite : !!normalizedPayload.ok;
+  const hasScore = Number.isFinite(Number(normalizedPayload.score));
+  const score = hasScore
+    ? Number(normalizedPayload.score)
+    : null;
+  const reviewComment = String(normalizedPayload.reviewComment || '').trim();
+  const rewriteAdvice = String(normalizedPayload.rewriteAdvice || '').trim();
+  const rewriteScope = String(normalizedPayload.rewriteScope || '').trim();
+  const rewrittenTheme = normalizeAiSuggestedTheme(normalizedPayload.rewrittenTheme);
+  if (!payload || typeof payload !== 'object') {
+    return {
+      stage: 'ai-review',
+      ok,
+      score,
+      failedChecks,
+      reasons: rawReasons,
+      reviewComment,
+      rewriteAdvice,
+      shouldRewrite: false,
+      abstractMissionIndexes,
+      repeatedMissionIndexes,
+      rewriteScope,
+      rewrittenTheme,
+      fieldSources: {
+        score: 'missing',
+        failedChecks: failedChecks.length ? 'ai' : 'missing',
+        reasons: 'missing',
+        reviewComment: 'missing',
+        rewriteAdvice: 'missing',
+        rewrittenTheme: rewrittenTheme ? 'ai' : 'missing',
+      },
+    };
+  }
   return {
     stage: 'ai-review',
-    ok: !!payload.ok,
-    score: Number.isFinite(Number(payload.score)) ? Number(payload.score) : null,
-    reasons: Array.isArray(payload.reasons) ? payload.reasons.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4) : [],
-    shouldRewrite: !!payload.shouldRewrite,
-    rewrittenTheme: payload.rewrittenTheme && typeof payload.rewrittenTheme === 'object' ? payload.rewrittenTheme : null,
+    ok,
+    score,
+    failedChecks,
+    reasons: rawReasons,
+    reviewComment,
+    rewriteAdvice,
+    shouldRewrite: !!normalizedPayload.shouldRewrite,
+    abstractMissionIndexes,
+    repeatedMissionIndexes,
+    rewriteScope,
+    rewrittenTheme,
+    fieldSources: {
+      score: hasScore ? 'ai' : 'missing',
+      failedChecks: failedChecks.length ? 'ai' : 'missing',
+      reasons: rawReasons.length ? 'ai' : 'missing',
+      reviewComment: reviewComment ? 'ai' : 'missing',
+      rewriteAdvice: rewriteAdvice ? 'ai' : 'missing',
+      rewrittenTheme: rewrittenTheme ? 'ai' : 'missing',
+    },
   };
+}
+
+function decideAiRepairStrategy(aiValidation) {
+  const requestedScope = String(aiValidation && aiValidation.rewriteScope || '').trim();
+  if (['mission-only', 'title-description', 'full'].includes(requestedScope)) {
+    return requestedScope;
+  }
+  const failedChecks = Array.isArray(aiValidation && aiValidation.failedChecks)
+    ? aiValidation.failedChecks
+    : [];
+  if (failedChecks.length && failedChecks.every((item) => ['concreteness', 'novelty'].includes(item))) {
+    return 'mission-only';
+  }
+  return 'full';
+}
+
+function mergeThemeByRepairStrategy(theme, rewrittenTheme, aiValidation, strategy, walkMode) {
+  const baseTheme = theme && typeof theme === 'object' ? theme : {};
+  const suggestedTheme = rewrittenTheme && typeof rewrittenTheme === 'object' ? rewrittenTheme : {};
+  const normalizedStrategy = strategy || 'full';
+  if (normalizedStrategy === 'title-description') {
+    return normalizeTheme({
+      ...baseTheme,
+      title: String(suggestedTheme.title || '').trim() || baseTheme.title,
+      description: String(suggestedTheme.description || '').trim() || baseTheme.description,
+      missions: Array.isArray(baseTheme.missions) ? baseTheme.missions : [],
+    }, walkMode);
+  }
+  if (normalizedStrategy === 'mission-only') {
+    const currentMissions = Array.isArray(baseTheme.missions) ? [...baseTheme.missions] : [];
+    const suggestedMissions = Array.isArray(suggestedTheme.missions) ? suggestedTheme.missions : [];
+    const targetedIndexes = []
+      .concat(Array.isArray(aiValidation && aiValidation.abstractMissionIndexes) ? aiValidation.abstractMissionIndexes : [])
+      .concat(Array.isArray(aiValidation && aiValidation.repeatedMissionIndexes) ? aiValidation.repeatedMissionIndexes : [])
+      .filter((item, index, source) => Number.isInteger(item) && item >= 0 && source.indexOf(item) === index);
+    if (targetedIndexes.length && suggestedMissions.length) {
+      targetedIndexes.forEach((missionIndex, offset) => {
+        const replacement = suggestedMissions[offset] || suggestedMissions[missionIndex] || suggestedMissions[0] || '';
+        if (replacement) {
+          currentMissions[missionIndex] = replacement;
+        }
+      });
+    } else if (suggestedMissions.length) {
+      return normalizeTheme({
+        ...baseTheme,
+        missions: suggestedMissions,
+      }, walkMode);
+    }
+    return normalizeTheme({
+      ...baseTheme,
+      missions: currentMissions,
+    }, walkMode);
+  }
+  return normalizeTheme({
+    ...baseTheme,
+    ...suggestedTheme,
+  }, walkMode);
 }
 
 async function maybeRunSecondaryValidation(theme, event, fallbackTheme, options) {
@@ -350,9 +526,6 @@ async function maybeRunSecondaryValidation(theme, event, fallbackTheme, options)
     ...options,
     allowSecondaryValidation: true,
   });
-  if (!validation.shouldRunSecondaryValidation) {
-    return { theme, validation };
-  }
 
   try {
     const aiValidation = normalizeAiValidationResult(await chatJson(
@@ -363,12 +536,29 @@ async function maybeRunSecondaryValidation(theme, event, fallbackTheme, options)
       return { theme, validation };
     }
     let nextTheme = theme;
+    let appliedRepairStrategy = 'none';
     if (aiValidation.shouldRewrite && aiValidation.rewrittenTheme) {
-      const rewrittenTheme = normalizeTheme({
-        ...theme,
-        ...aiValidation.rewrittenTheme,
-      }, event.walkMode);
-      nextTheme = finalizeTheme({ ...theme, ...rewrittenTheme }, event, fallbackTheme, options);
+      appliedRepairStrategy = decideAiRepairStrategy(aiValidation);
+      const rewrittenTheme = mergeThemeByRepairStrategy(
+        theme,
+        aiValidation.rewrittenTheme,
+        aiValidation,
+        appliedRepairStrategy,
+        event.walkMode
+      );
+      nextTheme = finalizeTheme(rewrittenTheme, event, fallbackTheme, options);
+      nextTheme = {
+        ...nextTheme,
+        finalization: {
+          ...(nextTheme.finalization || {}),
+          aiRepairStrategy: appliedRepairStrategy,
+          aiRepairIndexes: []
+            .concat(aiValidation.abstractMissionIndexes || [])
+            .concat(aiValidation.repeatedMissionIndexes || [])
+            .filter((item, index, source) => Number.isInteger(item) && source.indexOf(item) === index),
+          aiFailedChecks: aiValidation.failedChecks || [],
+        },
+      };
       validation = summarizeThemeValidation(nextTheme, event, {
         ...options,
         allowSecondaryValidation: true,
@@ -378,11 +568,28 @@ async function maybeRunSecondaryValidation(theme, event, fallbackTheme, options)
       theme: nextTheme,
       validation: {
         ...validation,
-        ok: validation.ok && aiValidation.ok !== false,
+        ok: aiValidation.ok !== false,
         stage: 'ai-review',
+        precheckScore: validation.score,
+        precheckReasons: validation.reasons,
+        score: aiValidation.score != null ? aiValidation.score : validation.score,
+        reasons: aiValidation.reasons.length ? aiValidation.reasons : validation.reasons,
         aiOk: aiValidation.ok,
         aiScore: aiValidation.score,
+        aiFailedChecks: aiValidation.failedChecks,
         aiReasons: aiValidation.reasons,
+        aiReviewComment: aiValidation.reviewComment,
+        aiRewriteAdvice: aiValidation.rewriteAdvice,
+        aiAbstractMissionIndexes: aiValidation.abstractMissionIndexes,
+        aiRepeatedMissionIndexes: aiValidation.repeatedMissionIndexes,
+        aiRewriteScope: aiValidation.rewriteScope,
+        aiSuggestedTheme: aiValidation.rewrittenTheme,
+        aiAppliedRepairStrategy: appliedRepairStrategy,
+        aiAppliedRepairIndexes: []
+          .concat(aiValidation.abstractMissionIndexes || [])
+          .concat(aiValidation.repeatedMissionIndexes || [])
+          .filter((item, index, source) => Number.isInteger(item) && source.indexOf(item) === index),
+        aiFieldSources: aiValidation.fieldSources,
         aiShouldRewrite: aiValidation.shouldRewrite,
         secondaryValidationUsed: true,
       },
@@ -455,6 +662,22 @@ exports.main = async (event) => {
       && event.generationContext.contextPacket.generation
       && event.generationContext.contextPacket.generation.seed)
     || '';
+  const previousThemeTitle = event.generationContext
+    && event.generationContext.contextPacket
+    && event.generationContext.contextPacket.generation
+    && event.generationContext.contextPacket.generation.previousThemeTitle
+    ? String(event.generationContext.contextPacket.generation.previousThemeTitle).trim()
+    : '';
+  const previousMissions = uniqText(
+    event.generationContext
+      && event.generationContext.contextPacket
+      && event.generationContext.contextPacket.generation
+      && Array.isArray(event.generationContext.contextPacket.generation.previousMissions)
+      ? event.generationContext.contextPacket.generation.previousMissions
+      : [],
+    3
+  );
+  const seedStyleGuide = buildSeedStyleGuide(generationSeed);
   const promptContext = buildPromptContextBlock(event, {
     categories,
     walkMode: event.walkMode,
@@ -479,8 +702,11 @@ exports.main = async (event) => {
 ${promptContext.text}
 模式：${event.walkMode === 'advanced' ? '进阶模式，生成3个短而清楚的任务' : '纯粹模式，生成1个短而清楚的任务'}
 本次变化种子：${generationSeed || '未提供'}
+上一轮主题：${previousThemeTitle || '未提供'}
+上一轮任务：${previousMissions.length ? previousMissions.join('；') : '未提供'}
+本次句式偏好：${seedStyleGuide.length ? seedStyleGuide.join('；') : '未提供'}
 
-以下是检索增强上下文（RAG），请优先基于这些信息生成，而不是凭空想象：
+以下是检索增强上下文（RAG），请把它当作 grounding，而不是脚本：
 ${JSON.stringify(modelReferenceContext, null, 2)}
 
 生成计划：
@@ -494,6 +720,7 @@ ${JSON.stringify(generationPlan, null, 2)}
 5. 至少有一个任务要明确回应 categoryPlans 里的两个方向交集，不能只是各写各的。
 6. 至少有一个任务要呼应附近 POI 或活动线索。
 7. 如果没有选择“声音”，就不要把声音当任务重点。
+7.1 如果没有选择“数字”，禁止把“数清、数一数、数出、几个、多少、编号”当成任务开头或核心动作。
 8. 如果包含“数字”，至少有一个任务必须直接涉及数字形状、数量统计、数字变体或数字行动线索。
 9. 如果包含“气味”，至少有一个任务必须直接涉及气味来源、扩散、停留或气味记忆。
 10. 如果包含“形状”，至少有一个任务必须直接涉及线条、轮廓、弧度或几何关系。
@@ -506,7 +733,9 @@ ${JSON.stringify(generationPlan, null, 2)}
 17. 如果是纯粹模式，唯一的那个任务必须同时体现已选方向，并写成“动作 + 观察重点”的一句话，尽量控制在 32 个字以内。
 18. 如果提供了附近 POI 或活动线索，至少有一个任务要能呼应这些附近信息。
 19. 同一地点重复生成时，请根据“本次变化种子”改变任务的动作、锚点或观察角度，避免反复使用同一固定句式。
-20. RAG 只提供结构、角度、线索和锚点；不要复用知识库样例句，不要把模板样例当成可直接粘贴的任务文本。
+20. RAG 只提供 grounding、角度、线索和锚点；不要复用知识库样例句，不要把模板样例当成可直接粘贴的任务文本。
+21. 如果提供了“上一轮任务”，请避免复用其中的开头动词、核心对象组合和句式骨架。
+22. 至少有一个任务应在当前上下文里做出 RAG 里没有直接写出的新鲜融合关系，但仍然要贴合已选主题。
 
 返回 JSON：title, description, category, missions, vibeColor。`;
 
@@ -525,6 +754,7 @@ ${JSON.stringify(generationPlan, null, 2)}
     const reviewResult = await maybeRunSecondaryValidation(finalizedTheme, event, fallbackTheme, {
       categories,
       combined: true,
+      currentPlan: generationPlan,
     });
     return {
       theme: reviewResult.theme,

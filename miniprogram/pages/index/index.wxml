@@ -267,6 +267,123 @@
             </scroll-view>
           </view>
 
+          <view wx:if="{{debugValidationLoopCards.length}}" class="debug-loop-section">
+            <view class="debug-rag-card">
+              <view class="debug-rag-head">
+                <view class="debug-rag-title">AI Review / Rewrite 轮次记录</view>
+                <view class="debug-rag-hint">这里按轮次展示每次 review 的结果页、建议改写内容，以及真正改写后的主题结果，不再只看最后一轮</view>
+              </view>
+            </view>
+
+            <view wx:for="{{debugValidationLoopCards}}" wx:key="key" class="debug-loop-card">
+              <view class="debug-json-head">
+                <view>
+                  <view class="debug-json-title">{{item.title}}</view>
+                  <view class="debug-json-hint">逐轮查看输入主题、review 结论、建议改写和实际改写产物</view>
+                </view>
+                <view class="debug-json-pill">Loop</view>
+              </view>
+
+              <view class="debug-summary-grid debug-loop-grid">
+                <view wx:for="{{item.summaryRows}}" wx:key="label" class="debug-summary-item">
+                  <view class="debug-summary-label">{{item.label}}</view>
+                  <view class="debug-summary-value">{{item.value}}</view>
+                </view>
+              </view>
+
+              <view wx:if="{{item.inputThemeLines.length}}" class="debug-json-card debug-loop-json-card">
+                <view class="debug-json-head">
+                  <view>
+                    <view class="debug-json-title">{{item.title}} 输入主题</view>
+                    <view class="debug-json-hint">这一轮 review 之前，真正送进校验链路的主题内容</view>
+                  </view>
+                  <view class="debug-json-pill">Input</view>
+                </view>
+                <scroll-view scroll-y class="debug-json-scroll debug-json-scroll-compact">
+                  <view class="debug-json-block">
+                    <view wx:for="{{item.inputThemeLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+                  </view>
+                </scroll-view>
+              </view>
+
+              <view wx:if="{{item.precheckLines.length}}" class="debug-json-card debug-loop-json-card">
+                <view class="debug-json-head">
+                  <view>
+                    <view class="debug-json-title">{{item.title}} precheck</view>
+                    <view class="debug-json-hint">这一轮进入 AI review 前的结构预检结果</view>
+                  </view>
+                  <view class="debug-json-pill">Precheck</view>
+                </view>
+                <scroll-view scroll-y class="debug-json-scroll debug-json-scroll-compact">
+                  <view class="debug-json-block">
+                    <view wx:for="{{item.precheckLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+                  </view>
+                </scroll-view>
+              </view>
+
+              <view wx:if="{{item.reviewLines.length}}" class="debug-json-card debug-loop-json-card">
+                <view class="debug-json-head">
+                  <view>
+                    <view class="debug-json-title">{{item.title}} review 结果</view>
+                    <view class="debug-json-hint">这一轮 review 最终返回的结果页；如果中间做过字段补全，这里展示补全后的最终 review JSON</view>
+                  </view>
+                  <view class="debug-json-pill">Review</view>
+                </view>
+                <scroll-view scroll-y class="debug-json-scroll">
+                  <view class="debug-json-block">
+                    <view wx:for="{{item.reviewLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+                  </view>
+                </scroll-view>
+              </view>
+
+              <view wx:if="{{item.rewrittenSuggestionLines.length}}" class="debug-json-card debug-loop-json-card">
+                <view class="debug-json-head">
+                  <view>
+                    <view class="debug-json-title">{{item.title}} 建议改写内容</view>
+                    <view class="debug-json-hint">review 阶段要求模型改写时，模型给出的建议版本</view>
+                  </view>
+                  <view class="debug-json-pill">Suggested</view>
+                </view>
+                <scroll-view scroll-y class="debug-json-scroll debug-json-scroll-compact">
+                  <view class="debug-json-block">
+                    <view wx:for="{{item.rewrittenSuggestionLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+                  </view>
+                </scroll-view>
+              </view>
+
+              <view wx:if="{{item.rewrittenThemeLines.length}}" class="debug-json-card debug-loop-json-card">
+                <view class="debug-json-head">
+                  <view>
+                    <view class="debug-json-title">{{item.title}} 改写后结果</view>
+                    <view class="debug-json-hint">这一轮真正合并并 finalize 之后的主题内容</view>
+                  </view>
+                  <view class="debug-json-pill">Rewritten</view>
+                </view>
+                <scroll-view scroll-y class="debug-json-scroll debug-json-scroll-compact">
+                  <view class="debug-json-block">
+                    <view wx:for="{{item.rewrittenThemeLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+                  </view>
+                </scroll-view>
+              </view>
+
+              <view wx:for="{{item.attemptCards}}" wx:key="key" class="debug-json-card debug-loop-json-card">
+                <view class="debug-json-head">
+                  <view>
+                    <view class="debug-json-title">{{item.title}} 原始返回</view>
+                    <view class="debug-json-hint">如果这一轮做过 repair，这里能看到每次 review / repair 的原始 JSON 返回</view>
+                  </view>
+                  <view class="debug-json-pill">Raw</view>
+                </view>
+                <view class="debug-loop-attempt-meta">缺失字段：{{item.missingFields}}</view>
+                <scroll-view scroll-y class="debug-json-scroll debug-json-scroll-compact">
+                  <view class="debug-json-block">
+                    <view wx:for="{{item.lines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+                  </view>
+                </scroll-view>
+              </view>
+            </view>
+          </view>
+
           <view class="debug-json-card">
             <view class="debug-json-head">
               <view>
