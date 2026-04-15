@@ -3,6 +3,7 @@ const { chatJsonWithMeta, getAiConfig } = require('./ai');
 const {
   normalizeLocationSignals,
   normalizeTimeContext,
+  summarizeCoreTimeHints,
   normalizeNearbySummary,
   buildPreferenceContext,
   normalizeRecentMissionHistory,
@@ -118,29 +119,44 @@ function buildPrompt(event, categories) {
     walkMode: event.walkMode,
     combined: true,
   });
-  const recentHistory = normalizeRecentMissionHistory(event, 6);
   const generationContext = event && event.generationContext && typeof event.generationContext === 'object'
     ? event.generationContext
     : {};
   const contextPacket = generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
     ? generationContext.contextPacket
     : {};
-  const generationSeed = String(
-    event.generationSeed
-    || generationContext.generationSeed
-    || (contextPacket.generation && contextPacket.generation.seed)
-    || ''
-  ).trim();
-  const previousThemeTitle = String(
-    contextPacket.generation && contextPacket.generation.previousThemeTitle || ''
-  ).trim();
   const previousMissions = Array.isArray(contextPacket.generation && contextPacket.generation.previousMissions)
     ? contextPacket.generation.previousMissions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4)
     : [];
   const missionCount = event.walkMode === 'advanced' ? 3 : 1;
-  const compactModelInput = {
+  const generationRules = [
+    '直接生成组合主题任务，不提及 RAG、知识库、检索或验证。',
+    `必须把主题 ${categories.join('、')} 融合在一起，不要拆成两段各写各的。`,
+    '任务要短、具体、可执行，像真人会收到的任务卡片，不要写成散文。',
+    '要体现当前时间段和场景语境，但不要每条都机械重复地点名。',
+    '避免空话，例如“寻找一个细节”“感受一下周围”“观察这里的变化”。',
+    '避免抽象大词堆砌，例如“氛围、气质、秩序、关系、张力”单独充当观察对象。',
+    missionCount === 1 ? '只返回 1 条任务，尽量控制在 18 到 30 个字。' : '返回 3 条任务，每条尽量控制在 14 到 28 个字，三条任务要有明显差异。',
+    '标题尽量在 12 个字以内，描述尽量在 32 个字以内。',
+    '输出语言自然、具体、少 AI 味，不要解释为什么这样生成。',
+    '如果提供了偏好，优先从 preferenceGuide.availableObjects 里选观察对象；preferenceGuide.blockedObjects 里的对象不要主动写进任务。',
+    '如果 previousMissions 非空，必须逐条避开上一轮任务；先检查 previousMissions 用了哪些 availableObjects 对象，这些对象在这次生成中禁用，除非 availableObjects 剩下对象数量不够。',
+    'preferenceGuide.objectDetails 给出了当前更值得参考的对象摘要。优先选这些文本证据更具体的对象，不要只根据“命中/未命中”做模糊判断。',
+    '输出前先静默检查对象与地点是否对应，如果拿不准 preferenceGuide.availableObjects 里的对象是否合适，退回 preferenceGuide.safeObjects 里的对象。',
+    '高德原生分类名只作为内部上下文，不要把 nearby.poiTypes 这类分类名和 nearby.pois 具体名称直接写进标题、描述或任务；如果需要写地点，只写具体 AOI、商圈或自然说法。',
+    '好任务优先级：优先选近处、稳定、此刻容易找到的对象；优先用“看、听、找、比、停一下、顺着走、记下”这类自然动作；一条任务尽量只做一件事。',
+    '如果任务里涉及人物或状态解读，可以基于当下听到或看到的线索做轻量判断，但不要写成需要长时间跟踪、偷拍偷录或下结论式审问的任务。',
+    '每条任务必须是一句语义完整、自然收口的话，不能停在半截动作上。不要输出“找个……，停下”“在……旁，听……”这种没说完的句子；动作后面必须落到明确的观察对象、比较对象或判断目标。',
+  ];
+  const strategyInput = {
     walkMode: event.walkMode || 'advanced',
     categories,
+    missionCount,
+    generationRules,
+    themeTaskSkeletons: promptContext.themeSkeletonHints,
+    timeTaskSkeletons: promptContext.timeSkeletonHints,
+  };
+  const dynamicContext = {
     mood: event.mood || '',
     weather: event.weather || '',
     season: event.season || '',
@@ -148,8 +164,8 @@ function buildPrompt(event, categories) {
     preferenceGuide: {
       availableObjects: preferenceContext.availableObjects,
       blockedObjects: preferenceContext.blockedObjects.slice(0, 4),
-      safeObjects: preferenceContext.safeObjects.slice(0, 6),
-      objectDetails: preferenceContext.objectDetails.slice(0, 6),
+      safeObjects: preferenceContext.safeObjects,
+      objectDetails: preferenceContext.objectDetails.slice(0, 3),
       instruction: preferenceContext.instruction,
     },
     location: {
@@ -158,48 +174,36 @@ function buildPrompt(event, categories) {
     },
     time: {
       timePhase: timeContext.timePhase || '',
-      timeHints: timeContext.timeHints || [],
+      timeHints: summarizeCoreTimeHints(timeContext),
     },
     nearby: {
       nearbyScene: nearbySummary.dominantScene || '',
       aoi: nearbySummary.primaryAoiName || nearbySummary.primaryAoiType || '',
-      businessAreas: nearbySummary.businessAreaNames.slice(0, 3),
-      poiTypes: nearbySummary.poiTypes.slice(0, 4),
-      pois: nearbySummary.poiNames.slice(0, 5),
+      aoiList: nearbySummary.aoiNames.slice(0, 4),
+      businessAreas: nearbySummary.businessAreaNames.slice(0, 2),
+      poiTypes: nearbySummary.poiTypes.slice(0, 5),
+      pois: nearbySummary.poiNames.slice(0, 3),
     },
-    previousThemeTitle,
     previousMissions,
-    recentMissionHistory: recentHistory.map((item) => item.mission).filter(Boolean).slice(0, 6),
-    generationSeed,
   };
 
-  return `你是“遛遛”小程序的城市漫步组合主题生成助手。请直接依据当前基础信息生成融合后的主题和任务。
+  return `你是“遛遛”小程序的城市漫步组合主题生成助手。请按固定协议、策略输入、动态上下文的顺序理解内容，并直接生成结果。
 
-基础输入：
-${JSON.stringify(compactModelInput, null, 2)}
+固定协议：
+1. 只返回一个合法 JSON 对象，不要输出解释、前后缀、代码块。
+2. 优先遵循 strategyInput.generationRules，其次参考 strategyInput.themeTaskSkeletons、strategyInput.timeTaskSkeletons 和 dynamicContext.preferenceGuide。
+3. dynamicContext 是这次真正变化的现场信息，越靠后的内容越代表当下。
+4. 如果规则之间冲突，优先保证主题融合自然、任务具体、句子完整。
+
+策略输入：
+${JSON.stringify(strategyInput, null, 2)}
+
+动态上下文：
+${JSON.stringify(dynamicContext, null, 2)}
 
 上下文摘要：
 ${promptContext.text}
 
-生成要求：
-1. 直接生成，不要提及 RAG、知识库、验证、检索。
-2. 这是一组组合主题，输出必须把 ${categories.join('、')} 融合在一起，不要简单拆成两段各写各的。
-3. ${missionCount === 1 ? '只返回 1 条任务。' : '返回 3 条任务，三条任务必须从不同角度切入。'}
-4. 任务要短、具体、可执行，像真人会收到的任务卡片。
-5. 要体现当前时间段和场景语境，但不要每条都机械重复地点名。
-6. 不要写成抽象散文，不要空话，不要“感受一下周围”。
-7. 如果基础输入里的 previousMissions 非空，必须逐条避开上一轮任务；先检查 previousMissions 用了哪些 availableObjects 对象，这些对象在这次生成中禁用，除非 availableObjects 剩下对象数量不够。
-8. 同一地点重复生成时，要换动作、换对象、换切入角度，避免复用上一轮句式。
-9. 标题尽量在 12 个字以内，描述尽量在 32 个字以内。
-10. 如果提供了偏好，优先从 preferenceGuide.availableObjects 里选观察对象；preferenceGuide.blockedObjects 里的对象不要主动写进任务。
-11. 组合的是主题，不是偏好，偏好主要决定“看什么”。结合第 10 条，优先从偏好对象里选观察对象。
-12. preferenceGuide.objectDetails 给出了当前更值得参考的对象摘要。优先选这些文本证据更具体的对象，不要只根据“命中/未命中”做模糊判断。
-13. 输出前先静默检查对象与地点是否对应，如果拿不准preferenceGuide.availableObjects里的对象是否合适，退回preferenceGuide.safeObjects 里的对象。
-14. 高德原生分类名只作为内部上下文，不要把“生活服务场所、风景名胜、购物服务、商务住宅”这类分类名直接写进标题、描述或任务；如果需要写地点，只写具体 POI、AOI、商圈或自然说法。
-15. 好任务优先级：优先选近处、稳定、此刻容易找到的对象；优先用“看、听、找、比、停一下、顺着走、记下”这类自然动作；一条任务尽量只做一件事。
-16. 如果任务里涉及人物或状态解读，可以基于当下听到或看到的线索做轻量判断，但不要写成需要长时间跟踪、偷拍偷录或下结论式审问的任务。
-17. 每条任务必须是一句语义完整、自然收口的话，不能停在半截动作上。不要输出“找个……，停下”“在……旁，听……”这种没说完的句子；动作后面必须落到明确的观察对象、比较对象或判断目标。
- 
 返回 JSON：
 {
   "title": "主题标题",

@@ -1314,6 +1314,33 @@ function buildReadableModelRequestLines(value) {
   }
 }
 
+function extractModelCacheStats(modelResponse) {
+  const usage = modelResponse && modelResponse.usage && typeof modelResponse.usage === 'object'
+    ? modelResponse.usage
+    : {};
+  const promptTokens = Number.isFinite(Number(usage.prompt_tokens)) ? Number(usage.prompt_tokens) : null;
+  const cachedTokensFromDirect = Number.isFinite(Number(usage.cached_tokens)) ? Number(usage.cached_tokens) : null;
+  const promptTokenDetails = usage.prompt_tokens_details && typeof usage.prompt_tokens_details === 'object'
+    ? usage.prompt_tokens_details
+    : {};
+  const cachedTokensFromDetails = Number.isFinite(Number(promptTokenDetails.cached_tokens))
+    ? Number(promptTokenDetails.cached_tokens)
+    : null;
+  const cachedTokens = cachedTokensFromDirect !== null
+    ? cachedTokensFromDirect
+    : cachedTokensFromDetails;
+  const cacheHit = Number.isFinite(cachedTokens) && cachedTokens > 0;
+  const cacheRatio = cacheHit && promptTokens
+    ? `${Math.round((cachedTokens / promptTokens) * 100)}%`
+    : '';
+  return {
+    cachedTokens,
+    promptTokens,
+    cacheHit,
+    cacheRatio,
+  };
+}
+
 function buildValidationLoopCards(generationValidation, generationFinalization) {
   const loopDetails = generationValidation && Array.isArray(generationValidation.aiLoopDetails)
     ? generationValidation.aiLoopDetails
@@ -1557,6 +1584,7 @@ function buildGenerationDebugState(generationContext) {
     : (contextPacket && contextPacket.modelResponse && typeof contextPacket.modelResponse === 'object'
       ? contextPacket.modelResponse
       : null);
+  const modelCacheStats = extractModelCacheStats(generationModelResponse);
   const runtimeVersion = generationContext && generationContext.runtimeVersion
     ? String(generationContext.runtimeVersion)
     : (contextPacket && contextPacket.runtimeVersion ? String(contextPacket.runtimeVersion) : '');
@@ -1656,12 +1684,30 @@ function buildGenerationDebugState(generationContext) {
       label: '生成失败原因',
       value: formatDebugValue(generationErrorReason || '未提供'),
     },
-    {
-      label: '运行时版本',
-      value: formatDebugValue(runtimeVersion || '未提供'),
-    },
-    {
-      label: isDirectMode ? '检查状态' : '验证状态',
+      {
+        label: '运行时版本',
+        value: formatDebugValue(runtimeVersion || '未提供'),
+      },
+      {
+        label: '缓存命中',
+        value: formatDebugValue(
+          modelCacheStats.cachedTokens === null || modelCacheStats.cachedTokens === undefined
+            ? '未提供'
+            : (modelCacheStats.cacheHit ? '是' : '否')
+        ),
+      },
+      {
+        label: '缓存命中 Token',
+        value: formatDebugValue(
+          modelCacheStats.cachedTokens === null || modelCacheStats.cachedTokens === undefined
+            ? '未提供'
+            : (modelCacheStats.cacheRatio
+              ? `${modelCacheStats.cachedTokens}（约 ${modelCacheStats.cacheRatio}）`
+              : modelCacheStats.cachedTokens)
+        ),
+      },
+      {
+        label: isDirectMode ? '检查状态' : '验证状态',
       value: formatDebugValue(validationSummary.status),
     },
     {
