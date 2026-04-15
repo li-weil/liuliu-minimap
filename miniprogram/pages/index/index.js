@@ -112,6 +112,119 @@ function normalizeGenerationThemeList(selectedThemes) {
     .slice(0, 3);
 }
 
+const GENERATION_STAGE_SEQUENCE = ['confirm', 'gather', 'generate', 'finalize'];
+const GENERATION_OVERTIME_COPY = '66 正在加速赶来，请耐心等待';
+const GENERATION_ERROR_COPY = '66 迷路啦，请再次尝试生成';
+const GENERATION_STAGE_META = {
+  confirm: {
+    key: 'confirm',
+    index: 1,
+    shortLabel: '确认位置',
+    title: '正在确认探索点位置',
+    progress: 14,
+    durationMs: 1000,
+    badge: '位置就绪前',
+  },
+  gather: {
+    key: 'gather',
+    index: 2,
+    shortLabel: '整理线索',
+    title: '正在整理附近地点和时间线索',
+    progress: 38,
+    durationMs: 1000,
+    badge: '环境整理中',
+  },
+  generate: {
+    key: 'generate',
+    index: 3,
+    shortLabel: '生成任务',
+    title: '正在生成漫步主题和任务',
+    progress: 78,
+    durationMs: 5000,
+    badge: 'AI 生成中',
+  },
+  finalize: {
+    key: 'finalize',
+    index: 4,
+    shortLabel: '整理卡片',
+    title: '正在整理任务卡片',
+    progress: 100,
+    durationMs: 1000,
+    badge: '马上就好',
+  },
+};
+
+function buildGenerationStepViews(currentStage, status = 'loading') {
+  const currentIndex = Math.max(0, GENERATION_STAGE_SEQUENCE.indexOf(currentStage));
+  return GENERATION_STAGE_SEQUENCE.map((stageKey, index) => {
+    const meta = GENERATION_STAGE_META[stageKey];
+    let state = 'pending';
+    if (status === 'error') {
+      state = index < currentIndex ? 'done' : index === currentIndex ? 'error' : 'pending';
+    } else if (index < currentIndex) {
+      state = 'done';
+    } else if (index === currentIndex) {
+      state = 'active';
+    }
+    return {
+      key: stageKey,
+      index: meta.index,
+      label: meta.shortLabel,
+      state,
+    };
+  });
+}
+
+function buildGenerationViewState({
+  status = 'idle',
+  stage = 'confirm',
+  overtime = false,
+  missionCount = 1,
+  message = '',
+  hint = '',
+} = {}) {
+  if (status === 'idle') {
+    return null;
+  }
+
+  const stageKey = GENERATION_STAGE_META[stage] ? stage : 'confirm';
+  const meta = GENERATION_STAGE_META[stageKey];
+
+  if (status === 'error') {
+    return {
+      visible: true,
+      status: 'error',
+      glyph: '66',
+      vibeColor: '#8f5b5b',
+      kicker: '生成失败',
+      title: GENERATION_ERROR_COPY,
+      hint: message || hint || '这次没有顺利找到合适的漫步线索，可以直接再次点击生成。',
+      badge: '请再试一次',
+      progress: 100,
+      progressTransitionMs: 320,
+      progressLabel: '这次没有顺利完成，我们已经停在刚才的阶段，等你再次出发。',
+      steps: buildGenerationStepViews(stageKey, 'error'),
+      placeholderMissions: Array.from({ length: Math.max(1, Number(missionCount) || 1) }),
+    };
+  }
+
+  return {
+    visible: true,
+    status: 'loading',
+    glyph: '66',
+    vibeColor: '#5a5a40',
+    kicker: '生成中',
+    title: meta.title,
+    hint: overtime ? GENERATION_OVERTIME_COPY : '',
+    badge: meta.badge,
+    progress: meta.progress,
+    progressTransitionMs: meta.durationMs,
+    progressLabel: overtime ? GENERATION_OVERTIME_COPY : meta.title,
+    steps: buildGenerationStepViews(stageKey, 'loading'),
+    placeholderMissions: Array.from({ length: Math.max(1, Number(missionCount) || 1) }),
+  };
+}
+
 function normalizeRandomSource(source) {
   const normalized = String(source || '').trim();
   if (normalized === 'rag+ai') {
@@ -923,6 +1036,42 @@ const NEARBY_QUERY_OPTIONS = {
   radius: 3500,
 };
 
+const LOCATION_CONTEXT_CACHE_TTL_MS = 5 * 60 * 1000;
+const NEARBY_PLACES_CACHE_TTL_MS = 3 * 60 * 1000;
+
+function buildGeoCacheKey(latitude, longitude, suffix = '') {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  const latText = Number.isFinite(lat) ? lat.toFixed(5) : 'nan';
+  const lngText = Number.isFinite(lng) ? lng.toFixed(5) : 'nan';
+  return `${latText},${lngText}${suffix ? `:${suffix}` : ''}`;
+}
+
+function readTimedCacheEntry(store, key, ttlMs) {
+  if (!(store instanceof Map) || !key || !ttlMs) {
+    return null;
+  }
+  const entry = store.get(key);
+  if (!entry || !Number.isFinite(entry.expireAt) || entry.expireAt <= Date.now()) {
+    if (entry) {
+      store.delete(key);
+    }
+    return null;
+  }
+  return entry.value;
+}
+
+function writeTimedCacheEntry(store, key, value, ttlMs) {
+  if (!(store instanceof Map) || !key) {
+    return value;
+  }
+  store.set(key, {
+    value,
+    expireAt: Date.now() + ttlMs,
+  });
+  return value;
+}
+
 function buildNearbyTokenText(places) {
   return (places || [])
     .map((item) => [item.name, item.address, item.district, item.typeRaw || item.type, item.typePrimary, item.typeSecondary].filter(Boolean).join(' '))
@@ -1341,48 +1490,6 @@ function extractModelCacheStats(modelResponse) {
   };
 }
 
-function buildValidationLoopCards(generationValidation, generationFinalization) {
-  const loopDetails = generationValidation && Array.isArray(generationValidation.aiLoopDetails)
-    ? generationValidation.aiLoopDetails
-    : generationFinalization && Array.isArray(generationFinalization.aiLoopDetails)
-      ? generationFinalization.aiLoopDetails
-      : [];
-  return loopDetails.map((item, index) => {
-    const review = item.review || {};
-    const precheck = item.precheck || {};
-    const attempts = Array.isArray(item.reviewAttempts) ? item.reviewAttempts : [];
-    const summaryRows = [
-      { label: '轮次', value: formatDebugValue(item.pass || index + 1) },
-      { label: '结构预检', value: formatDebugValue(precheck.score !== null && precheck.score !== undefined ? precheck.score : '未提供') },
-      { label: 'AI 分数', value: formatDebugValue(review.score !== null && review.score !== undefined ? review.score : '未提供') },
-      { label: 'AI 结果', value: formatDebugValue(review.ok === null || review.ok === undefined ? '未提供' : (review.ok ? '通过' : '未通过')) },
-      { label: '建议改写', value: formatDebugValue(review.shouldRewrite === null || review.shouldRewrite === undefined ? '未提供' : (review.shouldRewrite ? '是' : '否')) },
-      { label: '改写范围', value: formatDebugValue(review.rewriteScope || '未提供') },
-      { label: '实际策略', value: formatDebugValue(item.appliedRepairStrategy || '未提供') },
-      { label: '修复序号', value: formatDebugValue(item.appliedRepairIndexes || []) },
-      { label: '缺失字段', value: formatDebugValue(item.missingFields || []) },
-      { label: '补全次数', value: formatDebugValue(item.repairPromptCount) },
-      { label: '停止原因', value: formatDebugValue(item.stopReason || '未提供') },
-    ];
-    return {
-      key: `validation-loop-${item.pass || index + 1}`,
-      title: `第 ${item.pass || index + 1} 轮`,
-      summaryRows,
-      inputThemeLines: buildJsonLines(item.inputTheme),
-      precheckLines: buildJsonLines(item.precheck),
-      reviewLines: buildJsonLines(item.review && item.review.raw ? item.review.raw : item.review),
-      rewrittenSuggestionLines: buildJsonLines(review.rewrittenTheme),
-      rewrittenThemeLines: buildJsonLines(item.rewrittenTheme),
-      attemptCards: attempts.map((attempt, attemptIndex) => ({
-        key: `validation-loop-${item.pass || index + 1}-attempt-${attemptIndex + 1}`,
-        title: attempt.step || `attempt-${attemptIndex + 1}`,
-        missingFields: formatDebugValue(attempt.missingFields || []),
-        lines: buildJsonLines(attempt.payload),
-      })),
-    };
-  });
-}
-
 function formatRagSceneCoverage(sceneCoverage) {
   return (Array.isArray(sceneCoverage) ? sceneCoverage : [])
     .map((item) => {
@@ -1537,7 +1644,7 @@ function buildRagExplainRows(ragPlan, ragDebug) {
     }));
 }
 
-function buildGenerationDebugState(generationContext) {
+function buildGenerationDebugState(generationContext, includeHeavy = false) {
   const contextPacket = generationContext && generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
     ? generationContext.contextPacket
     : null;
@@ -1554,11 +1661,6 @@ function buildGenerationDebugState(generationContext) {
     : (contextPacket && contextPacket.generation && contextPacket.generation.errorReason
       ? String(contextPacket.generation.errorReason)
       : '');
-  const generationFinalization = generationContext && generationContext.generationFinalization && typeof generationContext.generationFinalization === 'object'
-    ? generationContext.generationFinalization
-    : (contextPacket && contextPacket.finalization && typeof contextPacket.finalization === 'object'
-      ? contextPacket.finalization
-      : null);
   const generationRagPlan = generationContext && generationContext.generationRagPlan && typeof generationContext.generationRagPlan === 'object'
     ? generationContext.generationRagPlan
     : (contextPacket && contextPacket.rag && contextPacket.rag.plan && typeof contextPacket.rag.plan === 'object'
@@ -1595,86 +1697,29 @@ function buildGenerationDebugState(generationContext) {
       debugContextAvailable: false,
       debugContextRows: [],
       debugRagRows: [],
-      debugContextLines: [],
       debugRagPlanLines: [],
       debugRagDebugLines: [],
       debugRagModelInputLines: [],
       debugModelRequestLines: [],
       debugModelResponseLines: [],
-      debugValidationLoopCards: [],
+    };
+  }
+
+  if (!includeHeavy) {
+    return {
+      lastGenerationContext: generationContext,
+      debugContextAvailable: true,
+      debugContextRows: [],
+      debugRagRows: [],
+      debugRagPlanLines: [],
+      debugRagDebugLines: [],
+      debugRagModelInputLines: [],
+      debugModelRequestLines: [],
+      debugModelResponseLines: [],
     };
   }
 
   const validationSummary = buildValidationSummary(generationSource, generationValidation);
-  const ragThemes = generationRagPlan
-    ? dedupeStrings(
-      []
-        .concat(generationRagPlan.focusThemes || [])
-        .concat(generationRagPlan.targetThemes || [])
-        .concat(generationRagDebug && generationRagDebug.themeCoverage ? generationRagDebug.themeCoverage : []),
-      6
-    )
-    : [];
-  const ragSceneValue = generationRagPlan
-    ? dedupeStrings(
-      []
-        .concat(generationRagPlan.chosenScene || [])
-        .concat(generationRagPlan.dominantScene || [])
-        .concat(generationRagPlan.supportingScenes || [])
-        .concat(generationRagDebug && generationRagDebug.sceneCoverage
-          ? generationRagDebug.sceneCoverage.map((item) => item.label || item.id)
-          : []),
-      6
-    )
-    : [];
-  const ragAngles = generationRagPlan
-    ? dedupeStrings(
-      []
-        .concat(generationRagPlan.recommendedAngles || [])
-        .concat(generationRagDebug && generationRagDebug.diversityAngles ? generationRagDebug.diversityAngles : []),
-      6
-    )
-    : [];
-  const ragAnchors = generationRagPlan
-    ? dedupeStrings(
-      []
-        .concat(generationRagPlan.primaryAnchors || [])
-        .concat(generationRagDebug && generationRagDebug.anchorCoverage ? generationRagDebug.anchorCoverage : []),
-      8
-    )
-    : [];
-  const ragAntiPatterns = generationRagPlan
-    ? dedupeStrings(
-      []
-        .concat(generationRagPlan.antiPatterns || [])
-        .concat(generationRagDebug && generationRagDebug.antiPatterns ? generationRagDebug.antiPatterns : []),
-      8
-    )
-    : [];
-  const ragQuality = generationRagDebug && generationRagDebug.retrievalQuality
-    ? generationRagDebug.retrievalQuality
-    : '';
-  const ragBlueprints = generationRagPlan && generationRagPlan.missionBlueprints && generationRagPlan.missionBlueprints.length
-    ? generationRagPlan.missionBlueprints.map((item) => {
-      const parts = [
-        item.slot ? `#${item.slot}` : '',
-        item.angle || '',
-        item.anchor ? `锚点:${item.anchor}` : '',
-        item.skeleton ? `骨架:${item.skeleton}` : '',
-      ].filter(Boolean);
-      return parts.join(' · ');
-    })
-    : [];
-  const finalizationSummary = generationFinalization
-    ? [
-      generationFinalization.rewritten ? '已改写' : '未改写',
-      generationFinalization.replacementCount > 0 ? `共改 ${generationFinalization.replacementCount} 处` : '',
-      generationFinalization.anchoredReplacementCount > 0 ? `锚点改写 ${generationFinalization.anchoredReplacementCount} 处` : '',
-      generationFinalization.fallbackReplacementCount > 0 ? `fallback 改写 ${generationFinalization.fallbackReplacementCount} 处` : '',
-      generationFinalization.aiRepairStrategy ? `AI 策略 ${generationFinalization.aiRepairStrategy}` : '',
-    ].filter(Boolean).join(' · ')
-    : '';
-
   const rows = [
     {
       label: '结果来源',
@@ -1684,30 +1729,38 @@ function buildGenerationDebugState(generationContext) {
       label: '生成失败原因',
       value: formatDebugValue(generationErrorReason || '未提供'),
     },
-      {
-        label: '运行时版本',
-        value: formatDebugValue(runtimeVersion || '未提供'),
-      },
-      {
-        label: '缓存命中',
-        value: formatDebugValue(
-          modelCacheStats.cachedTokens === null || modelCacheStats.cachedTokens === undefined
-            ? '未提供'
-            : (modelCacheStats.cacheHit ? '是' : '否')
-        ),
-      },
-      {
-        label: '缓存命中 Token',
-        value: formatDebugValue(
-          modelCacheStats.cachedTokens === null || modelCacheStats.cachedTokens === undefined
-            ? '未提供'
-            : (modelCacheStats.cacheRatio
-              ? `${modelCacheStats.cachedTokens}（约 ${modelCacheStats.cacheRatio}）`
-              : modelCacheStats.cachedTokens)
-        ),
-      },
-      {
-        label: isDirectMode ? '检查状态' : '验证状态',
+    {
+      label: '运行时版本',
+      value: formatDebugValue(runtimeVersion || '未提供'),
+    },
+    {
+      label: '模型名称',
+      value: formatDebugValue(
+        generationModelRequest
+        && generationModelRequest.request
+        && generationModelRequest.request.model
+      ),
+    },
+    {
+      label: '缓存命中',
+      value: formatDebugValue(
+        modelCacheStats.cachedTokens === null || modelCacheStats.cachedTokens === undefined
+          ? '未提供'
+          : (modelCacheStats.cacheHit ? '是' : '否')
+      ),
+    },
+    {
+      label: '缓存命中 Token',
+      value: formatDebugValue(
+        modelCacheStats.cachedTokens === null || modelCacheStats.cachedTokens === undefined
+          ? '未提供'
+          : (modelCacheStats.cacheRatio
+            ? `${modelCacheStats.cachedTokens}（约 ${modelCacheStats.cacheRatio}）`
+            : modelCacheStats.cachedTokens)
+      ),
+    },
+    {
+      label: isDirectMode ? '检查状态' : '验证状态',
       value: formatDebugValue(validationSummary.status),
     },
     {
@@ -1715,65 +1768,8 @@ function buildGenerationDebugState(generationContext) {
       value: formatDebugValue(validationSummary.details),
     },
     {
-      label: '结构预检分数',
-      value: formatDebugValue(validationSummary.precheckScore),
-    },
-    {
-      label: '缺失主题',
-      value: formatDebugValue(validationSummary.missingCategories),
-    },
-    {
       label: isDirectMode ? '检查说明' : '复核原因',
       value: formatDebugValue(validationSummary.reasons.length ? validationSummary.reasons : (isDirectMode ? '未提供' : 'AI 未提供')),
-    },
-    {
-      label: 'Finalize 改写',
-      value: formatDebugValue(finalizationSummary || '未提供'),
-    },
-    {
-      label: '改写原因',
-      value: formatDebugValue(generationFinalization && generationFinalization.reasons),
-    },
-    {
-      label: isDirectMode ? 'Finalize 策略' : 'Finalize AI 策略',
-      value: formatDebugValue(generationFinalization && generationFinalization.aiRepairStrategy),
-    },
-    {
-      label: isDirectMode ? 'Finalize 改写序号' : 'Finalize AI 序号',
-      value: formatDebugValue(generationFinalization && generationFinalization.aiRepairIndexes),
-    },
-    {
-      label: isDirectMode ? 'Finalize 失败项' : 'Finalize AI 失败项',
-      value: formatDebugValue(generationFinalization && generationFinalization.aiFailedChecks),
-    },
-    {
-      label: 'Finalize 原始结果',
-      value: formatDebugValue(generationFinalization && generationFinalization.aiOriginalTheme
-        ? JSON.stringify(generationFinalization.aiOriginalTheme, null, 2)
-        : '未提供'),
-    },
-    {
-      label: 'Finalize AI 循环',
-      value: formatDebugValue(generationFinalization
-        ? [
-            generationFinalization.aiLoopPassCount ? `轮次:${generationFinalization.aiLoopPassCount}` : '',
-            Number.isFinite(Number(generationFinalization.aiLoopRewriteCount)) ? `改写:${generationFinalization.aiLoopRewriteCount}` : '',
-            Number.isFinite(Number(generationFinalization.aiRepairPromptCount)) ? `补全:${generationFinalization.aiRepairPromptCount}` : '',
-            generationFinalization.aiLoopStopReason ? `停止:${generationFinalization.aiLoopStopReason}` : '',
-          ].filter(Boolean)
-        : '未提供'),
-    },
-    {
-      label: 'Finalize AI 缺失字段',
-      value: formatDebugValue(generationFinalization && generationFinalization.aiValidationMissingFields),
-    },
-    {
-      label: '改写前任务',
-      value: formatDebugValue(generationFinalization && generationFinalization.beforeMissions),
-    },
-    {
-      label: '改写后任务',
-      value: formatDebugValue(generationFinalization && generationFinalization.afterMissions),
     },
     ...(!isDirectMode ? [
       {
@@ -1903,87 +1899,7 @@ function buildGenerationDebugState(generationContext) {
             ]
           : '未提供'),
       },
-      {
-        label: 'RAG 质量',
-        value: formatDebugValue(ragQuality || '未提供'),
-      },
-      {
-        label: 'RAG 主题',
-        value: formatDebugValue(ragThemes),
-      },
-      {
-        label: 'RAG 场景',
-        value: formatDebugValue(ragSceneValue),
-      },
-      {
-        label: 'RAG 角度',
-        value: formatDebugValue(ragAngles),
-      },
-      {
-        label: 'RAG 锚点',
-        value: formatDebugValue(ragAnchors),
-      },
-      {
-        label: 'RAG 反例',
-        value: formatDebugValue(ragAntiPatterns),
-      },
-      {
-        label: '任务蓝图',
-        value: formatDebugValue(ragBlueprints),
-      },
     ] : []),
-    {
-      label: '地点',
-      value: formatDebugValue(contextPacket.location && contextPacket.location.name),
-    },
-    {
-      label: '场景标签',
-      value: formatDebugValue(contextPacket.location && contextPacket.location.sceneTag),
-    },
-    {
-      label: '时间段',
-      value: formatDebugValue(contextPacket.time && contextPacket.time.timePhase),
-    },
-    {
-      label: '时间线索',
-      value: formatDebugValue(contextPacket.time && contextPacket.time.timeHints),
-    },
-    {
-      label: '附近场景',
-      value: formatDebugValue(contextPacket.nearby && contextPacket.nearby.dominantScene),
-    },
-    {
-      label: '附近 POI',
-      value: formatDebugValue(contextPacket.nearby && contextPacket.nearby.poiNames),
-    },
-    {
-      label: '活动线索',
-      value: formatDebugValue(contextPacket.nearby && contextPacket.nearby.activityHints),
-    },
-    {
-      label: '上一轮主题',
-      value: formatDebugValue(contextPacket.generation && contextPacket.generation.previousThemeTitle),
-    },
-    {
-      label: '上一轮任务',
-      value: formatDebugValue(contextPacket.generation && contextPacket.generation.previousMissions),
-    },
-    {
-      label: '主题输入',
-      value: formatDebugValue(contextPacket.userState && contextPacket.userState.selectedThemes),
-    },
-    {
-      label: '生成主题',
-      value: formatDebugValue(contextPacket.userState && contextPacket.userState.generatedThemeCategory),
-    },
-    {
-      label: '模型名称',
-      value: formatDebugValue(
-        generationModelRequest
-        && generationModelRequest.request
-        && generationModelRequest.request.model
-      ),
-    },
   ];
 
   return {
@@ -1991,13 +1907,11 @@ function buildGenerationDebugState(generationContext) {
     debugContextAvailable: true,
     debugContextRows: rows,
     debugRagRows: isDirectMode ? [] : buildRagExplainRows(generationRagPlan, generationRagDebug),
-    debugContextLines: JSON.stringify(contextPacket, null, 2).split('\n'),
-    debugRagPlanLines: isDirectMode ? [] : (generationRagPlan ? JSON.stringify(generationRagPlan, null, 2).split('\n') : []),
-    debugRagDebugLines: isDirectMode ? [] : (generationRagDebug ? JSON.stringify(generationRagDebug, null, 2).split('\n') : []),
-    debugRagModelInputLines: isDirectMode ? [] : (generationRagModelInput ? JSON.stringify(generationRagModelInput, null, 2).split('\n') : []),
-    debugModelRequestLines: generationModelRequest ? buildReadableModelRequestLines(generationModelRequest) : [],
-    debugModelResponseLines: generationModelResponse ? buildReadableModelRequestLines(generationModelResponse) : [],
-    debugValidationLoopCards: isDirectMode ? [] : buildValidationLoopCards(generationValidation, generationFinalization),
+    debugRagPlanLines: includeHeavy && !isDirectMode ? (generationRagPlan ? JSON.stringify(generationRagPlan, null, 2).split('\n') : []) : [],
+    debugRagDebugLines: includeHeavy && !isDirectMode ? (generationRagDebug ? JSON.stringify(generationRagDebug, null, 2).split('\n') : []) : [],
+    debugRagModelInputLines: includeHeavy && !isDirectMode ? (generationRagModelInput ? JSON.stringify(generationRagModelInput, null, 2).split('\n') : []) : [],
+    debugModelRequestLines: includeHeavy && generationModelRequest ? buildReadableModelRequestLines(generationModelRequest) : [],
+    debugModelResponseLines: includeHeavy && generationModelResponse ? buildReadableModelRequestLines(generationModelResponse) : [],
   };
 }
 
@@ -2173,6 +2087,8 @@ Page({
     displaySummary: '根据你的位置与模式生成今天的 citywalk 任务。',
     displayTag: '展示栏',
     isCombining: false,
+    generationBusy: false,
+    generationViewState: null,
     moodOptions: MOODS,
     weatherOptions: WEATHERS,
     seasonOptions: SEASONS,
@@ -2208,16 +2124,22 @@ Page({
     lastGenerationContext: null,
     debugContextAvailable: false,
     debugContextRows: [],
-    debugContextLines: [],
     showGenerationDebug: false,
     supportsNearbyPois: false,
     privacyPopup: createDefaultPrivacyPopup(),
   },
 
   onLoad() {
-    this.locationResolveToken = 0;
-    const randomTheme = PRESET_THEMES[Math.floor(Math.random() * PRESET_THEMES.length)];
-    const currentTheme = trimTheme({ ...randomTheme, locationName: '当前位置', allMissions: randomTheme.missions }, 'pure');
+      this.locationResolveToken = 0;
+      this.generationStageTimer = null;
+      this.generationRequestCache = {
+        locationContext: new Map(),
+        nearbyPlaces: new Map(),
+        pendingLocationContext: new Map(),
+        pendingNearbyPlaces: new Map(),
+      };
+      const randomTheme = PRESET_THEMES[Math.floor(Math.random() * PRESET_THEMES.length)];
+      const currentTheme = trimTheme({ ...randomTheme, locationName: '当前位置', allMissions: randomTheme.missions }, 'pure');
     this.setData({
       currentTheme,
       latitude: 39.908823,
@@ -2240,10 +2162,19 @@ Page({
           fontSize: 12,
         },
       }],
-      supportsNearbyPois: true,
-    });
-    app.globalData.currentTheme = currentTheme;
-    this.syncDisplayMeta(currentTheme, 'preset', 'pure');
+        supportsNearbyPois: true,
+      });
+      this.prefetchGenerationPrerequisites({
+        latitude: 39.908823,
+        longitude: 116.39747,
+        placeName: '天安门-城楼',
+      });
+      app.globalData.currentTheme = currentTheme;
+      this.syncDisplayMeta(currentTheme, 'preset', 'pure');
+    },
+
+  onUnload() {
+    this.clearGenerationStageTimer();
   },
 
   onReady() {
@@ -2375,6 +2306,100 @@ Page({
     return false;
   },
 
+  clearGenerationStageTimer() {
+    if (this.generationStageTimer) {
+      clearTimeout(this.generationStageTimer);
+      this.generationStageTimer = null;
+    }
+  },
+
+  scheduleGenerationStageOvertime() {
+    this.clearGenerationStageTimer();
+    if (!this.generationStageState || this.generationStageState.status !== 'loading') {
+      return;
+    }
+    const stageKey = this.generationStageState.stage;
+    const meta = GENERATION_STAGE_META[stageKey] || GENERATION_STAGE_META.confirm;
+    const timeoutMs = Number(meta.durationMs) || 1000;
+    this.generationStageTimer = setTimeout(() => {
+      if (!this.generationStageState || this.generationStageState.status !== 'loading') {
+        return;
+      }
+      if (this.generationStageState.stage !== stageKey) {
+        return;
+      }
+      this.generationStageState = {
+        ...this.generationStageState,
+        overtime: true,
+      };
+      this.setData({
+        generationViewState: buildGenerationViewState(this.generationStageState),
+      });
+    }, timeoutMs);
+  },
+
+  beginGenerationStageFlow(missionCount) {
+    this.generationStageState = {
+      status: 'loading',
+      stage: 'confirm',
+      overtime: false,
+      missionCount: Math.max(1, Number(missionCount) || 1),
+    };
+    this.setData({
+      generationBusy: true,
+      generationViewState: buildGenerationViewState(this.generationStageState),
+    });
+    this.scheduleGenerationStageOvertime();
+  },
+
+  advanceGenerationStage(stage, patch = {}) {
+    if (!this.generationStageState || this.generationStageState.status !== 'loading') {
+      return;
+    }
+    if (!GENERATION_STAGE_META[stage]) {
+      return;
+    }
+    this.generationStageState = {
+      ...this.generationStageState,
+      stage,
+      overtime: false,
+      ...patch,
+    };
+    this.setData({
+      generationViewState: buildGenerationViewState(this.generationStageState),
+    });
+    this.scheduleGenerationStageOvertime();
+  },
+
+  finishGenerationStageFlow() {
+    this.clearGenerationStageTimer();
+    this.generationStageState = null;
+    return {
+      generationBusy: false,
+      generationViewState: null,
+    };
+  },
+
+  failGenerationStageFlow() {
+    this.clearGenerationStageTimer();
+    const missionCount = this.generationStageState && this.generationStageState.missionCount
+      ? this.generationStageState.missionCount
+      : (this.data.walkMode === 'advanced' ? 3 : 1);
+    const stage = this.generationStageState && this.generationStageState.stage
+      ? this.generationStageState.stage
+      : 'generate';
+    this.generationStageState = {
+      status: 'error',
+      stage,
+      missionCount,
+      message: '可以直接再次点击生成，我们会重新组织这次漫步线索。',
+    };
+    return {
+      generationBusy: false,
+      generationViewState: buildGenerationViewState(this.generationStageState),
+    };
+  },
+
   setOption(event) {
     const { field, value } = event.currentTarget.dataset;
     const nextState = { [field]: value };
@@ -2395,12 +2420,16 @@ Page({
   },
 
   toggleGenerationDebug() {
-    this.setData({ showGenerationDebug: !this.data.showGenerationDebug });
-  },
+      const nextShow = !this.data.showGenerationDebug;
+      this.setData({
+        showGenerationDebug: nextShow,
+        ...buildGenerationDebugState(this.data.lastGenerationContext, nextShow),
+      });
+    },
 
   toggleCombineSelection(event) {
-    const value = event.currentTarget.dataset.value;
-    const current = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
+      const value = event.currentTarget.dataset.value;
+      const current = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
     const isPureMode = this.data.walkMode === 'pure';
     let combineSelections = current;
     if (current.includes(value)) {
@@ -2409,27 +2438,122 @@ Page({
       combineSelections = [value];
     } else {
       combineSelections = current.concat(value).slice(0, 2);
-    }
-    this.setData({ combineSelections, combineOptionViews: buildCombineOptionViews(combineSelections) });
-  },
+      }
+      this.setData({ combineSelections, combineOptionViews: buildCombineOptionViews(combineSelections) });
+    },
 
-  async enrichLocation(location) {
-    const token = ++this.locationResolveToken;
-    const regeo = await getRegeo(location).catch(() => null);
-    const amapSummary = normalizeAmapLocation(regeo, location.placeName || location.name || location.address);
-    const displayLocationName = pickBestLocationName({
-      location,
-      amapSummary,
-      contextResponse: null,
-    });
-    const locationContextResult = await getLocationContext({
-      latitude: Number(location.latitude),
-      longitude: Number(location.longitude),
-      placeName: displayLocationName,
-    }).catch(() => null);
-    if (token !== this.locationResolveToken) {
-      return;
-    }
+    getGenerationRequestCache() {
+      if (!this.generationRequestCache) {
+        this.generationRequestCache = {
+          locationContext: new Map(),
+          nearbyPlaces: new Map(),
+          pendingLocationContext: new Map(),
+          pendingNearbyPlaces: new Map(),
+        };
+      }
+      return this.generationRequestCache;
+    },
+
+    async fetchLocationContextWithCache({ latitude, longitude, placeName = '', force = false } = {}) {
+      const lat = Number(latitude);
+      const lng = Number(longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null;
+      }
+      const cache = this.getGenerationRequestCache();
+      const key = buildGeoCacheKey(lat, lng, String(placeName || '').trim());
+      if (!force) {
+        const cached = readTimedCacheEntry(cache.locationContext, key, LOCATION_CONTEXT_CACHE_TTL_MS);
+        if (cached) {
+          return cached;
+        }
+        if (cache.pendingLocationContext.has(key)) {
+          return cache.pendingLocationContext.get(key);
+        }
+      }
+      const request = getLocationContext({
+        latitude: lat,
+        longitude: lng,
+        placeName,
+      }).then((result) => {
+        cache.pendingLocationContext.delete(key);
+        if (result) {
+          writeTimedCacheEntry(cache.locationContext, key, result, LOCATION_CONTEXT_CACHE_TTL_MS);
+        }
+        return result || null;
+      }).catch((error) => {
+        cache.pendingLocationContext.delete(key);
+        throw error;
+      });
+      cache.pendingLocationContext.set(key, request);
+      return request;
+    },
+
+    async fetchNearbyPlacesWithCache(latitude, longitude, { force = false } = {}) {
+      const lat = Number(latitude);
+      const lng = Number(longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return [];
+      }
+      const cache = this.getGenerationRequestCache();
+      const key = buildGeoCacheKey(lat, lng, JSON.stringify(NEARBY_QUERY_OPTIONS));
+      if (!force) {
+        const cached = readTimedCacheEntry(cache.nearbyPlaces, key, NEARBY_PLACES_CACHE_TTL_MS);
+        if (cached) {
+          return cached;
+        }
+        if (cache.pendingNearbyPlaces.has(key)) {
+          return cache.pendingNearbyPlaces.get(key);
+        }
+      }
+      const request = fetchNearbyPois(lat, lng, NEARBY_QUERY_OPTIONS)
+        .then((result) => {
+          cache.pendingNearbyPlaces.delete(key);
+          const nearbyPlaces = buildNearbyPlaceViews(result);
+          writeTimedCacheEntry(cache.nearbyPlaces, key, nearbyPlaces, NEARBY_PLACES_CACHE_TTL_MS);
+          return nearbyPlaces;
+        })
+        .catch((error) => {
+          cache.pendingNearbyPlaces.delete(key);
+          throw error;
+        });
+      cache.pendingNearbyPlaces.set(key, request);
+      return request;
+    },
+
+    async prefetchGenerationPrerequisites({ latitude, longitude, placeName = '' } = {}) {
+      const lat = Number(latitude);
+      const lng = Number(longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return { locationContextResult: null, nearbyPlaces: [] };
+      }
+      const [locationContextResult, nearbyPlaces] = await Promise.all([
+        this.fetchLocationContextWithCache({ latitude: lat, longitude: lng, placeName }).catch(() => null),
+        this.fetchNearbyPlacesWithCache(lat, lng).catch(() => []),
+      ]);
+      return {
+        locationContextResult,
+        nearbyPlaces,
+      };
+    },
+
+    async enrichLocation(location) {
+      const token = ++this.locationResolveToken;
+      const regeo = await getRegeo(location).catch(() => null);
+      const amapSummary = normalizeAmapLocation(regeo, location.placeName || location.name || location.address);
+      const displayLocationName = pickBestLocationName({
+        location,
+        amapSummary,
+        contextResponse: null,
+      });
+      const { locationContextResult, nearbyPlaces } = await this.prefetchGenerationPrerequisites({
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+        placeName: displayLocationName,
+      });
+      if (token !== this.locationResolveToken) {
+        return;
+      }
     this.setData({
       latitude: location.latitude,
       longitude: location.longitude,
@@ -2441,38 +2565,30 @@ Page({
       locationAddress: amapSummary.address || location.address || '',
       searchResults: [],
       searchResultCount: 0,
-      ...this.buildMapState({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        placeName: displayLocationName || location.name || '已选地点',
-      }),
-      nearbyPlaces: [],
-      nearbyExpanded: false,
-      lastGenerationContext: null,
-    });
-    this.loadNearbyPlaces(location.latitude, location.longitude).then(() => {
-      if (token !== this.locationResolveToken) {
-        return;
-      }
-      if (this.data.nearbyPlaces.length) {
-        this.setData({ nearbyExpanded: true });
-      }
-    });
-  },
+        ...this.buildMapState({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          placeName: displayLocationName || location.name || '已选地点',
+        }),
+        nearbyPlaces: nearbyPlaces || [],
+        nearbyExpanded: !!(nearbyPlaces && nearbyPlaces.length),
+        lastGenerationContext: null,
+      });
+    },
 
-  async loadNearbyPlaces(latitude, longitude) {
+    async loadNearbyPlaces(latitude, longitude) {
     if (!Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) {
       this.setData({ nearbyPlaces: [], nearbyExpanded: false, loadingNearbyPlaces: false });
       return;
     }
 
-    this.setData({ loadingNearbyPlaces: true });
-    try {
-      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(Number(latitude), Number(longitude), NEARBY_QUERY_OPTIONS));
-      this.setData({
-        nearbyPlaces,
-        nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
-      });
+      this.setData({ loadingNearbyPlaces: true });
+      try {
+        const nearbyPlaces = await this.fetchNearbyPlacesWithCache(Number(latitude), Number(longitude));
+        this.setData({
+          nearbyPlaces,
+          nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
+        });
     } catch (error) {
       this.setData({ nearbyPlaces: [], nearbyExpanded: false });
       const detail = explainNearbyPoiError(error);
@@ -2487,7 +2603,7 @@ Page({
     }
   },
 
-  async ensureGenerationLocationContext() {
+    async ensureGenerationLocationContext() {
     if (this.data.locationContextResponse && this.data.locationContextResponse.context) {
       return this.data.locationContextResponse;
     }
@@ -2503,16 +2619,16 @@ Page({
 
     const latitude = Number(this.data.latitude);
     const longitude = Number(this.data.longitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return '';
-    }
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return '';
+      }
 
-    try {
-      const result = await getLocationContext({
-        latitude,
-        longitude,
-        placeName: this.data.locationName,
-      });
+      try {
+        const result = await this.fetchLocationContextWithCache({
+          latitude,
+          longitude,
+          placeName: this.data.locationName,
+        });
       const locationContext = result && result.context ? String(result.context).trim() : '';
       if (locationContext || result) {
         this.setData({
@@ -2534,23 +2650,23 @@ Page({
     }
   },
 
-  async ensureGenerationNearbyPlaces() {
+    async ensureGenerationNearbyPlaces() {
     if (Array.isArray(this.data.nearbyPlaces) && this.data.nearbyPlaces.length) {
       return this.data.nearbyPlaces;
     }
 
     const latitude = Number(this.data.latitude);
     const longitude = Number(this.data.longitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-      return [];
-    }
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return [];
+      }
 
-    try {
-      const nearbyPlaces = buildNearbyPlaceViews(await fetchNearbyPois(latitude, longitude, NEARBY_QUERY_OPTIONS));
-      this.setData({
-        nearbyPlaces,
-        nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
-      });
+      try {
+        const nearbyPlaces = await this.fetchNearbyPlacesWithCache(latitude, longitude);
+        this.setData({
+          nearbyPlaces,
+          nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
+        });
       return nearbyPlaces;
     } catch (error) {
       return [];
@@ -2872,8 +2988,10 @@ Page({
     if (!this.ensureExplorePointReadyForGeneration()) {
       return;
     }
+    this.beginGenerationStageFlow(this.data.walkMode === 'advanced' ? 3 : 1);
     this.setData({ isGenerating: true });
     try {
+      this.advanceGenerationStage('gather');
       const normalizedSelections = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
       const selectedThemes = buildSelectedThemeCategories(normalizedSelections);
       const effectiveThemes = selectedThemes.length
@@ -2891,13 +3009,15 @@ Page({
         walkMode: this.data.walkMode,
         selectedThemes: useCombinedTheme ? normalizedSelections : effectiveThemes,
       });
-      this.setData(buildGenerationDebugState(payload.generationContext));
+      this.setData(buildGenerationDebugState(payload.generationContext, this.data.showGenerationDebug));
+      this.advanceGenerationStage('generate');
       const result = useCombinedTheme
         ? await generateCombinedTheme({
           ...payload,
           categories: normalizedSelections,
         })
         : await generateTheme(payload);
+      this.advanceGenerationStage('finalize');
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       const nextGenerationContext = applyGeneratedThemeMetaToContext(
         payload.generationContext,
@@ -2914,16 +3034,17 @@ Page({
       );
       this.setData({
         currentTheme,
-        ...buildGenerationDebugState(nextGenerationContext),
+        ...buildGenerationDebugState(nextGenerationContext, this.data.showGenerationDebug),
+        ...this.finishGenerationStageFlow(),
       });
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(currentTheme, result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback'));
     } catch (error) {
-      wx.showModal({
-        title: '主题生成失败',
-        content: extractErrorMessage(error, '主题生成失败'),
-        showCancel: false,
-        confirmText: '知道了',
+      this.setData(this.failGenerationStageFlow());
+      wx.showToast({
+        title: GENERATION_ERROR_COPY,
+        icon: 'none',
+        duration: 2200,
       });
     } finally {
       this.setData({ isGenerating: false });
@@ -2934,8 +3055,10 @@ Page({
     if (!this.ensureExplorePointReadyForGeneration()) {
       return;
     }
+    this.beginGenerationStageFlow(this.data.walkMode === 'advanced' ? 3 : 1);
     this.setData({ isGenerating: true });
     try {
+      this.advanceGenerationStage('gather');
       const categoryPool = this.data.randomCategories;
       const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
       const selectedThemes = buildSelectedThemeCategories([category]);
@@ -2950,12 +3073,14 @@ Page({
         walkMode: this.data.walkMode,
         selectedThemes,
       });
-      this.setData(buildGenerationDebugState(payload.generationContext));
+      this.setData(buildGenerationDebugState(payload.generationContext, this.data.showGenerationDebug));
+      this.advanceGenerationStage('generate');
       const result = await generateTheme({
         ...payload,
         selectedThemes,
       });
       const displaySource = normalizeRandomSource(result.source);
+      this.advanceGenerationStage('finalize');
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       const nextGenerationContext = applyGeneratedThemeMetaToContext(
         payload.generationContext,
@@ -2972,16 +3097,17 @@ Page({
       );
       this.setData({
         currentTheme,
-        ...buildGenerationDebugState(nextGenerationContext),
+        ...buildGenerationDebugState(nextGenerationContext, this.data.showGenerationDebug),
+        ...this.finishGenerationStageFlow(),
       });
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(currentTheme, displaySource);
     } catch (error) {
-      wx.showModal({
-        title: '随机生成失败',
-        content: extractErrorMessage(error, '随机生成失败'),
-        showCancel: false,
-        confirmText: '知道了',
+      this.setData(this.failGenerationStageFlow());
+      wx.showToast({
+        title: GENERATION_ERROR_COPY,
+        icon: 'none',
+        duration: 2200,
       });
     } finally {
       this.setData({ isGenerating: false });
@@ -2992,8 +3118,10 @@ Page({
     if (!this.ensureExplorePointReadyForGeneration()) {
       return;
     }
+    this.beginGenerationStageFlow(this.data.walkMode === 'advanced' ? 3 : 1);
     this.setData({ isCombining: true });
     try {
+      this.advanceGenerationStage('gather');
       const normalizedSelections = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
       if (normalizedSelections.length !== this.data.combineSelections.length) {
         this.setData({
@@ -3016,7 +3144,8 @@ Page({
         walkMode: this.data.walkMode,
         selectedThemes: useCombinedTheme ? selections : buildSelectedThemeCategories(selections),
       });
-      this.setData(buildGenerationDebugState(payload.generationContext));
+      this.setData(buildGenerationDebugState(payload.generationContext, this.data.showGenerationDebug));
+      this.advanceGenerationStage('generate');
       const result = !useCombinedTheme
         ? await generateTheme({
           ...payload,
@@ -3026,6 +3155,7 @@ Page({
           ...payload,
           categories: selections,
         });
+      this.advanceGenerationStage('finalize');
       const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
       const nextGenerationContext = applyGeneratedThemeMetaToContext(
         payload.generationContext,
@@ -3042,7 +3172,8 @@ Page({
       );
       this.setData({
         currentTheme,
-        ...buildGenerationDebugState(nextGenerationContext),
+        ...buildGenerationDebugState(nextGenerationContext, this.data.showGenerationDebug),
+        ...this.finishGenerationStageFlow(),
       });
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(
@@ -3050,11 +3181,11 @@ Page({
         result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback')
       );
     } catch (error) {
-      wx.showModal({
-        title: '选择生成失败',
-        content: extractErrorMessage(error, '选择生成失败'),
-        showCancel: false,
-        confirmText: '知道了',
+      this.setData(this.failGenerationStageFlow());
+      wx.showToast({
+        title: GENERATION_ERROR_COPY,
+        icon: 'none',
+        duration: 2200,
       });
     } finally {
       this.setData({ isCombining: false });

@@ -7,6 +7,7 @@ const {
   normalizeNearbySummary,
   buildPreferenceContext,
   normalizeRecentMissionHistory,
+  buildPreparedRuntimeContext,
   buildPromptContextBlock,
   finalizeTheme,
   summarizeThemeValidation,
@@ -86,11 +87,16 @@ function normalizeCategories(categories) {
     .slice(0, 3);
 }
 
-function buildFallbackTheme(event, categories) {
-  const locationSignals = normalizeLocationSignals(event);
-  const timeContext = normalizeTimeContext(event);
-  const nearbySummary = normalizeNearbySummary(event);
-  const preferenceContext = buildPreferenceContext(event);
+function buildFallbackTheme(event, categories, preparedContext = null) {
+  const prepared = preparedContext || buildPreparedRuntimeContext(event, {
+    categories,
+    walkMode: event.walkMode,
+    combined: true,
+  });
+  const locationSignals = prepared.locationSignals || normalizeLocationSignals(event);
+  const timeContext = prepared.timeContext || normalizeTimeContext(event);
+  const nearbySummary = prepared.nearbySummary || normalizeNearbySummary(event);
+  const preferenceContext = prepared.preferenceContext || buildPreferenceContext(event);
   const sceneName = chooseTaskPlaceLabel(locationSignals, nearbySummary) || locationSignals.locationName || '这片街区';
   const timePhase = timeContext.timePhase || '此刻';
   const preferredObject = preferenceContext.objectHints[0] || '';
@@ -109,12 +115,17 @@ function buildFallbackTheme(event, categories) {
   };
 }
 
-function buildPrompt(event, categories) {
-  const locationSignals = normalizeLocationSignals(event);
-  const timeContext = normalizeTimeContext(event);
-  const nearbySummary = normalizeNearbySummary(event);
-  const preferenceContext = buildPreferenceContext(event);
-  const promptContext = buildPromptContextBlock(event, {
+function buildPrompt(event, categories, preparedContext = null) {
+  const prepared = preparedContext || buildPreparedRuntimeContext(event, {
+    categories,
+    walkMode: event.walkMode,
+    combined: true,
+  });
+  const locationSignals = prepared.locationSignals || normalizeLocationSignals(event);
+  const timeContext = prepared.timeContext || normalizeTimeContext(event);
+  const nearbySummary = prepared.nearbySummary || normalizeNearbySummary(event);
+  const preferenceContext = prepared.preferenceContext || buildPreferenceContext(event);
+  const promptContext = prepared.promptContext || buildPromptContextBlock(event, {
     categories,
     walkMode: event.walkMode,
     combined: true,
@@ -148,11 +159,17 @@ function buildPrompt(event, categories) {
     '如果任务里涉及人物或状态解读，可以基于当下听到或看到的线索做轻量判断，但不要写成需要长时间跟踪、偷拍偷录或下结论式审问的任务。',
     '每条任务必须是一句语义完整、自然收口的话，不能停在半截动作上。不要输出“找个……，停下”“在……旁，听……”这种没说完的句子；动作后面必须落到明确的观察对象、比较对象或判断目标。',
   ];
+  const fixedProtocol = {
+    outputContract: '只返回一个合法 JSON 对象，不要输出解释、前后缀、代码块。',
+    rulePriority: '优先遵循 fixedProtocol.generationRules，其次参考 strategyInput.themeTaskSkeletons、strategyInput.timeTaskSkeletons 和 dynamicContext.preferenceGuide。',
+    contextPriority: 'dynamicContext 是这次真正变化的现场信息，越靠后的内容越代表当下。',
+    conflictPolicy: '如果规则之间冲突，优先保证主题融合自然、任务具体、句子完整。',
+    generationRules,
+  };
   const strategyInput = {
     walkMode: event.walkMode || 'advanced',
     categories,
     missionCount,
-    generationRules,
     themeTaskSkeletons: promptContext.themeSkeletonHints,
     timeTaskSkeletons: promptContext.timeSkeletonHints,
   };
@@ -190,10 +207,7 @@ function buildPrompt(event, categories) {
   return `你是“遛遛”小程序的城市漫步组合主题生成助手。请按固定协议、策略输入、动态上下文的顺序理解内容，并直接生成结果。
 
 固定协议：
-1. 只返回一个合法 JSON 对象，不要输出解释、前后缀、代码块。
-2. 优先遵循 strategyInput.generationRules，其次参考 strategyInput.themeTaskSkeletons、strategyInput.timeTaskSkeletons 和 dynamicContext.preferenceGuide。
-3. dynamicContext 是这次真正变化的现场信息，越靠后的内容越代表当下。
-4. 如果规则之间冲突，优先保证主题融合自然、任务具体、句子完整。
+${JSON.stringify(fixedProtocol, null, 2)}
 
 策略输入：
 ${JSON.stringify(strategyInput, null, 2)}
@@ -239,8 +253,14 @@ exports.main = async (event) => {
     };
   }
 
-  const fallbackTheme = normalizeTheme(buildFallbackTheme(event, categories), event.walkMode);
-  const prompt = buildPrompt(event, categories);
+  const preparedContext = buildPreparedRuntimeContext(event, {
+    categories,
+    walkMode: event.walkMode,
+    combined: true,
+    recentHistoryLimit: 10,
+  });
+  const fallbackTheme = normalizeTheme(buildFallbackTheme(event, categories, preparedContext), event.walkMode);
+  const prompt = buildPrompt(event, categories, preparedContext);
   const systemPrompt = '你是遛遛小程序的组合主题策划助手。只返回合法 JSON，不要输出额外解释。';
   const modelRequest = buildModelRequestDebug(systemPrompt, prompt);
 

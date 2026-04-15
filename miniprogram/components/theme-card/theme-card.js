@@ -24,6 +24,10 @@ Component({
       type: Boolean,
       value: false,
     },
+    generationViewState: {
+      type: Object,
+      value: null,
+    },
   },
 
   methods: {

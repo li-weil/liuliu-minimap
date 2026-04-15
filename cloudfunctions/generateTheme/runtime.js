@@ -5,6 +5,21 @@ function getGenerationContext(event) {
     : {};
 }
 
+function getRuntimeMemo(event) {
+  if (!event || typeof event !== 'object') {
+    return null;
+  }
+  if (!event.__runtimeMemo || typeof event.__runtimeMemo !== 'object') {
+    Object.defineProperty(event, '__runtimeMemo', {
+      value: {},
+      enumerable: false,
+      configurable: true,
+      writable: true,
+    });
+  }
+  return event.__runtimeMemo;
+}
+
 function getContextPacket(event) {
   const generationContext = getGenerationContext(event);
   return generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
@@ -13,18 +28,30 @@ function getContextPacket(event) {
 }
 
 function normalizeLocationSignals(event) {
+  const memo = getRuntimeMemo(event);
+  if (memo && memo.locationSignals) {
+    return memo.locationSignals;
+  }
   const contextPacket = getContextPacket(event);
   const locationPacket = contextPacket.location && typeof contextPacket.location === 'object'
     ? contextPacket.location
     : {};
-  return {
-    locationName: event.locationName || locationPacket.name || '',
-    locationContext: event.locationContext || event.sceneTag || event.placeName || locationPacket.sceneTag || '',
-    sceneTag: event.sceneTag || event.locationContext || locationPacket.sceneTag || '',
-  };
+  const result = {
+      locationName: event.locationName || locationPacket.name || '',
+      locationContext: event.locationContext || event.sceneTag || event.placeName || locationPacket.sceneTag || '',
+      sceneTag: event.sceneTag || event.locationContext || locationPacket.sceneTag || '',
+    };
+  if (memo) {
+    memo.locationSignals = result;
+  }
+  return result;
 }
 
 function normalizeTimeContext(event) {
+  const memo = getRuntimeMemo(event);
+  if (memo && memo.timeContext) {
+    return memo.timeContext;
+  }
   const contextPacket = getContextPacket(event);
   const packetTime = contextPacket.time && typeof contextPacket.time === 'object' ? contextPacket.time : {};
   const generationContext = getGenerationContext(event);
@@ -33,15 +60,19 @@ function normalizeTimeContext(event) {
     : generationContext.timeContext && typeof generationContext.timeContext === 'object'
       ? generationContext.timeContext
       : packetTime;
-  return {
-    localTime: typeof timeContext.localTime === 'string' ? timeContext.localTime : '',
+  const result = {
+      localTime: typeof timeContext.localTime === 'string' ? timeContext.localTime : '',
     hour: Number.isFinite(Number(timeContext.hour)) ? Number(timeContext.hour) : null,
     timePhase: typeof timeContext.timePhase === 'string' ? timeContext.timePhase : '',
     weekdayType: typeof timeContext.weekdayType === 'string' ? timeContext.weekdayType : '',
-    timeHints: Array.isArray(timeContext.timeHints)
-      ? timeContext.timeHints.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
-      : [],
-  };
+      timeHints: Array.isArray(timeContext.timeHints)
+        ? timeContext.timeHints.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
+        : [],
+    };
+  if (memo) {
+    memo.timeContext = result;
+  }
+  return result;
 }
 
 function summarizeCoreTimeHints(timeContext) {
@@ -109,6 +140,10 @@ function normalizeAoiTypecodeList(values, limit = 8) {
 }
 
 function normalizeNearbySummary(event) {
+  const memo = getRuntimeMemo(event);
+  if (memo && memo.nearbySummary) {
+    return memo.nearbySummary;
+  }
   const contextPacket = getContextPacket(event);
   const packetNearby = contextPacket.nearby && typeof contextPacket.nearby === 'object' ? contextPacket.nearby : {};
   const generationContext = getGenerationContext(event);
@@ -125,7 +160,7 @@ function normalizeNearbySummary(event) {
       ? rawPrimaryAoiType
       : '';
   const normalizedPrimaryAoiType = looksLikeAmapTypecode(rawPrimaryAoiType) ? '' : rawPrimaryAoiType;
-  return {
+  const result = {
     poiNames: Array.isArray(nearbySummary.poiNames)
       ? nearbySummary.poiNames.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8)
       : [],
@@ -171,11 +206,20 @@ function normalizeNearbySummary(event) {
     activityHints: Array.isArray(nearbySummary.activityHints)
       ? nearbySummary.activityHints.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 5)
       : [],
-    source: typeof nearbySummary.source === 'string' ? nearbySummary.source : '',
-  };
+      source: typeof nearbySummary.source === 'string' ? nearbySummary.source : '',
+    };
+  if (memo) {
+    memo.nearbySummary = result;
+  }
+  return result;
 }
 
 function normalizeRecentMissionHistory(event, limit = 10) {
+  const memo = getRuntimeMemo(event);
+  const memoKey = memo ? `recentMissionHistory:${limit}` : '';
+  if (memo && memo[memoKey]) {
+    return memo[memoKey];
+  }
   const contextPacket = getContextPacket(event);
   const generationPacket = contextPacket.generation && typeof contextPacket.generation === 'object'
     ? contextPacket.generation
@@ -205,7 +249,11 @@ function normalizeRecentMissionHistory(event, limit = 10) {
       source: String(entry.source || '').trim(),
     });
   });
-  return result.slice(0, limit);
+  const finalResult = result.slice(0, limit);
+  if (memo) {
+    memo[memoKey] = finalResult;
+  }
+  return finalResult;
 }
 
 function cleanText(text) {
@@ -832,11 +880,19 @@ const URBAN_CONFLICT_KEYWORDS = ['商务写字楼', '楼宇', '住宅区', '停�
 const QUIET_CONFLICT_KEYWORDS = ['博物馆', '图书馆', '美术馆', '展览馆', '纪念馆', '公园', '风景名胜', '学校', '住宅区'];
 
 function normalizeEnvironmentContext(event) {
+  const memo = getRuntimeMemo(event);
+  if (memo && memo.environmentContext) {
+    return memo.environmentContext;
+  }
   const contextPacket = getContextPacket(event);
-  return {
+  const result = {
     season: String(event.season || contextPacket.season || '').trim(),
     weather: String(event.weather || contextPacket.weather || '').trim(),
   };
+  if (memo) {
+    memo.environmentContext = result;
+  }
+  return result;
 }
 
 function includesAnyKeyword(values, keywords) {
@@ -1186,6 +1242,10 @@ function chooseTaskPlaceLabel(locationSignals, nearbySummary) {
 }
 
 function buildPreferenceContext(event) {
+  const memo = getRuntimeMemo(event);
+  if (memo && memo.preferenceContext) {
+    return memo.preferenceContext;
+  }
   const preference = normalizePreference(event);
   const nearbySummary = normalizeNearbySummary(event);
   const locationSignals = normalizeLocationSignals(event);
@@ -1195,17 +1255,21 @@ function buildPreferenceContext(event) {
     ? PREFERENCE_OBJECT_LIBRARY[preference]
     : null;
   if (!library) {
-    return {
-      preference,
-      availableObjects: [],
-      blockedObjects: [],
-      safeObjects: buildGlobalSafeObjects(event, 12),
-      evidenceNotes: [],
+    const emptyResult = {
+        preference,
+        availableObjects: [],
+        blockedObjects: [],
+        safeObjects: buildGlobalSafeObjects(event, 12),
+        evidenceNotes: [],
       objectDetails: [],
       objectHints: [],
-      avoidHints: [],
-      instruction: '',
-    };
+        avoidHints: [],
+        instruction: '',
+      };
+    if (memo) {
+      memo.preferenceContext = emptyResult;
+    }
+    return emptyResult;
   }
   const evidence = {
     nativeCategoryCodes: uniqText([
@@ -1290,17 +1354,21 @@ function buildPreferenceContext(event) {
     .slice(0, 3)
     .map((item) => buildPreferenceObjectSummary(item))
     .filter(Boolean);
-  return {
-    preference,
-    availableObjects,
-    blockedObjects,
-    safeObjects,
+  const result = {
+      preference,
+      availableObjects,
+      blockedObjects,
+      safeObjects,
     evidenceNotes,
     objectDetails,
-    objectHints: availableObjects,
-    avoidHints: uniqText(library.avoid || [], 5),
-    instruction: String(library.instruction || '').trim(),
-  };
+      objectHints: availableObjects,
+      avoidHints: uniqText(library.avoid || [], 5),
+      instruction: String(library.instruction || '').trim(),
+    };
+  if (memo) {
+    memo.preferenceContext = result;
+  }
+  return result;
 }
 
 function buildCompactValidationContext(promptContext) {
@@ -1974,6 +2042,13 @@ function buildTaskSkeletonGroups(categories, timePhase, walkMode, options = {}) 
 }
 
 function buildPromptContextBlock(event, options = {}) {
+  const memo = getRuntimeMemo(event);
+  const memoKey = memo
+    ? `promptContext:${normalizeCategoryList(options.categories || []).join('|')}:${options.walkMode || event.walkMode}:${options.combined ? 'combined' : 'single'}`
+    : '';
+  if (memo && memo[memoKey]) {
+    return memo[memoKey];
+  }
   const locationSignals = normalizeLocationSignals(event);
   const timeContext = normalizeTimeContext(event);
   const nearbySummary = normalizeNearbySummary(event);
@@ -1998,17 +2073,33 @@ function buildPromptContextBlock(event, options = {}) {
       : '这次没有额外偏好，优先从当下更稳妥、近处、可立刻找到的对象入手。',
     '任务要短、真、可执行，像真实的人会收到的观察指令。',
   ];
-  return {
-    locationSignals,
-    timeContext,
-    nearbySummary,
+  const result = {
+      locationSignals,
+      timeContext,
+      nearbySummary,
       preferenceContext,
       skeletonHints,
       themeSkeletonHints: skeletonGroups.themeSkeletons,
       timeSkeletonHints: skeletonGroups.timeSkeletons,
       text: lines.join('\n'),
     };
+  if (memo) {
+    memo[memoKey] = result;
   }
+  return result;
+}
+
+function buildPreparedRuntimeContext(event, options = {}) {
+  const promptContext = buildPromptContextBlock(event, options);
+  return {
+    locationSignals: promptContext.locationSignals,
+    timeContext: promptContext.timeContext,
+    nearbySummary: promptContext.nearbySummary,
+    preferenceContext: promptContext.preferenceContext,
+    promptContext,
+    recentMissionHistory: normalizeRecentMissionHistory(event, options.recentHistoryLimit || 10),
+  };
+}
 
 function buildAnchoredMission(event, options = {}) {
   const timeContext = normalizeTimeContext(event);
@@ -2213,6 +2304,7 @@ module.exports = {
   buildPreferenceContext,
   buildTaskSkeletonHints,
   buildTaskSkeletonGroups,
+  buildPreparedRuntimeContext,
   buildPromptContextBlock,
   cleanText,
   clampText,

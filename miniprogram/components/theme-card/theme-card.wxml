@@ -1,4 +1,48 @@
-<view wx:if="{{theme}}" class="theme-card theme-display">
+<view wx:if="{{generationViewState && generationViewState.visible}}" class="theme-card theme-display theme-display-loading">
+  <view class="display-stage generation-stage" style="background: linear-gradient(135deg, {{generationViewState.vibeColor || '#5a5a40'}} 0%, rgba(255,255,255,0.18) 100%);">
+    <view class="display-glyph-wrap">
+      <view class="display-glyph">{{generationViewState.glyph || '66'}}</view>
+      <view class="display-stage-title">{{generationViewState.title}}</view>
+      <view wx:if="{{generationViewState.badge}}" class="generation-stage-badge">{{generationViewState.badge}}</view>
+    </view>
+  </view>
+  <view class="theme-content">
+    <view class="theme-kicker">{{generationViewState.kicker || modeLabel}}</view>
+    <view class="theme-title">{{generationViewState.hint || ''}}</view>
+
+    <view class="generation-progress-panel">
+      <view class="generation-progress-track">
+        <view
+          class="generation-progress-fill {{generationViewState.status === 'error' ? 'generation-progress-fill-error' : ''}}"
+          style="width: {{generationViewState.progress || 0}}%; transition-duration: {{generationViewState.progressTransitionMs || 600}}ms;"
+        ></view>
+      </view>
+      <view class="generation-progress-copy">{{generationViewState.progressLabel}}</view>
+    </view>
+
+    <view class="generation-steps">
+      <view
+        wx:for="{{generationViewState.steps}}"
+        wx:key="key"
+        class="generation-step generation-step-{{item.state}}"
+      >
+        <view class="generation-step-dot">{{item.index}}</view>
+        <view class="generation-step-text">{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="mission-label">{{generationViewState.status === 'error' ? '重新试试' : '正在组织任务'}}</view>
+    <view wx:for="{{generationViewState.placeholderMissions}}" wx:key="index" class="mission-card mission-item mission-item-placeholder">
+      <view class="mission-order">{{index + 1}}</view>
+      <view class="mission-skeleton">
+        <view class="mission-skeleton-line mission-skeleton-line-main"></view>
+        <view class="mission-skeleton-line mission-skeleton-line-sub"></view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<view wx:elif="{{theme}}" class="theme-card theme-display">
   <view class="display-stage" style="background: linear-gradient(135deg, {{theme.vibeColor || '#5a5a40'}} 0%, rgba(255,255,255,0.18) 100%);">
     <view class="display-glyph-wrap">
       <view class="display-glyph">{{theme.displayGlyph || '遛'}}</view>
