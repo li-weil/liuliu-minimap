@@ -1758,285 +1758,240 @@ ${JSON.stringify({
 ${categoryReviewRules.map((item, index) => `${index + 1}. ${item}`).join('\n')}`;
 }
 
-function buildTaskSkeletonHints(categories, timePhase, walkMode, options = {}) {
-  const normalizedCategories = normalizeCategoryList(categories);
-  const combined = !!options.combined;
-  const suppressThemeSpecificSkeletons = !combined && normalizedCategories.length === 1;
-  const seed = getGenerationSeed(options.event || {});
-  const recentHistory = normalizeRecentMissionHistory(options.event || {}, 8);
-  const sharedSkeletons = combined
+function getBaseTaskSkeletons(combined) {
+  return combined
     ? [
-        '找交集：先找到一个同时能带出两个方向的对象、位置或瞬间',
-        '分两层看：先抓第一个方向，再补看第二个方向怎么叠上来',
-        '比较两处：比较同一方向在两处地方怎样分别呼应另一个方向',
-        '停一下等变化：在一个点多停20到30秒，看两个方向怎样先后出现',
-        '换个位置：往前后左右挪一步，看两个方向会不会重新叠在一起',
-        '回头再看：走过以后回头确认，哪个方向是你刚才差点漏掉的',
-        '先猜再确认：先猜这两个方向会在这里怎么碰上，再找现场证据',
-        '顺着线索走：顺着一个方向的线索往前走，看看它什么时候带出另一个方向',
+        '找交集：先找到一个同时能带出两个主题的对象、位置或瞬间',
+        '分两层看：先抓第一个主题，再补看第二个主题怎么叠上来',
+        '顺着线索走：顺着一个主题的线索往前走，看看它什么时候带出另一个主题',
+        '联想：以其中一个主题为基础，看看如何联想到另一个主题',
       ]
     : [
-        '找一处：先找到一个明确对象或位置，不要一上来就写抽象感受',
-        '比较两处：比较两处细节到底哪里不一样',
-        '停一下：在同一处多停20到30秒，看有没有第二层线索冒出来',
-        '回头看：走过以后回头再看一次，确认最留下来的那个细节',
-        '换个位置：换一个站位或高度，再看对象会不会变得更明显',
-        '先猜再确认：先做一个判断，再去找现场证据支持或推翻它',
-        '顺着找：顺着一条线索往前走，看看它把你带到哪里',
-        '只盯一个点：缩小范围，只看一个角落、一个物件或一小段路',
       ];
-  const singleThemeSkeletonMap = {
+}
+
+function getSingleThemeSkeletonMap() {
+  return {
     形状: [
       '看方圆：先找一个最容易说出是方是圆的对象',
       '看直弯：找栏杆、屋檐、路沿或墙边，看它更像直线还是弧线',
-      '看高低宽窄：比较两个对象谁更高、谁更矮、谁更宽、谁更窄',
       '看尖圆：找一个尖角或圆角最明显的位置',
       '看轮廓：退后一点，看门洞、窗框、招牌边框或屋檐外形',
-      '看边角：只盯一个转角、拐角或边沿，看它是利落还是圆缓',
-      '看框口：找门洞、窗框、栏杆格这类带框的形',
-      '绕着看：围着同一个对象走半圈，看它的形有没有变',
-      '近远对照：先远看整体，再走近看局部哪里最不一样',
-      '找重复：找一组重复出现的形，看它们排得整不整齐',
+      '看框口：找门洞、窗框、栏杆格这类带框的形状',
+      '找重复：找一组重复出现的形',
     ],
     色彩: [
       '找一组颜色：先找到最能代表此刻的一组颜色搭配',
-      '找最跳的一块：先抓住第一眼最跳出来的色块',
-      '比较色差：比较同一类对象在两处位置的颜色差异',
+      '找最显眼的一块：抓最先注意到的色块',
       '看明暗：站定不动，只看亮处和暗处怎样分开',
-      '看新旧：找一处颜色最能看出新旧痕迹的地方',
       '看材质色：比较同一种颜色落在不同材质上有什么差别',
-      '顺着一种颜色走：盯住一种颜色，看看它会把你带到哪里',
       '找反差：找一处颜色反差最大的地方',
-      '看颜色怎么变：走近或走远，再看颜色有没有变得更明显',
-      '只看边上的颜色：别看主体，专看边缘、角落或背景色',
+      '留意边上的颜色：别看主体，专看边缘、角落或背景色',
     ],
     声音: [
       '停一下听：先停下来，只抓离你最近的一层声音',
       '分辨来源：分清一个声音到底从哪里来',
       '顺着声音走几步：跟着一条声音线索移动一小段',
       '等下一次出现：等同一种声音再出现一次',
-      '回头再听：走过以后回头听，判断刚才漏掉了什么',
-      '分前后景：先分清近处声和远处声谁更占上风',
-      '找触发点：听一个声音是在什么动作之后出现的',
-      '换个位置听：挪一步，再听同一个声音有没有变化',
-      '找停留声：找一种会让人停一下的声音',
+      '找停留声：找一种会让人驻足的声音',
       '找节奏变化：听某段路上声音什么时候突然变密或变稀',
     ],
     数字: [
-      '先猜再确认：先猜一个数字线索的意思，再走近确认',
-      '找一个规则：找出一个会影响行动的数字规则',
-      '核对两个线索：拿两个数字提示互相核对',
-      '判断哪个更像提示：找出最像给人指路的数字信息',
-      '找一个会影响行动的数字：抓住一个会让你决定往哪走的数字',
       '找顺序：找一组有前后顺序的数字或编号',
-      '找变体：找一个不是标准写法、但你能认出来的数字',
-      '找提示牌：找一个数字信息最像是在提醒人做什么',
+      '找变体：找一个不是阿拉伯写法的数字，比如英文数字，罗马数字，汉字数字',
       '找重复数字：找一个重复出现的数字模式',
-      '比较两个数字：看两个数字线索谁更直接影响判断',
+      '数一数：视野中同类物体有几个',
+      '数字指令：数字作为行动指令，比如门牌号决定步数',
     ],
     气味: [
       '闻到后找来源：先确认一股味道，再找它从哪里来',
-      '换个位置再闻：前后挪一步，看气味怎么变',
-      '等风过来：先停一会，等味道自己过来',
+      '等风过来：先停一会，闻风中伴随的味道是怎么样的',
       '比较前后变化：比较同一条路上前后两处气味差异',
       '找最容易停下的一处：找一处会让你因为味道停一下的地方',
-      '找最先闻到的那一下：刚冒出来的那股味道最像从哪里来',
-      '找变强点：往前走几步，判断味道在哪一小段突然变强',
-      '找变淡点：退一步，看看味道从哪里开始散掉',
-      '比较两股味：分清同一处是不是混着两种味道',
+      '找变化点：往前走几步，判断味道在哪一小段突然变浓或变淡',
       '找残留味：找一种人走了、东西收了但味道还在的线索',
     ],
   };
-  const skeletons = suppressThemeSpecificSkeletons
-    ? [...(singleThemeSkeletonMap[normalizedCategories[0]] || sharedSkeletons)]
-    : [...sharedSkeletons];
-  if (timePhase === '黄昏' || timePhase === '夜间') {
-    skeletons.push('等亮起来：等灯光、招牌或窗口亮起来后再看一次');
-    skeletons.push('看收拢：等人流、声音或停留点慢慢收拢出来');
+}
+
+function buildTimeWeatherSkeletons(timePhase, weather) {
+  const phase = String(timePhase || '').trim();
+  const weatherLabel = String(weather || '').trim();
+  const map = {
+    凌晨: {
+      default: [
+        '看谁还在：找还在继续工作的线索，看它如何维持这片地方的运转',
+        '看空出来的地方：留意白天被遮住的空隙、路口或边角现在怎样显出来',
+      ],
+      晴朗: [
+        '看谁还在：找还在继续工作的线索，看它如何维持这片地方的运转',
+        '看空出来的地方：留意白天被遮住的空隙、路口或边角现在怎样显出来',
+      ],
+      多云: [
+        '看谁还在：找还在继续工作的线索，看它如何维持这片地方的运转',
+        '看空出来的地方：留意白天被遮住的空隙、路口或边角现在怎样显出来',
+      ],
+      雨天: [
+        '看谁在躲雨也在继续：找一边避雨一边维持运转的线索',
+        '找潮湿留下的动作：看雨把哪些停留、经过的痕迹留了下来',
+      ],
+      大风: [
+        '找还稳得住的地方：看哪些动作在风里依旧持续，没有被吹散',
+        '看空处怎么发声：留意开阔处、拐角或缝隙怎样把风带出来',
+      ],
+    },
+    清晨: {
+      default: [
+        '看哪里先醒：找最先开始运转的线索，看这片地方怎样从静转动',
+        '看第一波经过：留意最早出现的一批动作',
+      ],
+      晴朗: [
+        '看哪里先醒：找最先开始运转的线索，看这片地方怎样从静转动',
+        '找刚被照见的地方：看晨光先把哪些细节或位置提出来',
+      ],
+      多云: [
+        '看哪里先醒：找最先开始运转的线索，看这片地方怎样从静转动',
+        '找还带着夜里痕迹的地方：看清晨里还留有哪些夜里的状态',
+      ],
+      雨天: [
+        '看谁冒雨开场：找在潮湿里仍最先开始的一类动作',
+        '看避雨怎么改变路线：留意人和动作怎样绕开、贴近或借住遮挡',
+      ],
+      大风: [
+        '看哪里先醒：找最先开始运转的线索，看这片地方怎样从静转动',
+        '看风把什么先带出来：留意哪些轻的、松的、悬着的东西最先被提醒',
+      ],
+    },
+    上午: {
+      default: [
+        '看秩序怎么铺开：找这片地方进入稳定运转后的线索',
+        '找最像白天样子的地方：看哪些位置最早显出完整的日间节奏',
+      ],
+      晴朗: [
+        '看秩序怎么铺开：找这片地方进入稳定运转后的线索',
+        '找最像白天样子的地方：看哪些位置最早显出完整的日间节奏',
+      ],
+      多云: [
+        '找最像白天样子的地方：看哪些位置最早显出完整的日间节奏',
+        '看哪里开始变得耐看：找在柔光里更容易被留意的线索',
+      ],
+      雨天: [
+        '看谁在雨里照常办事：找不因下雨就停掉的动作线索',
+        '看避雨怎么改变路线：留意人和动作怎样绕开、贴近或借住遮挡',
+      ],
+      大风: [
+        '看秩序怎么铺开：找这片地方进入稳定运转后的线索',
+        '看轻东西怎么暴露现场：观察风把哪些平时不显眼的细节带出来',
+      ],
+    },
+    午后: {
+      default: [
+        '看谁在躲亮和找阴：找会因为晒、热、亮而改变停留的线索',
+        '找慢下来的地方：留意午后节奏怎样从赶路变成短暂停一停',
+      ],
+      晴朗: [
+        '看谁在躲亮和找阴：找会因为晒、热、亮而改变停留的线索',
+        '找慢下来的地方：留意午后节奏怎样从赶路变成短暂停一停',
+      ],
+      多云: [
+        '找慢下来的地方：留意午后节奏怎样从赶路变成短暂停一停',
+        '看光变软后什么更明显：观察原本硬的节奏怎样被放松一点',
+      ],
+      雨天: [
+        '找慢下来的地方：留意午后节奏怎样从赶路变成短暂停一停',
+        '看避雨怎么改变路线：留意人和动作怎样绕开、贴近或借住遮挡',
+      ],
+      大风: [
+        '找慢下来的地方：留意午后节奏怎样从赶路变成短暂停一停',
+        '看轻东西怎么暴露现场：观察风把哪些平时不显眼的细节带出来',
+      ],
+    },
+    黄昏: {
+      default: [
+        '找慢慢灯亮起来的地方：看哪些位置开始从白天节奏转向夜里的停留',
+        '看回程怎么和停留叠在一起：留意经过、等人、回程怎样混在一起',
+      ],
+      晴朗: [
+        '找慢慢灯亮起来的地方：看哪些位置开始从白天节奏转向夜里的停留',
+        '看回程怎么和停留叠在一起：留意经过、等人、回程怎样混在一起',
+      ],
+      多云: [
+        '找慢慢灯亮起来的地方：看哪些位置开始从白天节奏转向夜里的停留',
+        '看回程怎么和停留叠在一起：留意经过、等人、回程怎样混在一起',
+      ],
+      雨天: [
+        '看谁在雨里接住黄昏：找下班、回程、买吃的这些动作怎样被雨重新排布',
+        '看水痕怎么把黄昏放大：观察雨后的亮面和反光怎样接管视线',
+      ],
+      大风: [
+        '找慢慢灯亮起来的地方：看哪些位置开始从白天节奏转向夜里的停留',
+        '看回程怎么和停留叠在一起：留意经过、等人、回程怎样混在一起',
+      ],
+    },
+    夜间: {
+      default: [
+        '找亮着但不喧闹的地方：留意夜里真正持续运转的点位',
+        '看近处怎么接管注意力：观察夜里哪些细节会比白天更先被看到',
+      ],
+      晴朗: [
+        '找亮着但不喧闹的地方：留意夜里真正持续运转的点位',
+        '看近处怎么接管注意力：观察夜里哪些细节会比白天更先被看到',
+      ],
+      多云: [
+        '找亮着但不喧闹的地方：留意夜里真正持续运转的点位',
+        '看什么被压低、什么被托出来：观察夜里不同线索怎样重新分层',
+      ],
+      雨天: [
+        '看谁在雨夜里最稳：找即使潮湿、反光、路滑还在持续的线索',
+        '看反光怎么改写现场：观察雨夜里地面、窗面、亮面怎样重新组织空间',
+      ],
+      大风: [
+        '看近处怎么接管注意力：观察夜里哪些细节会比白天更先被看到',
+        '找风把什么放大了：留意哪些轻微声响、摆动、开合在夜里更显眼',
+      ],
+    },
+  };
+  const phaseMap = map[phase] || {};
+  const weatherSpecific = phaseMap[weatherLabel] || [];
+  const fallback = phaseMap.default || [];
+  return uniqText([].concat(weatherSpecific, fallback), 4);
+}
+
+function selectThemeSkeletonCandidates(categories, { combined = false } = {}) {
+  const normalizedCategories = normalizeCategoryList(categories);
+  const baseSkeletons = getBaseTaskSkeletons(combined);
+  const singleThemeSkeletonMap = getSingleThemeSkeletonMap();
+  if (combined) {
+    return [...baseSkeletons];
   }
-  if (timePhase === '清晨' || timePhase === '上午') {
-    skeletons.push('看开场：抓住刚开始出现的变化，比如开门、摆摊、第一波穿行');
-    skeletons.push('看刚启动：留意这片地方从静到动的那一下');
-  }
-  if (timePhase === '午后') {
-    skeletons.push('看人怎么绕：观察人们为了光线、阴影、热度而怎样改变停留和路线');
-    skeletons.push('找避让：看人们会为了晒、热、亮、挤而绕开什么');
-  }
-  if (timePhase === '凌晨') {
-    skeletons.push('看谁还在：找还在继续工作的线索，看它如何维持这片地方的运转');
-    skeletons.push('找没停下的痕迹：看哪些动作到了这个时间还在继续');
-  }
-  if (!suppressThemeSpecificSkeletons && (normalizedCategories.includes('声音') || normalizedCategories.includes('气味'))) {
-    skeletons.push(combined ? '判断来源：判断声音或气味与另一个方向如何相遇' : '判断来源：判断声音或气味从哪里来');
-    skeletons.push(combined ? '跟着扩散走：跟一段声音或气味的扩散路径，看它和另一方向怎样叠在一起' : '跟着扩散走：跟一段声音或气味的扩散路径');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('色彩')) {
-    skeletons.push('对照：对照同一元素在不同位置的表现');
-    skeletons.push('盯住细部：只看一个边缘、色块或转折，看看它怎样改变整体感觉');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('数字')) {
-    skeletons.push('辨认数字：先找数字形状、数量关系、数字变体或行动密码');
-    skeletons.push('验证数量：先猜一个数量，再去现场验证是不是对的');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('色彩')) {
-    skeletons.push('找反差：先找最跳出的颜色，再看它被什么环境托出来');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('声音')) {
-    skeletons.push('分前后听：先分清前景声和背景声，再判断谁在主导你的注意力');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('气味')) {
-    skeletons.push('找边界：在气味变强或变弱的地方停一下，看它从哪里开始变化');
-  }
-  const orderedBase = rotateBySeed(uniqText(skeletons, 12), seed, `skeleton:${normalizedCategories.join('|')}:${timePhase}:${combined ? 'combined' : 'single'}`);
-  const ordered = suppressThemeSpecificSkeletons
-      ? prioritizeSingleThemeSkeletons(orderedBase, recentHistory)
-      : orderedBase;
-  return (walkMode === 'advanced' ? ordered : ordered.slice(0, 4)).slice(0, walkMode === 'advanced' ? 8 : 5);
+  return [...(singleThemeSkeletonMap[normalizedCategories[0]] || baseSkeletons)];
 }
 
 function buildTaskSkeletonGroups(categories, timePhase, walkMode, options = {}) {
   const normalizedCategories = normalizeCategoryList(categories);
   const combined = !!options.combined;
-  const suppressThemeSpecificSkeletons = !combined && normalizedCategories.length === 1;
   const seed = getGenerationSeed(options.event || {});
   const recentHistory = normalizeRecentMissionHistory(options.event || {}, 8);
-  const combinedThemeSkeletons = [
-    '找交集：先找到一个同时能带出两个方向的对象、位置或瞬间',
-    '分两层看：先抓第一个方向，再补看第二个方向怎么叠上来',
-    '比较两处：比较同一方向在两处地方怎样分别呼应另一个方向',
-    '停一下等变化：在一个点多停20到30秒，看两个方向怎样先后出现',
-    '换个位置：往前后左右挪一步，看两个方向会不会重新叠在一起',
-    '回头再看：走过以后回头确认，哪个方向是你刚才差点漏掉的',
-    '先猜再确认：先猜这两个方向会在这里怎么碰上，再找现场证据',
-    '顺着线索走：顺着一个方向的线索往前走，看看它什么时候带出另一个方向',
-  ];
-  const sharedSingleSkeletons = [
-    '找一处：先找到一个明确对象或位置，不要一上来就写抽象感受',
-    '比较两处：比较两处细节到底哪里不一样',
-    '停一下：在同一处多停20到30秒，看有没有第二层线索冒出来',
-    '回头看：走过以后回头再看一次，确认最留下来的那个细节',
-    '换个位置：换一个站位或高度，再看对象会不会变得更明显',
-    '先猜再确认：先做一个判断，再去找现场证据支持或推翻它',
-    '顺着找：顺着一条线索往前走，看看它把你带到哪里',
-    '只盯一个点：缩小范围，只看一个角落、一个物件或一小段路',
-  ];
-  const singleThemeSkeletonMap = {
-    形状: [
-      '看方圆：先找一个最容易说出是方是圆的对象',
-      '看直弯：找栏杆、屋檐、路沿或墙边，看它更像直线还是弧线',
-      '看高低宽窄：比较两个对象谁更高、谁更矮、谁更宽、谁更窄',
-      '看尖圆：找一个尖角或圆角最明显的位置',
-      '看轮廓：退后一点，看门洞、窗框、招牌边框或屋檐外形',
-      '看边角：只盯一个转角、拐角或边沿，看它是利落还是圆缓',
-      '看框口：找门洞、窗框、栏杆格这类带框的形',
-      '绕着看：围着同一个对象走半圈，看它的形有没有变',
-      '近远对照：先远看整体，再走近看局部哪里最不一样',
-      '找重复：找一组重复出现的形，看它们排得整不整齐',
-    ],
-    色彩: [
-      '找一组颜色：先找到最能代表此刻的一组颜色搭配',
-      '找最跳的一块：先抓住第一眼最跳出来的色块',
-      '比较色差：比较同一类对象在两处位置的颜色差异',
-      '看明暗：站定不动，只看亮处和暗处怎样分开',
-      '看新旧：找一处颜色最能看出新旧痕迹的地方',
-      '看材质色：比较同一种颜色落在不同材质上有什么差别',
-      '顺着一种颜色走：盯住一种颜色，看看它会把你带到哪里',
-      '找反差：找一处颜色反差最大的地方',
-      '看颜色怎么变：走近或走远，再看颜色有没有变得更明显',
-      '只看边上的颜色：别看主体，专看边缘、角落或背景色',
-    ],
-    声音: [
-      '停一下听：先停下来，只抓离你最近的一层声音',
-      '分辨来源：分清一个声音到底从哪里来',
-      '顺着声音走几步：跟着一条声音线索移动一小段',
-      '等下一次出现：等同一种声音再出现一次',
-      '回头再听：走过以后回头听，判断刚才漏掉了什么',
-      '分前后景：先分清近处声和远处声谁更占上风',
-      '找触发点：听一个声音是在什么动作之后出现的',
-      '换个位置听：挪一步，再听同一个声音有没有变化',
-      '找停留声：找一种会让人停一下的声音',
-      '找节奏变化：听某段路上声音什么时候突然变密或变稀',
-    ],
-    数字: [
-      '先猜再确认：先猜一个数字线索的意思，再走近确认',
-      '找一个规则：找出一个会影响行动的数字规则',
-      '核对两个线索：拿两个数字提示互相核对',
-      '判断哪个更像提示：找出最像给人指路的数字信息',
-      '找一个会影响行动的数字：抓住一个会让你决定往哪走的数字',
-      '找顺序：找一组有前后顺序的数字或编号',
-      '找变体：找一个不是标准写法、但你能认出来的数字',
-      '找提示牌：找一个数字信息最像是在提醒人做什么',
-      '找重复数字：找一个重复出现的数字模式',
-      '比较两个数字：看两个数字线索谁更直接影响判断',
-    ],
-    气味: [
-      '闻到后找来源：先确认一股味道，再找它从哪里来',
-      '换个位置再闻：前后挪一步，看气味怎么变',
-      '等风过来：先停一会，等味道自己过来',
-      '比较前后变化：比较同一条路上前后两处气味差异',
-      '找最容易停下的一处：找一处会让你因为味道停一下的地方',
-      '找最先闻到的那一下：刚冒出来的那股味道最像从哪里来',
-      '找变强点：往前走几步，判断味道在哪一小段突然变强',
-      '找变淡点：退一步，看看味道从哪里开始散掉',
-      '比较两股味：分清同一处是不是混着两种味道',
-      '找残留味：找一种人走了、东西收了但味道还在的线索',
-    ],
-  };
+  const weather = normalizeEnvironmentContext(options.event || {}).weather;
   const timeSkeletons = [];
-  const themeSkeletons = suppressThemeSpecificSkeletons
-    ? [...(singleThemeSkeletonMap[normalizedCategories[0]] || (combined ? combinedThemeSkeletons : sharedSingleSkeletons))]
-    : [...(combined ? combinedThemeSkeletons : sharedSingleSkeletons)];
-  if (timePhase === '黄昏' || timePhase === '夜间') {
-    timeSkeletons.push('等亮起来：等灯光、招牌或窗口亮起来后再看一次');
-    timeSkeletons.push('看收拢：等人流、声音或停留点慢慢收拢出来');
-  }
-  if (timePhase === '清晨' || timePhase === '上午') {
-    timeSkeletons.push('看开场：抓住刚开始出现的变化，比如开门、摆摊、第一波穿行');
-    timeSkeletons.push('看刚启动：留意这片地方从静到动的那一下');
-  }
-  if (timePhase === '午后') {
-    timeSkeletons.push('看人怎么绕：观察人们为了光线、阴影、热度而怎样改变停留和路线');
-    timeSkeletons.push('找避让：看人们会为了晒、热、亮、挤而绕开什么');
-  }
-  if (timePhase === '凌晨') {
-    timeSkeletons.push('看谁还在：找还在继续工作的线索，看它如何维持这片地方的运转');
-    timeSkeletons.push('找没停下的痕迹：看哪些动作到了这个时间还在继续');
-  }
-  if (!suppressThemeSpecificSkeletons && (normalizedCategories.includes('声音') || normalizedCategories.includes('气味'))) {
-    themeSkeletons.push(combined ? '判断来源：判断声音或气味与另一个方向如何相遇' : '判断来源：判断声音或气味从哪里来');
-    themeSkeletons.push(combined ? '跟着扩散走：跟一段声音或气味的扩散路径，看它和另一方向怎样叠在一起' : '跟着扩散走：跟一段声音或气味的扩散路径');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('色彩')) {
-    themeSkeletons.push('对照：对照同一元素在不同位置的表现');
-    themeSkeletons.push('盯住细部：只看一个边缘、色块或转折，看看它怎样改变整体感觉');
-    themeSkeletons.push('找反差：先找最跳出的颜色，再看它被什么环境托出来');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('数字')) {
-    themeSkeletons.push('辨认数字：先找数字形状、数量关系、数字变体或行动密码');
-    themeSkeletons.push('验证数量：先猜一个数量，再去现场验证是不是对的');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('声音')) {
-    themeSkeletons.push('分前后听：先分清前景声和背景声，再判断谁在主导你的注意力');
-  }
-  if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('气味')) {
-    themeSkeletons.push('找边界：在气味变强或变弱的地方停一下，看它从哪里开始变化');
-  }
+  const themeSkeletons = selectThemeSkeletonCandidates(normalizedCategories, { combined });
+  timeSkeletons.push(...buildTimeWeatherSkeletons(timePhase, weather));
   const orderedThemeBase = rotateBySeed(
     uniqText(themeSkeletons, 12),
     seed,
     `theme-skeleton:${normalizedCategories.join('|')}:${combined ? 'combined' : 'single'}`
   );
-  const orderedTheme = suppressThemeSpecificSkeletons
+  const orderedTheme = !combined && normalizedCategories.length === 1
     ? prioritizeSingleThemeSkeletons(orderedThemeBase, recentHistory)
     : orderedThemeBase;
   const orderedTime = rotateBySeed(
     uniqText(timeSkeletons, 6),
     seed,
-    `time-skeleton:${timePhase}:${normalizedCategories.join('|')}`
+    `time-skeleton:${timePhase}:${weather}:${normalizedCategories.join('|')}`
   );
   return {
-    themeSkeletons: (walkMode === 'advanced' ? orderedTheme : orderedTheme.slice(0, 3)).slice(0, walkMode === 'advanced' ? 5 : 3),
-    timeSkeletons: (walkMode === 'advanced' ? orderedTime : orderedTime.slice(0, 2)).slice(0, walkMode === 'advanced' ? 3 : 2),
+    themeSkeletons: orderedTheme,
+    timeSkeletons: orderedTime,
   };
 }
 
@@ -2052,12 +2007,6 @@ function buildPromptContextBlock(event, options = {}) {
   const timeContext = normalizeTimeContext(event);
   const nearbySummary = normalizeNearbySummary(event);
   const preferenceContext = buildPreferenceContext(event);
-  const skeletonHints = buildTaskSkeletonHints(
-    options.categories || [],
-    timeContext.timePhase,
-    options.walkMode || event.walkMode,
-    { combined: !!options.combined, event }
-  );
   const skeletonGroups = buildTaskSkeletonGroups(
     options.categories || [],
     timeContext.timePhase,
@@ -2077,7 +2026,7 @@ function buildPromptContextBlock(event, options = {}) {
       timeContext,
       nearbySummary,
       preferenceContext,
-      skeletonHints,
+      skeletonHints: uniqText([].concat(skeletonGroups.themeSkeletons, skeletonGroups.timeSkeletons), 24),
       themeSkeletonHints: skeletonGroups.themeSkeletons,
       timeSkeletonHints: skeletonGroups.timeSkeletons,
       text: lines.join('\n'),
@@ -2301,7 +2250,6 @@ module.exports = {
   normalizeRecentMissionHistory,
   normalizeCategoryList,
   buildPreferenceContext,
-  buildTaskSkeletonHints,
   buildTaskSkeletonGroups,
   buildPreparedRuntimeContext,
   buildPromptContextBlock,
