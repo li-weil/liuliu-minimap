@@ -1,25 +1,48 @@
 const cloud = require('wx-server-sdk');
-const { chatJson } = require('./ai');
-const { missionTemplates, sceneProfiles } = require('./knowledge');
+const { chatJsonWithMeta, getAiConfig } = require('./ai');
 const {
   normalizeLocationSignals,
+  normalizeTimeContext,
+  normalizeNearbySummary,
+  buildPreferenceContext,
+  normalizeRecentMissionHistory,
   buildPromptContextBlock,
   finalizeTheme,
   summarizeThemeValidation,
-  buildSecondaryValidationPrompt,
+  chooseTaskPlaceLabel,
 } = require('./runtime');
-const { buildUnifiedRetrievalContext } = require('./rag-runtime');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
-const RUNTIME_VERSION = '2026-04-13-ai-validation-primary-r3';
 
-function shuffle(list) {
-  const copied = [...list];
-  for (let index = copied.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [copied[index], copied[swapIndex]] = [copied[swapIndex], copied[index]];
-  }
-  return copied;
+const RUNTIME_VERSION = '2026-04-14-combined-direct-ai-r5';
+
+function buildModelRequestDebug(systemPrompt, userPrompt) {
+  const config = getAiConfig();
+  return {
+    provider: 'dashscope-compatible',
+    request: {
+      model: config.model,
+      temperature: 1,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    },
+  };
+}
+
+function buildModelResponseDebug(responseMeta) {
+  const meta = responseMeta && typeof responseMeta === 'object' ? responseMeta : {};
+  return {
+    responseId: String(meta.responseId || '').trim(),
+    model: String(meta.responseModel || '').trim(),
+    finishReason: String(meta.finishReason || '').trim(),
+    usage: meta.usage && typeof meta.usage === 'object' ? meta.usage : null,
+    rawText: String(meta.rawText || ''),
+    strippedText: String(meta.strippedText || ''),
+    parsedJson: meta.parsed && typeof meta.parsed === 'object' ? meta.parsed : null,
+  };
 }
 
 function normalizeMissionText(mission) {
@@ -46,589 +69,149 @@ function normalizeMissionText(mission) {
 function normalizeTheme(theme, walkMode) {
   const missionCount = walkMode === 'advanced' ? 3 : 1;
   return {
-    ...theme,
-    missions: (theme.missions || []).map(normalizeMissionText).slice(0, missionCount),
+    ...(theme && typeof theme === 'object' ? theme : {}),
+    title: String(theme && theme.title || '').trim(),
+    description: String(theme && theme.description || '').trim(),
+    missions: Array.isArray(theme && theme.missions)
+      ? theme.missions.map(normalizeMissionText).filter(Boolean).slice(0, missionCount)
+      : [],
   };
 }
 
-function enrichPureMissionText(mission, categories) {
-  const text = String(mission || '').trim();
-  if (!text) {
-    return `找一处同时让你想到${categories.join('和')}的细节，留意它们为什么会在这里相遇`;
-  }
-  if (text.length >= 18 && text.length <= 36) {
-    return text;
-  }
-
-  return `${text.replace(/[。！!]+$/g, '')}，留意它们为什么会在这里同时出现`;
+function normalizeCategories(categories) {
+  return (Array.isArray(categories) ? categories : [])
+    .map((item) => String(item || '').replace(/漫步/g, '').trim())
+    .filter(Boolean)
+    .slice(0, 3);
 }
 
-function buildCombinedReferenceContext(categories, event) {
-  const ragContext = buildUnifiedRetrievalContext(event, {
-    selectedThemes: categories,
-    requestedCategories: categories,
-    missionTemplates,
-    sceneProfiles,
+function buildFallbackTheme(event, categories) {
+  const locationSignals = normalizeLocationSignals(event);
+  const timeContext = normalizeTimeContext(event);
+  const nearbySummary = normalizeNearbySummary(event);
+  const preferenceContext = buildPreferenceContext(event);
+  const sceneName = chooseTaskPlaceLabel(locationSignals, nearbySummary) || locationSignals.locationName || '这片街区';
+  const timePhase = timeContext.timePhase || '此刻';
+  const preferredObject = preferenceContext.objectHints[0] || '';
+  return {
+    title: `${categories.join('×')}漫步`,
+    description: `${timePhase}里，把${categories.join('和')}放进${sceneName}的此刻。`,
+    category: '组合',
+    missions: event.walkMode === 'advanced'
+      ? [
+          `在${sceneName}${preferredObject ? `先看${preferredObject}，` : ''}找一处同时呼应${categories.join('和')}的细节`,
+          `比较两处${preferredObject || '地方'}怎样分别带出${categories.join('和')}`,
+        `停一下，看它们在这里是怎么碰到一起的`,
+        ]
+      : [`在${sceneName}${preferredObject ? `先看${preferredObject}，` : ''}找一处同时呼应${categories.join('和')}的细节`],
+    vibeColor: '#7c6a94',
+  };
+}
+
+function buildPrompt(event, categories) {
+  const locationSignals = normalizeLocationSignals(event);
+  const timeContext = normalizeTimeContext(event);
+  const nearbySummary = normalizeNearbySummary(event);
+  const preferenceContext = buildPreferenceContext(event);
+  const promptContext = buildPromptContextBlock(event, {
+    categories,
+    walkMode: event.walkMode,
+    combined: true,
   });
-
-  return {
-    ragContext,
-  };
-}
-
-function buildModelCombinedReferenceContext(referenceContext) {
-  const context = referenceContext && typeof referenceContext === 'object' ? referenceContext : {};
-  const ragContext = context.ragContext && typeof context.ragContext === 'object' ? context.ragContext : null;
-  const targetThemes = uniqText(
-    ragContext && Array.isArray(ragContext.selectedThemes) && ragContext.selectedThemes.length
-      ? ragContext.selectedThemes
-      : (ragContext && Array.isArray(ragContext.categories) ? ragContext.categories : []),
-    3
-  );
-  return {
-    targetThemes,
-    time: buildCompactTimeModel(ragContext ? ragContext.timeContext : null),
-    nearby: buildCompactNearbyModel(ragContext ? ragContext.nearbySummary : null),
-    sceneCards: buildCompactSceneCards(ragContext, targetThemes),
-    themeReferences: buildCompactThemeReferences(ragContext, targetThemes),
-  };
-}
-
-function uniqText(values, limit = 10) {
-  const result = [];
-  (Array.isArray(values) ? values : [values]).forEach((item) => {
-    const text = String(item || '').trim();
-    if (text && !result.includes(text) && result.length < limit) {
-      result.push(text);
-    }
-  });
-  return result;
-}
-
-function buildCompactTimeModel(timeContext) {
-  const context = timeContext && typeof timeContext === 'object' ? timeContext : {};
-  return {
-    phase: context.timePhase || '',
-    hints: uniqText(context.timeHints || [], 4),
-  };
-}
-
-function buildCompactNearbyModel(nearbySummary) {
-  const summary = nearbySummary && typeof nearbySummary === 'object' ? nearbySummary : {};
-  return {
-    poiNames: uniqText(summary.poiNames || [], 5),
-    dominantScene: summary.dominantScene || '',
-    activityHints: uniqText(summary.activityHints || [], 4),
-  };
-}
-
-function buildCompactSceneCards(ragContext, categories) {
-  const allowedCategories = new Set(uniqText(categories, 3));
-  return (ragContext && Array.isArray(ragContext.scenes) ? ragContext.scenes : [])
-    .slice(0, 3)
-    .map((scene) => {
-      const labels = uniqText(scene.labels || [], 2);
-      return {
-        label: labels.join(' / '),
-        categories: uniqText(
-          (Array.isArray(scene.categories) ? scene.categories : []).filter((category) => {
-            return !allowedCategories.size || allowedCategories.has(category);
-          }),
-          3
-        ),
-        missionHints: uniqText(scene.missionHints || [], 3),
-      };
-    })
-    .filter((scene) => scene.label || scene.missionHints.length);
-}
-
-function buildCompactThemeReferences(ragContext, categories) {
-  return uniqText(categories, 3)
-    .map((category) => ({
-      category,
-      references: (Array.isArray(ragContext && ragContext.referenceMissions) ? ragContext.referenceMissions : [])
-        .filter((item) => item.category === category)
-        .slice(0, 3)
-        .map((item) => ({
-          angle: item.angle,
-          cues: uniqText(item.cues || [], 4),
-        })),
-    }))
-    .filter((item) => item.references.length);
-}
-
-function hashStringToUnit(value) {
-  const text = String(value || '');
-  if (!text) {
-    return 0;
-  }
-  let hash = 2166136261;
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return ((hash >>> 0) % 10000) / 10000;
-}
-
-function buildSeedStyleGuide(seed) {
-  const normalizedSeed = String(seed || '').trim();
-  if (!normalizedSeed) {
-    return [];
-  }
-  const actionStyles = [
-    '优先让三个任务分别落在“比较 / 判断来源 / 停留变化”上，不要都写成“找一处”。',
-    '优先让三个任务在动作上分开成“寻找 / 对照 / 解释相遇原因”，不要都写成同一种观察句。',
-    '优先把三条任务拆成“对象 / 关系 / 变化”三种结构，不要只换几个词。',
-  ];
-  const anchorStyles = [
-    '尽量更换锚点，不要三条都围绕同一个 POI 或入口句式。',
-    '至少有一条任务用活动线索做切口，而不是继续围绕建筑名词。',
-    '至少有一条任务从时间变化切入，而不是继续沿用静态描述。',
-  ];
-  return [
-    actionStyles[Math.floor(hashStringToUnit(`${normalizedSeed}|action`) * actionStyles.length) % actionStyles.length],
-    anchorStyles[Math.floor(hashStringToUnit(`${normalizedSeed}|anchor`) * anchorStyles.length) % anchorStyles.length],
-  ];
-}
-
-function classifyAngleHint(text) {
-  const value = String(text || '');
-  if (/数字|编号|门牌|倒计时|票号|序号|罗马数字|汉字数字|英文数字|数量/.test(value)) {
-    return '数字与数量';
-  }
-  if (/色|光影|明暗|渐变|反光|色块|色温|暖色|冷色/.test(value)) {
-    return '色彩与光线';
-  }
-  if (/声|听|回声|脚步|节奏|报站|叫卖|广播|音乐/.test(value)) {
-    return '声音与节奏';
-  }
-  if (/气味|闻|香气|烟火味|草木味|潮气|热气|药味/.test(value)) {
-    return '气味与来源';
-  }
-  if (/弧|轮廓|边界|门洞|窗框|对称|几何|线条|转角/.test(value)) {
-    return '形状与边界';
-  }
-  if (/排队|停留|穿行|换乘|进出|转场|动线|人流/.test(value)) {
-    return '流动与停留';
-  }
-  if (/清晨|上午|午后|黄昏|夜间|凌晨/.test(value)) {
-    return '时间变化';
-  }
-  return '空间关系';
-}
-
-function buildAngleDigest(referenceContext) {
-  const angleMap = new Map();
-  const scenes = (referenceContext.ragContext && referenceContext.ragContext.scenes) || [];
-  const templates = (referenceContext.ragContext && referenceContext.ragContext.referenceMissions) || [];
-  const cues = []
-    .concat(scenes)
-    .flatMap((scene) => {
-      const labels = Array.isArray(scene.labels) ? scene.labels : [];
-      const missionHints = Array.isArray(scene.missionHints) ? scene.missionHints : [];
-      return labels.concat(missionHints);
-    })
-    .concat(templates)
-    .flatMap((template) => (Array.isArray(template.cues) ? template.cues : []));
-
-  cues.forEach((cue) => {
-    const label = classifyAngleHint(cue);
-    if (!angleMap.has(label)) {
-      angleMap.set(label, { label, count: 0, examples: [] });
-    }
-    const bucket = angleMap.get(label);
-    bucket.count += 1;
-    if (bucket.examples.length < 3 && cue) {
-      bucket.examples.push(cue);
-    }
-  });
-
-  return Array.from(angleMap.values())
-    .sort((left, right) => right.count - left.count)
-    .slice(0, 6);
-}
-
-function buildAntiPatterns(categories, referenceContext) {
-  const normalizedCategories = uniqText(categories.map((item) => String(item || '').replace(/漫步/g, '').trim()), 3);
-  const antiPatterns = [
-    '不要把两个主题拆成互不相干的两段说明',
-    '不要用任何地方都能成立的抽象句',
-    '不要让三个任务写成同一句式改写',
-    '不要引入第三个无关主题',
-  ];
-
-  if (normalizedCategories.includes('数字')) {
-    antiPatterns.push('数字任务必须直接指向数量、编号、变体或行动线索');
-  }
-  if (normalizedCategories.includes('气味')) {
-    antiPatterns.push('气味任务必须写出来源、扩散、停留或气味记忆');
-  }
-  if (normalizedCategories.includes('声音')) {
-    antiPatterns.push('声音任务必须写出层次、来源、节奏或回响');
-  }
-  if (normalizedCategories.includes('形状')) {
-    antiPatterns.push('形状任务必须写出轮廓、弧度、边界或几何关系');
-  }
-  if (normalizedCategories.includes('色彩')) {
-    antiPatterns.push('色彩任务必须写出色块、对比、渐变、明暗或环境色调');
-  }
-
-  const sceneLabel = referenceContext && referenceContext.ragContext && Array.isArray(referenceContext.ragContext.scenes)
-    ? (referenceContext.ragContext.scenes[0] && referenceContext.ragContext.scenes[0].labels && referenceContext.ragContext.scenes[0].labels.join(' / '))
-    : '';
-  if (sceneLabel && /景区|游览|地标/.test(sceneLabel)) {
-    antiPatterns.push('不要引导进入受限区域，不要让任务依赖入场或越界');
-  }
-
-  const timePhase = referenceContext && referenceContext.ragContext && referenceContext.ragContext.timeContext
-    ? referenceContext.ragContext.timeContext.timePhase
-    : '';
-  if (timePhase) {
-    antiPatterns.push(`不要忽略当前是${timePhase}这个时间段`);
-  }
-
-  return uniqText(antiPatterns, 10);
-}
-
-function buildCategoryPlans(categories, referenceContext) {
-  const angleDigest = buildAngleDigest(referenceContext);
-  return uniqText(categories, 2).map((category, index) => {
-    const categoryAngles = angleDigest.filter((angle) => {
-      if (category === '数字') {
-        return /数字|数量/.test(angle.label);
-      }
-      if (category === '气味') {
-        return /气味/.test(angle.label);
-      }
-      if (category === '声音') {
-        return /声音|节奏/.test(angle.label);
-      }
-      if (category === '形状') {
-        return /形状|边界/.test(angle.label);
-      }
-      if (category === '色彩') {
-        return /色彩|光线/.test(angle.label);
-      }
-      return true;
-    });
-    return {
-      category,
-      preferredAngles: uniqText(categoryAngles.length ? categoryAngles.map((item) => item.label) : angleDigest.map((item) => item.label), 4),
-      anchors: uniqText(
-        []
-          .concat((referenceContext.ragContext && referenceContext.ragContext.referenceMissions) || [])
-          .flatMap((template) => {
-            return Array.isArray(template.cues) ? template.cues : [];
-          }),
-        8
-      ).slice(index, index + 4),
-    };
-  });
-}
-
-function buildFusionBlueprints(categories, referenceContext, walkMode) {
-  const missionCount = walkMode === 'advanced' ? 3 : 1;
-  const angleDigest = buildAngleDigest(referenceContext);
-  const sceneAnchors = uniqText(
-    []
-      .concat((referenceContext.ragContext && referenceContext.ragContext.nearbySummary && referenceContext.ragContext.nearbySummary.poiNames) || [])
-      .concat((referenceContext.ragContext && referenceContext.ragContext.nearbySummary && referenceContext.ragContext.nearbySummary.activityHints) || [])
-      .concat((referenceContext.ragContext && referenceContext.ragContext.scenes) || [])
-      .flatMap((scene) => Array.isArray(scene.missionHints) ? scene.missionHints : []),
-    14
-  );
-  const skeletons = [
-    '融合：同一任务里同时看见两个方向',
-    '比较：比较两个方向在同一地点的差异',
-    '变化：观察两个方向如何在此刻发生变化',
-    '来源：判断它们为什么会在这里相遇',
-    '停留：在一个点上停下来感受两者如何叠加',
-  ];
-  const categoryPlans = buildCategoryPlans(categories, referenceContext);
-  const priorities = angleDigest.length ? angleDigest : [{ label: '融合观察', examples: [] }];
-  return Array.from({ length: missionCount }, (_, index) => {
-    const angle = priorities[index % priorities.length];
-    const anchor = sceneAnchors[index % sceneAnchors.length] || '';
-    const focusCategory = categoryPlans[index % categoryPlans.length] || null;
-    return {
-      slot: index + 1,
-      angle: angle.label,
-      anchor,
-      skeleton: skeletons[index % skeletons.length],
-      categoryFocus: focusCategory ? focusCategory.category : '',
-      categoryAngles: focusCategory ? focusCategory.preferredAngles : [],
-      cues: uniqText(angle.examples || [], 2),
-    };
-  });
-}
-
-function buildGenerationPlan(categories, referenceContext, event) {
-  return {
-    focusThemes: uniqText(categories.map((item) => String(item || '').replace(/漫步/g, '').trim()), 3),
-    dominantScene: referenceContext.ragContext && referenceContext.ragContext.nearbySummary
-      ? referenceContext.ragContext.nearbySummary.dominantScene
-      : '',
-    timePhase: referenceContext.ragContext && referenceContext.ragContext.timeContext
-      ? referenceContext.ragContext.timeContext.timePhase
-      : '',
-    angleDigest: buildAngleDigest(referenceContext),
-    antiPatterns: buildAntiPatterns(categories, referenceContext),
-    categoryPlans: buildCategoryPlans(categories, referenceContext),
-    missionBlueprints: buildFusionBlueprints(categories, referenceContext, event.walkMode),
-  };
-}
-
-function normalizeAiSuggestedTheme(payload) {
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-  const title = String(payload.title || '').trim();
-  const description = String(payload.description || '').trim();
-  const missions = Array.isArray(payload.missions)
-    ? payload.missions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
+  const recentHistory = normalizeRecentMissionHistory(event, 6);
+  const generationContext = event && event.generationContext && typeof event.generationContext === 'object'
+    ? event.generationContext
+    : {};
+  const contextPacket = generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
+    ? generationContext.contextPacket
+    : {};
+  const generationSeed = String(
+    event.generationSeed
+    || generationContext.generationSeed
+    || (contextPacket.generation && contextPacket.generation.seed)
+    || ''
+  ).trim();
+  const previousThemeTitle = String(
+    contextPacket.generation && contextPacket.generation.previousThemeTitle || ''
+  ).trim();
+  const previousMissions = Array.isArray(contextPacket.generation && contextPacket.generation.previousMissions)
+    ? contextPacket.generation.previousMissions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4)
     : [];
-  if (!title && !description && !missions.length) {
-    return null;
-  }
-  return { title, description, missions };
-}
-
-function normalizeAiValidationResult(payload) {
-  const normalizedPayload = payload && typeof payload === 'object' ? payload : {};
-  const rawReasons = Array.isArray(normalizedPayload.reasons)
-    ? normalizedPayload.reasons.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4)
-    : [];
-  const failedChecks = Array.isArray(normalizedPayload.failedChecks)
-    ? normalizedPayload.failedChecks.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
-    : [];
-  const abstractMissionIndexes = Array.isArray(normalizedPayload.abstractMissionIndexes)
-    ? normalizedPayload.abstractMissionIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item)).slice(0, 6)
-    : [];
-  const repeatedMissionIndexes = Array.isArray(normalizedPayload.repeatedMissionIndexes)
-    ? normalizedPayload.repeatedMissionIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item)).slice(0, 6)
-    : [];
-  const ok = normalizedPayload.ok === undefined ? !normalizedPayload.shouldRewrite : !!normalizedPayload.ok;
-  const hasScore = Number.isFinite(Number(normalizedPayload.score));
-  const score = hasScore
-    ? Number(normalizedPayload.score)
-    : null;
-  const reviewComment = String(normalizedPayload.reviewComment || '').trim();
-  const rewriteAdvice = String(normalizedPayload.rewriteAdvice || '').trim();
-  const rewriteScope = String(normalizedPayload.rewriteScope || '').trim();
-  const rewrittenTheme = normalizeAiSuggestedTheme(normalizedPayload.rewrittenTheme);
-  if (!payload || typeof payload !== 'object') {
-    return {
-      stage: 'ai-review',
-      ok,
-      score,
-      failedChecks,
-      reasons: rawReasons,
-      reviewComment,
-      rewriteAdvice,
-      shouldRewrite: false,
-      abstractMissionIndexes,
-      repeatedMissionIndexes,
-      rewriteScope,
-      rewrittenTheme,
-      fieldSources: {
-        score: 'missing',
-        failedChecks: failedChecks.length ? 'ai' : 'missing',
-        reasons: 'missing',
-        reviewComment: 'missing',
-        rewriteAdvice: 'missing',
-        rewrittenTheme: rewrittenTheme ? 'ai' : 'missing',
-      },
-    };
-  }
-  return {
-    stage: 'ai-review',
-    ok,
-    score,
-    failedChecks,
-    reasons: rawReasons,
-    reviewComment,
-    rewriteAdvice,
-    shouldRewrite: !!normalizedPayload.shouldRewrite,
-    abstractMissionIndexes,
-    repeatedMissionIndexes,
-    rewriteScope,
-    rewrittenTheme,
-    fieldSources: {
-      score: hasScore ? 'ai' : 'missing',
-      failedChecks: failedChecks.length ? 'ai' : 'missing',
-      reasons: rawReasons.length ? 'ai' : 'missing',
-      reviewComment: reviewComment ? 'ai' : 'missing',
-      rewriteAdvice: rewriteAdvice ? 'ai' : 'missing',
-      rewrittenTheme: rewrittenTheme ? 'ai' : 'missing',
+  const missionCount = event.walkMode === 'advanced' ? 3 : 1;
+  const compactModelInput = {
+    walkMode: event.walkMode || 'advanced',
+    categories,
+    mood: event.mood || '',
+    weather: event.weather || '',
+    season: event.season || '',
+    preference: preferenceContext.preference || '',
+    preferenceGuide: {
+      availableObjects: preferenceContext.availableObjects,
+      blockedObjects: preferenceContext.blockedObjects.slice(0, 4),
+      safeObjects: preferenceContext.safeObjects.slice(0, 6),
+      objectDetails: preferenceContext.objectDetails.slice(0, 6),
+      instruction: preferenceContext.instruction,
     },
+    location: {
+      name: locationSignals.locationName || '当前位置',
+      sceneTag: locationSignals.sceneTag || '',
+    },
+    time: {
+      timePhase: timeContext.timePhase || '',
+      timeHints: timeContext.timeHints || [],
+    },
+    nearby: {
+      nearbyScene: nearbySummary.dominantScene || '',
+      aoi: nearbySummary.primaryAoiName || nearbySummary.primaryAoiType || '',
+      businessAreas: nearbySummary.businessAreaNames.slice(0, 3),
+      poiTypes: nearbySummary.poiTypes.slice(0, 4),
+      pois: nearbySummary.poiNames.slice(0, 5),
+    },
+    previousThemeTitle,
+    previousMissions,
+    recentMissionHistory: recentHistory.map((item) => item.mission).filter(Boolean).slice(0, 6),
+    generationSeed,
   };
-}
 
-function decideAiRepairStrategy(aiValidation) {
-  const requestedScope = String(aiValidation && aiValidation.rewriteScope || '').trim();
-  if (['mission-only', 'title-description', 'full'].includes(requestedScope)) {
-    return requestedScope;
-  }
-  const failedChecks = Array.isArray(aiValidation && aiValidation.failedChecks)
-    ? aiValidation.failedChecks
-    : [];
-  if (failedChecks.length && failedChecks.every((item) => ['concreteness', 'novelty'].includes(item))) {
-    return 'mission-only';
-  }
-  return 'full';
-}
+  return `你是“遛遛”小程序的城市漫步组合主题生成助手。请直接依据当前基础信息生成融合后的主题和任务。
 
-function mergeThemeByRepairStrategy(theme, rewrittenTheme, aiValidation, strategy, walkMode) {
-  const baseTheme = theme && typeof theme === 'object' ? theme : {};
-  const suggestedTheme = rewrittenTheme && typeof rewrittenTheme === 'object' ? rewrittenTheme : {};
-  const normalizedStrategy = strategy || 'full';
-  if (normalizedStrategy === 'title-description') {
-    return normalizeTheme({
-      ...baseTheme,
-      title: String(suggestedTheme.title || '').trim() || baseTheme.title,
-      description: String(suggestedTheme.description || '').trim() || baseTheme.description,
-      missions: Array.isArray(baseTheme.missions) ? baseTheme.missions : [],
-    }, walkMode);
-  }
-  if (normalizedStrategy === 'mission-only') {
-    const currentMissions = Array.isArray(baseTheme.missions) ? [...baseTheme.missions] : [];
-    const suggestedMissions = Array.isArray(suggestedTheme.missions) ? suggestedTheme.missions : [];
-    const targetedIndexes = []
-      .concat(Array.isArray(aiValidation && aiValidation.abstractMissionIndexes) ? aiValidation.abstractMissionIndexes : [])
-      .concat(Array.isArray(aiValidation && aiValidation.repeatedMissionIndexes) ? aiValidation.repeatedMissionIndexes : [])
-      .filter((item, index, source) => Number.isInteger(item) && item >= 0 && source.indexOf(item) === index);
-    if (targetedIndexes.length && suggestedMissions.length) {
-      targetedIndexes.forEach((missionIndex, offset) => {
-        const replacement = suggestedMissions[offset] || suggestedMissions[missionIndex] || suggestedMissions[0] || '';
-        if (replacement) {
-          currentMissions[missionIndex] = replacement;
-        }
-      });
-    } else if (suggestedMissions.length) {
-      return normalizeTheme({
-        ...baseTheme,
-        missions: suggestedMissions,
-      }, walkMode);
-    }
-    return normalizeTheme({
-      ...baseTheme,
-      missions: currentMissions,
-    }, walkMode);
-  }
-  return normalizeTheme({
-    ...baseTheme,
-    ...suggestedTheme,
-  }, walkMode);
-}
+基础输入：
+${JSON.stringify(compactModelInput, null, 2)}
 
-async function maybeRunSecondaryValidation(theme, event, fallbackTheme, options) {
-  let validation = summarizeThemeValidation(theme, event, {
-    ...options,
-    allowSecondaryValidation: true,
-  });
+上下文摘要：
+${promptContext.text}
 
-  try {
-    const aiValidation = normalizeAiValidationResult(await chatJson(
-      '你是遛遛小程序的主题质检助手。只返回合法 JSON，不要输出额外解释。',
-      buildSecondaryValidationPrompt(theme, event, options)
-    ));
-    if (!aiValidation) {
-      return { theme, validation };
-    }
-    let nextTheme = theme;
-    let appliedRepairStrategy = 'none';
-    if (aiValidation.shouldRewrite && aiValidation.rewrittenTheme) {
-      appliedRepairStrategy = decideAiRepairStrategy(aiValidation);
-      const rewrittenTheme = mergeThemeByRepairStrategy(
-        theme,
-        aiValidation.rewrittenTheme,
-        aiValidation,
-        appliedRepairStrategy,
-        event.walkMode
-      );
-      nextTheme = finalizeTheme(rewrittenTheme, event, fallbackTheme, options);
-      nextTheme = {
-        ...nextTheme,
-        finalization: {
-          ...(nextTheme.finalization || {}),
-          aiRepairStrategy: appliedRepairStrategy,
-          aiRepairIndexes: []
-            .concat(aiValidation.abstractMissionIndexes || [])
-            .concat(aiValidation.repeatedMissionIndexes || [])
-            .filter((item, index, source) => Number.isInteger(item) && source.indexOf(item) === index),
-          aiFailedChecks: aiValidation.failedChecks || [],
-        },
-      };
-      validation = summarizeThemeValidation(nextTheme, event, {
-        ...options,
-        allowSecondaryValidation: true,
-      });
-    }
-    return {
-      theme: nextTheme,
-      validation: {
-        ...validation,
-        ok: aiValidation.ok !== false,
-        stage: 'ai-review',
-        precheckScore: validation.score,
-        precheckReasons: validation.reasons,
-        score: aiValidation.score != null ? aiValidation.score : validation.score,
-        reasons: aiValidation.reasons.length ? aiValidation.reasons : validation.reasons,
-        aiOk: aiValidation.ok,
-        aiScore: aiValidation.score,
-        aiFailedChecks: aiValidation.failedChecks,
-        aiReasons: aiValidation.reasons,
-        aiReviewComment: aiValidation.reviewComment,
-        aiRewriteAdvice: aiValidation.rewriteAdvice,
-        aiAbstractMissionIndexes: aiValidation.abstractMissionIndexes,
-        aiRepeatedMissionIndexes: aiValidation.repeatedMissionIndexes,
-        aiRewriteScope: aiValidation.rewriteScope,
-        aiSuggestedTheme: aiValidation.rewrittenTheme,
-        aiAppliedRepairStrategy: appliedRepairStrategy,
-        aiAppliedRepairIndexes: []
-          .concat(aiValidation.abstractMissionIndexes || [])
-          .concat(aiValidation.repeatedMissionIndexes || [])
-          .filter((item, index, source) => Number.isInteger(item) && source.indexOf(item) === index),
-        aiFieldSources: aiValidation.fieldSources,
-        aiShouldRewrite: aiValidation.shouldRewrite,
-        secondaryValidationUsed: true,
-      },
-    };
-  } catch (error) {
-    return {
-      theme,
-      validation: {
-        ...validation,
-        secondaryValidationUsed: true,
-        secondaryValidationError: error.message || 'secondary_validation_failed',
-      },
-    };
-  }
+生成要求：
+1. 直接生成，不要提及 RAG、知识库、验证、检索。
+2. 这是一组组合主题，输出必须把 ${categories.join('、')} 融合在一起，不要简单拆成两段各写各的。
+3. ${missionCount === 1 ? '只返回 1 条任务。' : '返回 3 条任务，三条任务必须从不同角度切入。'}
+4. 任务要短、具体、可执行，像真人会收到的任务卡片。
+5. 要体现当前时间段和场景语境，但不要每条都机械重复地点名。
+6. 不要写成抽象散文，不要空话，不要“感受一下周围”。
+7. 如果基础输入里的 previousMissions 非空，必须逐条避开上一轮任务；先检查 previousMissions 用了哪些 availableObjects 对象，这些对象在这次生成中禁用，除非 availableObjects 剩下对象数量不够。
+8. 同一地点重复生成时，要换动作、换对象、换切入角度，避免复用上一轮句式。
+9. 标题尽量在 12 个字以内，描述尽量在 32 个字以内。
+10. 如果提供了偏好，优先从 preferenceGuide.availableObjects 里选观察对象；preferenceGuide.blockedObjects 里的对象不要主动写进任务。
+11. 组合的是主题，不是偏好，偏好主要决定“看什么”。结合第 10 条，优先从偏好对象里选观察对象。
+12. preferenceGuide.objectDetails 给出了当前更值得参考的对象摘要。优先选这些文本证据更具体的对象，不要只根据“命中/未命中”做模糊判断。
+13. 输出前先静默检查对象与地点是否对应，如果拿不准preferenceGuide.availableObjects里的对象是否合适，退回preferenceGuide.safeObjects 里的对象。
+14. 高德原生分类名只作为内部上下文，不要把“生活服务场所、风景名胜、购物服务、商务住宅”这类分类名直接写进标题、描述或任务；如果需要写地点，只写具体 POI、AOI、商圈或自然说法。
+15. 好任务优先级：优先选近处、稳定、此刻容易找到的对象；优先用“看、听、找、比、停一下、顺着走、记下”这类自然动作；一条任务尽量只做一件事。
+16. 如果任务里涉及人物或状态解读，可以基于当下听到或看到的线索做轻量判断，但不要写成需要长时间跟踪、偷拍偷录或下结论式审问的任务。
+17. 每条任务必须是一句语义完整、自然收口的话，不能停在半截动作上。不要输出“找个……，停下”“在……旁，听……”这种没说完的句子；动作后面必须落到明确的观察对象、比较对象或判断目标。
+ 
+返回 JSON：
+{
+  "title": "主题标题",
+  "description": "简短描述",
+  "category": "组合",
+  "missions": ["任务1", "任务2", "任务3"],
+  "vibeColor": "十六进制颜色"
+}`;
 }
 
 exports.main = async (event) => {
-  const categories = Array.isArray(event.categories) ? event.categories.filter(Boolean).slice(0, 3) : [];
-  if (event.walkMode === 'pure') {
-    const pureTheme = {
-      title: '纯粹探索',
-      description: '纯粹模式只允许选择一个主题方向。',
-      category: categories[0] || '探索',
-      missions: ['请选择一个主题后重新生成'],
-      vibeColor: '#5a5a40',
-    };
-    return {
-      theme: pureTheme,
-      source: 'combined-fallback',
-      validation: summarizeThemeValidation(pureTheme, event, {
-        categories,
-        combined: true,
-      }),
-      runtimeVersion: RUNTIME_VERSION,
-      ragPlan: null,
-      ragDebug: null,
-      reason: 'pure_mode_single_theme_only',
-    };
-  }
+  const categories = normalizeCategories(event.categories);
   if (categories.length < 2) {
     const needTheme = {
       title: '组合探索',
@@ -639,7 +222,7 @@ exports.main = async (event) => {
     };
     return {
       theme: needTheme,
-      source: 'combined-fallback',
+      source: 'combined-direct-fallback',
       validation: summarizeThemeValidation(needTheme, event, {
         categories,
         combined: true,
@@ -647,148 +230,68 @@ exports.main = async (event) => {
       runtimeVersion: RUNTIME_VERSION,
       ragPlan: null,
       ragDebug: null,
+      ragModelInput: null,
       reason: 'need_two_categories',
     };
   }
 
-  const referenceContext = buildCombinedReferenceContext(categories, event);
-  const modelReferenceContext = buildModelCombinedReferenceContext(referenceContext);
-  const generationPlan = buildGenerationPlan(categories, referenceContext, event);
-  const locationSignals = normalizeLocationSignals(event);
-  const generationSeed = event.generationSeed
-    || (event.generationContext && event.generationContext.generationSeed)
-    || (event.generationContext
-      && event.generationContext.contextPacket
-      && event.generationContext.contextPacket.generation
-      && event.generationContext.contextPacket.generation.seed)
-    || '';
-  const previousThemeTitle = event.generationContext
-    && event.generationContext.contextPacket
-    && event.generationContext.contextPacket.generation
-    && event.generationContext.contextPacket.generation.previousThemeTitle
-    ? String(event.generationContext.contextPacket.generation.previousThemeTitle).trim()
-    : '';
-  const previousMissions = uniqText(
-    event.generationContext
-      && event.generationContext.contextPacket
-      && event.generationContext.contextPacket.generation
-      && Array.isArray(event.generationContext.contextPacket.generation.previousMissions)
-      ? event.generationContext.contextPacket.generation.previousMissions
-      : [],
-    3
-  );
-  const seedStyleGuide = buildSeedStyleGuide(generationSeed);
-  const promptContext = buildPromptContextBlock(event, {
-    categories,
-    walkMode: event.walkMode,
-    combined: true,
-  });
-  const fallbackTheme = normalizeTheme({
-    title: `${categories.join(' × ')} 组合漫步`,
-    description: `把 ${categories.join('、')} 放进 ${locationSignals.locationContext || locationSignals.locationName || '这片街区'} 的此刻。`,
-    category: '组合',
-    missions: event.walkMode === 'advanced'
-      ? [
-          '找到一个同时呼应这两个方向的场景',
-          '拍下一处让多个感官同时被调动的细节',
-          '用一句话解释它们为什么会在这里相遇',
-        ]
-      : [`在街头寻找一处能同时让你想到${categories.join('与')}的细节，观察它们如何彼此呼应，并说出最打动你的那个瞬间`],
-    vibeColor: '#7c6a94',
-  }, event.walkMode);
-
-  const prompt = `你正在为微信小程序“遛遛”生成组合主题。
-组合方向：${categories.join('、')}
-${promptContext.text}
-模式：${event.walkMode === 'advanced' ? '进阶模式，生成3个短而清楚的任务' : '纯粹模式，生成1个短而清楚的任务'}
-本次变化种子：${generationSeed || '未提供'}
-上一轮主题：${previousThemeTitle || '未提供'}
-上一轮任务：${previousMissions.length ? previousMissions.join('；') : '未提供'}
-本次句式偏好：${seedStyleGuide.length ? seedStyleGuide.join('；') : '未提供'}
-
-以下是检索增强上下文（RAG），请把它当作 grounding，而不是脚本：
-${JSON.stringify(modelReferenceContext, null, 2)}
-
-生成计划：
-${JSON.stringify(generationPlan, null, 2)}
-
-要求：
-1. 请创建一个真正融合这些方向的主题，而不是简单并列。
-2. 三个任务切入角度尽量不同，可以分别从主体、关系、空间、时间、对比、来源、变化等角度切入。
-3. 任务必须只围绕这两个方向展开，不要额外引入第三种无关主题。
-4. 每个任务必须对应不同的 angle，不要把所有任务写成同一个句式。
-5. 至少有一个任务要明确回应 categoryPlans 里的两个方向交集，不能只是各写各的。
-6. 至少有一个任务要呼应附近 POI 或活动线索。
-7. 如果没有选择“声音”，就不要把声音当任务重点。
-7.1 如果没有选择“数字”，禁止把“数清、数一数、数出、几个、多少、编号”当成任务开头或核心动作。
-8. 如果包含“数字”，至少有一个任务必须直接涉及数字形状、数量统计、数字变体或数字行动线索。
-9. 如果包含“气味”，至少有一个任务必须直接涉及气味来源、扩散、停留或气味记忆。
-10. 如果包含“形状”，至少有一个任务必须直接涉及线条、轮廓、弧度或几何关系。
-11. 如果包含“色彩”，至少有一个任务必须直接涉及色块、对比、渐变、明暗或环境色调。
-12. 必须遵守 antiPatterns，避免把结果写成抽象散文、重复句式或任何地方都能套用的空话。
-13. 任务要具体、宽松、具有趣味，并且带有明确地点感和时间感。
-14. 任务必须安全、可执行，不要进入受限区域。
-15. 语言要像真实任务，不要写成散文，不要堆砌抽象修辞。
-16. title 尽量控制在 12 个字以内，description 尽量控制在 32 个字以内。
-17. 如果是纯粹模式，唯一的那个任务必须同时体现已选方向，并写成“动作 + 观察重点”的一句话，尽量控制在 32 个字以内。
-18. 如果提供了附近 POI 或活动线索，至少有一个任务要能呼应这些附近信息。
-19. 同一地点重复生成时，请根据“本次变化种子”改变任务的动作、锚点或观察角度，避免反复使用同一固定句式。
-20. RAG 只提供 grounding、角度、线索和锚点；不要复用知识库样例句，不要把模板样例当成可直接粘贴的任务文本。
-21. 如果提供了“上一轮任务”，请避免复用其中的开头动词、核心对象组合和句式骨架。
-22. 至少有一个任务应在当前上下文里做出 RAG 里没有直接写出的新鲜融合关系，但仍然要贴合已选主题。
-
-返回 JSON：title, description, category, missions, vibeColor。`;
+  const fallbackTheme = normalizeTheme(buildFallbackTheme(event, categories), event.walkMode);
+  const prompt = buildPrompt(event, categories);
+  const systemPrompt = '你是遛遛小程序的组合主题策划助手。只返回合法 JSON，不要输出额外解释。';
+  const modelRequest = buildModelRequestDebug(systemPrompt, prompt);
 
   try {
-    const theme = normalizeTheme(await chatJson('你是遛遛小程序的组合主题策划助手。只返回合法 JSON。', prompt), event.walkMode);
-    const enrichedTheme = event.walkMode === 'pure'
-      ? {
-          ...theme,
-          missions: [enrichPureMissionText((theme.missions || [])[0], categories)],
-        }
-      : theme;
-    const finalizedTheme = finalizeTheme({ ...fallbackTheme, ...enrichedTheme, category: '组合' }, event, fallbackTheme, {
+    const aiResult = await chatJsonWithMeta(
+      systemPrompt,
+      prompt
+    );
+    const generatedTheme = normalizeTheme(aiResult.parsed, event.walkMode);
+    const modelResponse = buildModelResponseDebug(aiResult);
+    const finalizedTheme = finalizeTheme({
+      ...fallbackTheme,
+      ...generatedTheme,
+      category: '组合',
+    }, event, fallbackTheme, {
       categories,
       combined: true,
+      preferAnchoredFill: true,
     });
-    const reviewResult = await maybeRunSecondaryValidation(finalizedTheme, event, fallbackTheme, {
-      categories,
-      combined: true,
-      currentPlan: generationPlan,
-    });
+
     return {
-      theme: reviewResult.theme,
-      source: 'combined+ai',
-      validation: reviewResult.validation,
+      theme: finalizedTheme,
+      source: 'combined-direct',
+      validation: summarizeThemeValidation(finalizedTheme, event, {
+        categories,
+        combined: true,
+      }),
       runtimeVersion: RUNTIME_VERSION,
       combinedCategories: categories,
-      ragPlan: generationPlan,
-      ragDebug: referenceContext.ragContext && referenceContext.ragContext.ragDebug ? referenceContext.ragContext.ragDebug : null,
-      ragModelInput: {
-        referenceContext: modelReferenceContext,
-        generationPlan,
-      },
+      ragPlan: null,
+      ragDebug: null,
+      ragModelInput: null,
+      modelRequest,
+      modelResponse,
+      reason: '',
     };
   } catch (error) {
     const finalizedFallback = finalizeTheme(fallbackTheme, event, fallbackTheme, {
       categories,
       combined: true,
+      preferAnchoredFill: true,
     });
     return {
       theme: finalizedFallback,
-      source: 'combined-fallback',
+      source: 'combined-direct-fallback',
       validation: summarizeThemeValidation(finalizedFallback, event, {
         categories,
         combined: true,
       }),
       runtimeVersion: RUNTIME_VERSION,
       combinedCategories: categories,
-      ragPlan: generationPlan,
-      ragDebug: referenceContext.ragContext && referenceContext.ragContext.ragDebug ? referenceContext.ragContext.ragDebug : null,
-      ragModelInput: {
-        referenceContext: modelReferenceContext,
-        generationPlan,
-      },
+      ragPlan: null,
+      ragDebug: null,
+      ragModelInput: null,
+      modelRequest,
       reason: error.message || 'generate_failed',
     };
   }

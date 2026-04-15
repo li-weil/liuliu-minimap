@@ -252,34 +252,28 @@
 其中：
 
 - `poiNames` 来自附近 POI 名称，最多保留 8 个去重结果。
-- `poiTypes` 来自 POI 类型，优先取 `typeSecondary / typePrimary / type`。
-- `dominantScene` 来自本地场景规则评分，不是地图接口直接返回字段。
-- `sceneCandidates` 是候选场景前三名。
-- `activityHints` 由场景规则、POI 文本和当前时间段共同推断。
+- `poiTypes` 来自 POI 类型，优先取 `typeTertiary / typeSecondary / typePrimary`。
+- `poiTypecodes` 来自高德原生 `typecode`。
+- `dominantScene` 来自高德原生分类和 AOI 加权后的主分类摘要，不再来自本地自定义场景桶。
+- `sceneCandidates` 是高德原生候选分类前几名。
+- `activityHints` 由高德原生分类、AOI、POI 文本和当前时间段共同推断。
 
 ---
 
 ## 5. 附近场景推断实现
 
-探索页当前维护 `NEARBY_SCENE_RULES`，用于把 POI 和地点语境推断为“附近场景”。
+当前已经舍弃旧的 `NEARBY_SCENE_RULES`，改为直接使用高德原生分类。
 
-当前覆盖场景包括：
+当前主链路是：
 
-- 历史景区游览带
-- 文博展览停留带
-- 城市地标与广场游览带
-- 公园或滨水慢行带
-- 校园与教育生活带
-- 居民街区生活带
-- 商业办公停留带
-- 餐饮与市井烟火带
-- 交通换乘流动带
-- 医院与民生服务带
+- 附近 POI 提供高德 `type / typecode`
+- `getLocationContext` 通过高德逆地理编码补齐 `AOI / businessAreas / roads / pois`
+- 探索页用 `buildNearbySummary()` 汇总出原生主分类与候选分类
 
-评分逻辑：
+当前评分逻辑：
 
-- `sceneTag` 命中场景关键词会加分。
-- POI 名称、地址、类型命中场景关键词会加分。
+- 高德 `typecode` 会参与分类聚合。
+- 高德 AOI 会以更高权重参与主分类判断。
 - 距离越近权重越高。
 - 排名越靠前的 POI 权重越高。
 
@@ -655,20 +649,18 @@ node scripts/sync_cloud_generation_runtime.js
 
 ### 13.1 扩充 POI 场景规则
 
-当前 `NEARBY_SCENE_RULES` 已覆盖 10 类场景，但还可以继续增加：
+当前更值得继续补强的不是旧场景桶，而是“偏好对象 -> 高德原生证据”的映射层：
 
-- 夜间餐饮停留带
-- 雨天街区反光带
-- 旅游服务与排队等候带
-- 老旧社区修补带
-- 城市边缘混合业态带
-- 办公楼下短暂停留带
-- 商场内外过渡带
-- 学校放学接送带
+- 对象对应的 `typecodePrefixes`
+- 对象对应的 `aoiTypecodePrefixes`
+- 对象对应的 `aoiKeywords`
+- 对象对应的 `businessAreaKeywords`
+- 不同时间段下 `hard-evidence` 对象的放行门槛
 
 目标：
 
 - 降低 `dominantScene` 与实际直觉不搭的概率。
+- 进一步减少偏好对象幻觉。
 - 让 `activityHints` 更像真实附近动作。
 
 ### 13.2 扩充主题 angle 库

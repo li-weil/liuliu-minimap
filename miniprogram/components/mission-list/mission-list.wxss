@@ -4,7 +4,7 @@
 
 .mission-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16rpx;
   padding: 24rpx 0;
   border-bottom: 1rpx solid #ede4d7;
@@ -57,6 +57,8 @@
   font-size: 28rpx;
   line-height: 1.7;
   color: #2f2b24;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .mission-copy-prefix {

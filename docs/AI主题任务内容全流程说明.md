@@ -159,7 +159,8 @@
 
 1. `locationContext`
    - 通过 [getLocationContext](/D:/liuliu-minimap/miniprogram/services/map.js)
-   - 用来把经纬度提炼成“校园边缘商业街 / 居民街区 / 商业中心 / 河岸步道”之类的场景标签
+   - 通过高德逆地理编码补齐 `AOI / 商圈 / 道路 / 附近 POI`
+   - 返回一份更接近原生地图语义的地点上下文，而不是本地自定义场景标签
 
 2. `nearbyPlaces`
    - 通过 [fetchNearbyPois](/D:/liuliu-minimap/miniprogram/services/map.js)
@@ -217,10 +218,18 @@
 
 - `poiNames`
 - `poiTypes`
+- `poiTypecodes`
 - `dominantScene`
 - `dominantSceneId`
 - `sceneCandidates`
+- `aoiNames`
+- `aoiTypecodes`
+- `primaryAoiName`
+- `primaryAoiType`
+- `primaryAoiTypecode`
+- `businessAreaNames`
 - `activityHints`
+- `source`
 
 这样做的好处是：
 
@@ -231,10 +240,17 @@
 字段来源说明：
 
 - `poiNames` 来自附近 POI 名称，最多保留 8 个去重结果
-- `poiTypes` 来自 POI 类型，优先取 `typeSecondary / typePrimary / type`
-- `dominantScene` 来自本地 `NEARBY_SCENE_RULES` 对 POI、距离和 `sceneTag` 的综合打分
-- `sceneCandidates` 是场景候选前三名，用于排查主场景为什么会被选中
-- `activityHints` 来自命中场景、POI 文本和当前时间段 fallback 线索
+- `poiTypes` 来自高德 POI 原生分类文本，优先取 `typeTertiary / typeSecondary / typePrimary`
+- `poiTypecodes` 来自高德 POI 原生 `typecode`
+- `dominantScene` 不再来自本地自定义场景桶，而是由高德原生分类与 AOI 加权后得到的“主分类摘要”
+- `dominantSceneId` 当前优先使用高德分类编码或主 AOI 类型编码
+- `sceneCandidates` 是高德原生候选分类前几名，用于排查主分类为什么会被选中
+- `aoiNames / aoiTypecodes / primaryAoi*` 来自高德逆地理编码返回的 AOI
+- `businessAreaNames` 来自高德逆地理编码返回的热点商圈
+- `activityHints` 来自高德原生分类、AOI、POI 文本和当前时间段 fallback 线索
+- `source` 当前为 `amap-native`
+
+这一步当前已经彻底舍弃旧的 `NEARBY_SCENE_RULES`。附近摘要和后续偏好对象验证统一建立在高德原生分类、AOI、商圈和 POI 文本之上。
 
 ### 6.3 `contextPacket`
 
@@ -258,6 +274,19 @@
 - `locationName`
 - `locationContext`
 - `sceneTag`
+
+其中当前比较关键的新增字段包括：
+
+- `location.nativeContext`
+  - 保存高德逆地理编码原始整理结果
+- `nearby.poiTypecodes`
+  - 保存高德原生分类编码
+- `nearby.aoiNames / nearby.aoiTypecodes`
+  - 保存 AOI 证据
+- `nearby.businessAreaNames`
+  - 保存商圈证据
+
+这些字段会直接参与后端 prompt 组装与偏好对象验证。
 - `timeContext`
 - `nearbySummary`
 
@@ -434,12 +463,28 @@ shared runtime 主要解决 6 件事：
 - 时间段
 - 日期类型
 - 时间线索
-- 附近场景
+- 偏好
+- 可用偏好对象
+- 不建议偏好对象
+- 偏好证据
+- 偏好约束
+- 高德原生主分类
+- 高德原生候选分类
+- 高德类型文本
+- 高德类型编码
+- 主 AOI
+- 主 AOI 类型编码
+- AOI 列表
+- 热点商圈
 - 附近 POI
-- 附近活动线索
 - 优先任务骨架
 
 这样单主题、前端随机、组合生成都能共享同一种“此时此地”的描述方式。
+
+这里要特别说明两点：
+
+- “附近活动线索”已经不再直接喂给模型，避免无关提示干扰生成。
+- 偏好对象验证当前只依据高德原生分类、AOI、商圈、POI 文本和时间环境，不再依据旧自定义场景桶。
 
 ### 8.3 任务骨架提示
 

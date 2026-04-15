@@ -185,7 +185,7 @@
     <view class="debug-card-head">
       <view>
         <view class="section-title">生成调试</view>
-        <view class="section-subtitle">查看最近一次真正传给 AI 的 contextPacket，方便校验时间、附近和场景上下文</view>
+        <view class="section-subtitle">查看最近一次真正传给模型的基础上下文，方便核对时间、附近、场景和返回结果是否对齐</view>
       </view>
       <view class="debug-toggle {{showGenerationDebug ? 'debug-toggle-active' : ''}}" bindtap="toggleGenerationDebug">
         {{showGenerationDebug ? '隐藏' : '显示'}}
@@ -196,8 +196,8 @@
       <view wx:if="{{debugContextAvailable}}">
         <view class="debug-panel">
           <view class="debug-panel-hero">
-            <view class="debug-panel-title">这次真正传给模型的上下文</view>
-            <view class="debug-panel-note">先看摘要，再看完整 JSON，方便快速判断时间、附近和主题是否对齐</view>
+            <view class="debug-panel-title">这次真正传给模型的基础信息</view>
+            <view class="debug-panel-note">先看摘要，再看完整 JSON，方便快速判断时间、附近、主题输入和最终结果是否对齐</view>
           </view>
 
           <view class="debug-summary-grid">
@@ -263,6 +263,36 @@
             <scroll-view scroll-y class="debug-json-scroll">
               <view class="debug-json-block">
                 <view wx:for="{{debugRagModelInputLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+              </view>
+            </scroll-view>
+          </view>
+
+          <view wx:if="{{debugModelRequestLines.length}}" class="debug-json-card">
+            <view class="debug-json-head">
+              <view>
+                <view class="debug-json-title">模型完整输入</view>
+                <view class="debug-json-hint">这里展示本次真正提交给模型接口的完整请求对象，包括模型名、system prompt、user prompt 和约束性提示</view>
+              </view>
+              <view class="debug-json-pill">Model</view>
+            </view>
+            <scroll-view scroll-y class="debug-json-scroll">
+              <view class="debug-json-block">
+                <view wx:for="{{debugModelRequestLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
+              </view>
+            </scroll-view>
+          </view>
+
+          <view wx:if="{{debugModelResponseLines.length}}" class="debug-json-card">
+            <view class="debug-json-head">
+              <view>
+                <view class="debug-json-title">模型原始返回</view>
+                <view class="debug-json-hint">这里展示模型接口返回的原始文本、去代码块后的文本，以及当前程序解析出的 JSON，方便判断问题出在模型还是后处理</view>
+              </view>
+              <view class="debug-json-pill">Raw</view>
+            </view>
+            <scroll-view scroll-y class="debug-json-scroll">
+              <view class="debug-json-block">
+                <view wx:for="{{debugModelResponseLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
               </view>
             </scroll-view>
           </view>

@@ -803,9 +803,10 @@ ${JSON.stringify(compactPlan, null, 2)}
 5.1. 如果提供了 themeLexicon，请把它当作候选词库自由选词组合，优先选择最贴合当前时间、场景、对象的词，不要机械复述同一个词。
 6. 优先呼应 timeHints、附近 POI、activityHints，但不要围着同一个 POI 重复写。
 7. 任务必须具体、可执行、像真实任务卡片，避免“边界、关系、秩序、气质、氛围”这类抽象对象。
-8. 同一地点重复生成时，要根据 generationSeed 和 previousMissions 主动换动作、锚点、观察角度。
-9. ${modeInstruction}
-10. 标题 12 字内，描述 32 字内；标题不要带编号，不要写成“声流5”“主题2”。
+8. 如果 previousMissions 非空，必须逐条避开上一轮任务；禁止生成与 previousMissions 在动作、对象、锚点、观察角度、句式上相同或近似相同的任务，不能只替换个别词语继续复用。
+9. 同一地点重复生成时，要根据 generationSeed 和 previousMissions 主动换动作、锚点、观察角度。
+10. ${modeInstruction}
+11. 标题 12 字内，描述 32 字内；标题不要带编号，不要写成“声流5”“主题2”。
 
 返回 JSON：
 {

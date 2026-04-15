@@ -60,11 +60,16 @@ function getAiConfig() {
   return {
     apiKey: process.env.AI_API_KEY || fileConfig.apiKey || '',
     baseUrl: process.env.AI_BASE_URL || fileConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: process.env.AI_CHAT_MODEL || fileConfig.model || 'qwen-turbo',
+    model: process.env.AI_CHAT_MODEL || fileConfig.model || 'deepseek-v3.2',
   };
 }
 
 async function chatJson(systemPrompt, userPrompt) {
+  const result = await chatJsonWithMeta(systemPrompt, userPrompt);
+  return result.parsed;
+}
+
+async function chatJsonWithMeta(systemPrompt, userPrompt) {
   const config = getAiConfig();
   if (!config.apiKey) {
     throw new Error('missing_ai_api_key');
@@ -89,11 +94,21 @@ async function chatJson(systemPrompt, userPrompt) {
     })
   );
 
-  const text = stripCodeFence(parseAssistantText(payload));
-  return JSON.parse(text || '{}');
+  const rawText = String(parseAssistantText(payload) || '');
+  const strippedText = stripCodeFence(rawText);
+  return {
+    parsed: JSON.parse(strippedText || '{}'),
+    rawText,
+    strippedText,
+    finishReason: payload && payload.choices && payload.choices[0] ? payload.choices[0].finish_reason || '' : '',
+    responseId: String(payload && payload.id || '').trim(),
+    responseModel: String(payload && payload.model || '').trim(),
+    usage: payload && payload.usage && typeof payload.usage === 'object' ? payload.usage : null,
+  };
 }
 
 module.exports = {
   chatJson,
+  chatJsonWithMeta,
   getAiConfig,
 };

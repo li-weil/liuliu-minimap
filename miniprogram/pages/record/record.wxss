@@ -15,7 +15,8 @@
   padding: 32rpx;
   min-height: 220rpx;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: 24rpx;
   border-radius: 40rpx 40rpx 0 0;
 }
@@ -25,10 +26,12 @@
   line-height: 1;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .record-stage-copy {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -39,11 +42,16 @@
   font-weight: 600;
   color: #fff;
   margin-bottom: 12rpx;
+  line-height: 1.35;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .record-stage-desc {
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.7;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .record-map-stage {

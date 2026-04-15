@@ -1,6 +1,4 @@
 module.exports = {
-  apiKey: 'sk-2a412220d64940878a0f904d706dff3f',
-  baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  model: 'qwen-turbo',
-  timeoutMs: 1500,
+  amapWebKey: 'be2a01a9119d5712e81bb2798a431aa0',
+  timeoutMs: 12000,
 };

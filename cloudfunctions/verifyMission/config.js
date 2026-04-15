@@ -6,13 +6,13 @@ module.exports = {
   baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
 
   // 图像/视频理解模型
-  visionModel: 'qwen-turbo',
+  visionModel: 'deepseek-v3.2',
 
   // 音频理解模型
   audioModel: 'qwen3-omni-30b-a3b-captioner',
 
   // 汇总评分模型
-  textModel: 'qwen-plus',
+  textModel: 'deepseek-v3.2',
 
   // 请求超时时间，单位毫秒
   timeoutMs: 12000,

@@ -43,6 +43,29 @@ function normalizeTimeContext(event) {
   };
 }
 
+function normalizePreference(event) {
+  const contextPacket = getContextPacket(event);
+  const userState = contextPacket.userState && typeof contextPacket.userState === 'object'
+    ? contextPacket.userState
+    : {};
+  return String(event.preference || userState.preference || '').trim();
+}
+
+function looksLikeAmapTypecode(value) {
+  return /^\d{4,6}$/.test(String(value || '').trim());
+}
+
+function normalizeAoiTypecodeList(values, limit = 8) {
+  const result = [];
+  (Array.isArray(values) ? values : [values]).forEach((item) => {
+    const text = String(item || '').trim();
+    if (looksLikeAmapTypecode(text) && !result.includes(text) && result.length < limit) {
+      result.push(text);
+    }
+  });
+  return result;
+}
+
 function normalizeNearbySummary(event) {
   const contextPacket = getContextPacket(event);
   const packetNearby = contextPacket.nearby && typeof contextPacket.nearby === 'object' ? contextPacket.nearby : {};
@@ -52,12 +75,23 @@ function normalizeNearbySummary(event) {
     : generationContext.nearbySummary && typeof generationContext.nearbySummary === 'object'
       ? generationContext.nearbySummary
       : packetNearby;
+  const rawPrimaryAoiType = typeof nearbySummary.primaryAoiType === 'string' ? nearbySummary.primaryAoiType : '';
+  const rawPrimaryAoiTypecode = typeof nearbySummary.primaryAoiTypecode === 'string' ? nearbySummary.primaryAoiTypecode : '';
+  const normalizedPrimaryAoiTypecode = looksLikeAmapTypecode(rawPrimaryAoiTypecode)
+    ? rawPrimaryAoiTypecode
+    : looksLikeAmapTypecode(rawPrimaryAoiType)
+      ? rawPrimaryAoiType
+      : '';
+  const normalizedPrimaryAoiType = looksLikeAmapTypecode(rawPrimaryAoiType) ? '' : rawPrimaryAoiType;
   return {
     poiNames: Array.isArray(nearbySummary.poiNames)
       ? nearbySummary.poiNames.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 8)
       : [],
     poiTypes: Array.isArray(nearbySummary.poiTypes)
       ? nearbySummary.poiTypes.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
+      : [],
+    poiTypecodes: Array.isArray(nearbySummary.poiTypecodes)
+      ? nearbySummary.poiTypecodes.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 12)
       : [],
     dominantSceneId: typeof nearbySummary.dominantSceneId === 'string' ? nearbySummary.dominantSceneId : '',
     dominantScene: typeof nearbySummary.dominantScene === 'string' ? nearbySummary.dominantScene : '',
@@ -76,9 +110,26 @@ function normalizeNearbySummary(event) {
         .filter(Boolean)
         .slice(0, 3)
       : [],
+    aoiNames: Array.isArray(nearbySummary.aoiNames)
+      ? nearbySummary.aoiNames.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
+      : [],
+    aoiTypecodes: normalizeAoiTypecodeList(
+      []
+        .concat(nearbySummary.aoiTypecodes || [])
+        .concat(normalizedPrimaryAoiTypecode || [])
+        .concat(rawPrimaryAoiType || []),
+      8
+    ),
+    primaryAoiName: typeof nearbySummary.primaryAoiName === 'string' ? nearbySummary.primaryAoiName : '',
+    primaryAoiType: normalizedPrimaryAoiType,
+    primaryAoiTypecode: normalizedPrimaryAoiTypecode,
+    businessAreaNames: Array.isArray(nearbySummary.businessAreaNames)
+      ? nearbySummary.businessAreaNames.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
+      : [],
     activityHints: Array.isArray(nearbySummary.activityHints)
       ? nearbySummary.activityHints.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 5)
       : [],
+    source: typeof nearbySummary.source === 'string' ? nearbySummary.source : '',
   };
 }
 
@@ -174,20 +225,7 @@ function clampText(text, maxLength) {
 }
 
 function compactMission(text, walkMode) {
-  const maxLength = walkMode === 'advanced' ? 28 : 36;
-  const cleaned = cleanText(text);
-  if (cleaned.length <= maxLength) {
-    return cleaned;
-  }
-  const clauses = cleaned.split(/[，。；;！!]/).map((item) => item.trim()).filter(Boolean);
-  if (!clauses.length) {
-    return clampText(cleaned, maxLength);
-  }
-  let result = clauses[0];
-  if (clauses[1] && result.length < maxLength - 8) {
-    result = `${result}，${clauses[1]}`;
-  }
-  return clampText(result, maxLength);
+  return cleanText(text);
 }
 
 function missionSignature(text) {
@@ -346,6 +384,883 @@ function normalizeValidationPlanMeta(plan) {
   };
 }
 
+const BASE_PREFERENCE_OBJECT_LIBRARY = {
+  自然景观: {
+    objects: [
+      { label: '树影', level: 'safe', sceneKeywords: ['公园', '绿地', '小区', '校园', '广场', '景区', '园'], timePhases: ['上午', '午后', '黄昏'] },
+      { label: '枝叶', level: 'safe', sceneKeywords: ['公园', '绿地', '小区', '校园', '园林', '树'] },
+      { label: '树冠', level: 'safe', sceneKeywords: ['树', '公园', '小区', '校园', '园'] },
+      { label: '花坛边', level: 'safe', sceneKeywords: ['花坛', '广场', '小区', '校园', '公园'] },
+      { label: '花枝', level: 'safe', sceneKeywords: ['花', '园', '公园', '小区', '院'], seasons: ['春', '夏', '秋'] },
+      { label: '草木边缘', level: 'safe', sceneKeywords: ['草', '绿地', '花坛', '公园', '校园'] },
+      { label: '路边绿植', level: 'safe', sceneKeywords: ['小区', '街区', '校园', '广场', '路'] },
+      { label: '天光', level: 'safe', timePhases: ['清晨', '上午', '午后', '黄昏'] },
+      { label: '天边亮处', level: 'safe', timePhases: ['清晨', '黄昏'] },
+      { label: '云层', level: 'safe', weathers: ['多云', '大风', '雨天'] },
+      { label: '风吹过的叶面', level: 'safe', sceneKeywords: ['树', '叶', '公园', '绿地', '院'], weathers: ['大风', '多云'] },
+      { label: '地上的叶子', level: 'safe', sceneKeywords: ['树', '路', '院', '公园'], seasons: ['秋', '冬', '春'] },
+      { label: '泥土边', level: 'safe', sceneKeywords: ['花坛', '树池', '绿地', '公园'] },
+      { label: '林荫道边', level: 'safe', sceneKeywords: ['公园', '校园', '小区', '园区', '景区', '路'] },
+      { label: '花圃边', level: 'safe', sceneKeywords: ['公园', '广场', '校园', '景区', '园区', '花'] },
+      { label: '草坡', level: 'safe', sceneKeywords: ['公园', '广场', '校园', '景区', '小区'] },
+      { label: '竹影', level: 'safe', sceneKeywords: ['园林', '公园', '景区', '院', '校园'] },
+      { label: '园路转弯处', level: 'safe', sceneKeywords: ['公园', '景区', '校园', '园区', '小区'] },
+      { label: '绿篱边', level: 'safe', sceneKeywords: ['公园', '校园', '小区', '景区', '广场'] },
+      { label: '落花边', level: 'safe', sceneKeywords: ['公园', '校园', '小区', '院', '花'], seasons: ['春', '夏', '秋'] },
+      { label: '灌木边', level: 'safe', sceneKeywords: ['公园', '绿地', '小区', '校园', '景区'] },
+      { label: '树皮纹路', level: 'safe', sceneKeywords: ['树', '公园', '校园', '景区', '院'] },
+      { label: '草叶尖', level: 'safe', sceneKeywords: ['草', '绿地', '公园', '校园', '小区'] },
+      { label: '树下阴影', level: 'scene-bound', sceneKeywords: ['树', '公园', '绿地', '院', '小区'], timePhases: ['上午', '午后', '黄昏'] },
+      { label: '院里的树', level: 'scene-bound', sceneKeywords: ['院', '景区', '博物馆', '胡同'] },
+      { label: '墙边植物', level: 'scene-bound', sceneKeywords: ['墙', '院', '校园', '小区'] },
+      { label: '草地边', level: 'scene-bound', sceneKeywords: ['草坪', '公园', '广场', '校园'] },
+      { label: '树池边', level: 'scene-bound', sceneKeywords: ['树池', '人行道', '街区', '广场', '小区'] },
+      { label: '路边花箱', level: 'scene-bound', sceneKeywords: ['街区', '广场', '路边', '商场'] },
+      { label: '草坪转角', level: 'scene-bound', sceneKeywords: ['草坪', '公园', '广场', '校园'] },
+      { label: '树梢空隙', level: 'scene-bound', sceneKeywords: ['树', '天', '公园', '院'] },
+      { label: '树干纹路', level: 'scene-bound', sceneKeywords: ['树', '院', '园', '公园'] },
+      { label: '石边苔痕', level: 'scene-bound', sceneKeywords: ['石', '院', '园', '景区', '公园'], seasons: ['春', '夏', '秋'] },
+      { label: '小喷泉', level: 'scene-bound', sceneKeywords: ['广场', '公园', '商场', '园区', '小区', '校园'] },
+      { label: '风吹动的水纹', level: 'scene-bound', sceneKeywords: ['河', '湖', '水', '池', '滨水'], weathers: ['大风', '多云'] },
+      { label: '水面', level: 'scene-bound', sceneKeywords: ['湖', '河', '水', '滨水', '池'], poiTypeKeywords: ['风景名胜', '公园广场'] },
+      { label: '岸线', level: 'scene-bound', sceneKeywords: ['河', '湖', '岸', '滨水'] },
+      { label: '倒影', level: 'scene-bound', sceneKeywords: ['水', '湖', '河', '池'], timePhases: ['上午', '午后', '黄昏', '夜间'] },
+      { label: '桥下阴影', level: 'scene-bound', sceneKeywords: ['桥', '河', '湖', '水', '滨水'], timePhases: ['上午', '午后', '黄昏'] },
+      { label: '岸边石头', level: 'scene-bound', sceneKeywords: ['岸', '河', '湖', '园', '石'] },
+      { label: '水边台阶', level: 'scene-bound', sceneKeywords: ['湖', '河', '水', '滨水', '公园', '景区'] },
+      { label: '湖边步道', level: 'scene-bound', sceneKeywords: ['湖', '河', '滨水', '公园', '景区'] },
+      { label: '水生植物', level: 'scene-bound', sceneKeywords: ['湖', '河', '池', '湿地', '公园', '景区'], seasons: ['春', '夏', '秋'] },
+      { label: '湿地边的草', level: 'scene-bound', sceneKeywords: ['湿地', '湖', '河', '岸', '公园', '景区'] },
+      { label: '桥边水面', level: 'hard-evidence', sceneKeywords: ['桥', '河', '湖', '滨水'], poiNameKeywords: ['桥', '河', '湖', '水'] },
+      { label: '柳枝', level: 'hard-evidence', sceneKeywords: ['柳', '湖', '河', '园', '岸'], poiNameKeywords: ['柳', '园'] },
+      { label: '荷叶', level: 'hard-evidence', sceneKeywords: ['荷', '池', '湖', '水'], seasons: ['夏'] },
+      { label: '水边栏杆外的景色', level: 'hard-evidence', sceneKeywords: ['滨水', '湖', '河', '桥'], poiNameKeywords: ['桥', '滨', '湖', '河'] },
+      { label: '芦苇边', level: 'hard-evidence', sceneKeywords: ['湿地', '河', '湖', '岸', '景区'], seasons: ['秋', '冬'] },
+      { label: '喷泉水雾', level: 'hard-evidence', sceneKeywords: ['喷泉', '广场', '公园', '商场', '园区'], timePhases: ['上午', '午后', '黄昏'] },
+    ],
+    avoid: ['招牌文案', '门牌编号', '促销字样'],
+    instruction: '优先把任务对象落在树、水、天光、花草、风带来的痕迹上，不要把注意力先放到招牌、编号或说明字样上。',
+  },
+  人文历史: {
+    objects: [
+      { label: '门洞', level: 'safe', sceneKeywords: ['景区', '馆', '楼', '院', '胡同', '街区'] },
+      { label: '窗框', level: 'safe', sceneKeywords: ['楼', '院', '馆', '建筑'] },
+      { label: '台阶', level: 'safe', sceneKeywords: ['入口', '楼', '馆', '广场'] },
+      { label: '墙面纹理', level: 'safe', sceneKeywords: ['墙', '院', '馆', '旧', '砖'] },
+      { label: '墙角', level: 'safe', sceneKeywords: ['墙', '院', '馆', '街区', '胡同'] },
+      { label: '砖缝', level: 'safe', sceneKeywords: ['砖', '墙', '胡同', '旧', '院'] },
+      { label: '窗台边', level: 'safe', sceneKeywords: ['窗', '院', '楼', '馆'] },
+      { label: '入口台基', level: 'safe', sceneKeywords: ['入口', '台基', '馆', '楼', '广场'] },
+      { label: '旧式栏杆', level: 'safe', sceneKeywords: ['栏杆', '院', '景区', '楼', '馆'] },
+      { label: '门框边线', level: 'safe', sceneKeywords: ['门', '框', '楼', '院', '馆'] },
+      { label: '长窗格', level: 'safe', sceneKeywords: ['楼', '馆', '院', '校园', '建筑'] },
+      { label: '柱脚', level: 'safe', sceneKeywords: ['楼', '馆', '门廊', '景区', '校园'] },
+      { label: '石阶边线', level: 'safe', sceneKeywords: ['台阶', '入口', '馆', '楼', '景区'] },
+      { label: '砖雕边', level: 'safe', sceneKeywords: ['砖', '墙', '门楼', '胡同', '故居'] },
+      { label: '屋脊线', level: 'safe', sceneKeywords: ['屋脊', '楼', '寺', '祠', '院'] },
+      { label: '门把手', level: 'safe', sceneKeywords: ['门', '馆', '楼', '校园', '院'] },
+      { label: '墙砖边', level: 'safe', sceneKeywords: ['砖', '墙', '馆', '楼', '胡同'] },
+      { label: '扶手转角', level: 'safe', sceneKeywords: ['扶手', '台阶', '馆', '楼', '校园'] },
+      { label: '柱身线条', level: 'safe', sceneKeywords: ['柱', '门廊', '馆', '楼', '校园'] },
+      { label: '檐下地面', level: 'safe', sceneKeywords: ['檐', '楼', '院', '馆', '景区'] },
+      { label: '屋檐', level: 'scene-bound', sceneKeywords: ['故居', '祠', '寺', '楼', '宫', '院'] },
+      { label: '牌匾', level: 'scene-bound', sceneKeywords: ['故居', '博物馆', '馆', '景区', '门楼'], poiNameKeywords: ['故宫', '故居', '博物馆', '纪念馆'] },
+      { label: '檐角', level: 'scene-bound', sceneKeywords: ['檐', '楼', '宫', '寺', '塔'] },
+      { label: '廊柱', level: 'scene-bound', sceneKeywords: ['馆', '楼', '广场', '纪念', '入口'] },
+      { label: '旧墙转角', level: 'scene-bound', sceneKeywords: ['旧墙', '城墙', '胡同', '故居', '砖墙'] },
+      { label: '铭牌', level: 'scene-bound', sceneKeywords: ['纪念', '博物馆', '展馆', '文化'] },
+      { label: '立面细部', level: 'scene-bound', sceneKeywords: ['立面', '建筑', '楼', '馆'] },
+      { label: '门前石阶', level: 'scene-bound', sceneKeywords: ['石阶', '入口', '馆', '楼', '景区'] },
+      { label: '旧砖路面', level: 'scene-bound', sceneKeywords: ['砖', '胡同', '旧路', '院', '景区'] },
+      { label: '檐下阴影', level: 'scene-bound', sceneKeywords: ['檐', '楼', '宫', '院'], timePhases: ['上午', '午后', '黄昏'] },
+      { label: '旧木构件', level: 'scene-bound', sceneKeywords: ['木', '故居', '祠', '馆', '院'] },
+      { label: '碑刻边缘', level: 'scene-bound', sceneKeywords: ['碑', '纪念', '馆', '景区'] },
+      { label: '匾额边框', level: 'scene-bound', sceneKeywords: ['匾', '门楼', '景区', '馆'] },
+      { label: '拐角砖面', level: 'scene-bound', sceneKeywords: ['胡同', '砖墙', '旧街', '巷'] },
+      { label: '回廊转角', level: 'scene-bound', sceneKeywords: ['廊', '馆', '院', '景区', '校园'] },
+      { label: '碑座', level: 'scene-bound', sceneKeywords: ['碑', '纪念', '馆', '景区', '校园'] },
+      { label: '校门边线', level: 'scene-bound', sceneKeywords: ['学校', '校园', '门', '楼'] },
+      { label: '图书馆门前台阶', level: 'scene-bound', sceneKeywords: ['图书馆', '馆', '学校', '校园'] },
+      { label: '校史墙', level: 'scene-bound', sceneKeywords: ['校园', '学校', '馆', '历史'] },
+      { label: '门环', level: 'hard-evidence', sceneKeywords: ['门', '故居', '院', '祠'], poiNameKeywords: ['故居', '故宫', '祠', '寺'] },
+      { label: '牌坊', level: 'hard-evidence', sceneKeywords: ['牌坊', '城楼', '景区'], poiNameKeywords: ['牌坊', '城楼', '祠', '寺'] },
+      { label: '拱门', level: 'hard-evidence', sceneKeywords: ['拱门', '门洞', '景区', '馆'], poiNameKeywords: ['门', '城', '故居'] },
+      { label: '石栏杆', level: 'hard-evidence', sceneKeywords: ['石', '桥', '台基', '景区'], poiNameKeywords: ['桥', '宫', '园'] },
+      { label: '城楼边线', level: 'hard-evidence', sceneKeywords: ['城楼', '角楼', '城门'], poiNameKeywords: ['城楼', '角楼', '城门'] },
+      { label: '宫墙边沿', level: 'hard-evidence', sceneKeywords: ['宫墙', '城墙', '故宫', '坛'], poiNameKeywords: ['故宫', '城', '坛'] },
+      { label: '牌楼立柱', level: 'hard-evidence', sceneKeywords: ['牌楼', '牌坊', '门楼'], poiNameKeywords: ['牌坊', '门楼'] },
+      { label: '旧门钉', level: 'hard-evidence', sceneKeywords: ['门钉', '宫', '院', '故居'], poiNameKeywords: ['故宫', '故居', '祠', '寺'] },
+      { label: '钟楼边线', level: 'hard-evidence', sceneKeywords: ['钟楼', '校', '楼', '景区'], poiNameKeywords: ['钟楼', '学校', '大学'] },
+      { label: '石狮底座', level: 'hard-evidence', sceneKeywords: ['石狮', '门口', '景区', '馆', '院'], poiNameKeywords: ['故居', '博物馆', '祠', '寺', '门楼'] },
+      { label: '城墙垛口', level: 'hard-evidence', sceneKeywords: ['城墙', '城门', '城楼', '景区'], poiNameKeywords: ['城墙', '城门', '城楼'] },
+      { label: '校训碑', level: 'hard-evidence', sceneKeywords: ['学校', '校园', '碑', '校训'], poiNameKeywords: ['大学', '学院', '中学', '学校'] },
+    ],
+    avoid: ['奶茶杯', '外卖袋', '促销海报'],
+    instruction: '优先看建筑细部、旧构件、门窗台阶、石砖牌匾这些有人文和历史感的对象，不要先落到临时消费物和商业广告上。',
+  },
+  市井烟火: {
+    objects: [
+      { label: '店门口', level: 'safe', sceneKeywords: ['店', '街', '商业', '商场', '小区', '站'] },
+      { label: '招牌', level: 'safe', sceneKeywords: ['商业', '餐饮', '街区', '站口', '小店'] },
+      { label: '排队的人', level: 'safe', sceneKeywords: ['餐饮', '站', '商场', '写字楼'], timePhases: ['上午', '午后', '黄昏', '夜间'] },
+      { label: '外带口', level: 'safe', sceneKeywords: ['咖啡', '外卖', '餐饮', '站口'] },
+      { label: '店外停留的人', level: 'safe', sceneKeywords: ['店', '街', '商场', '站', '小区'] },
+      { label: '门口小桌', level: 'safe', sceneKeywords: ['店', '餐饮', '咖啡', '小吃'] },
+      { label: '门边价牌', level: 'safe', sceneKeywords: ['店', '菜单', '价牌', '商店'] },
+      { label: '取餐的人', level: 'safe', sceneKeywords: ['外卖', '餐饮', '咖啡', '站口'], timePhases: ['上午', '午后', '黄昏', '夜间'] },
+      { label: '纸袋杯套', level: 'safe', sceneKeywords: ['咖啡', '外带', '餐饮', '商场'] },
+      { label: '便利店冰柜', level: 'safe', sceneKeywords: ['便利店', '商店', '站口', '小区', '写字楼'] },
+      { label: '水果筐', level: 'safe', sceneKeywords: ['水果', '市场', '店门口', '商店', '小区'] },
+      { label: '面包柜', level: 'safe', sceneKeywords: ['面包', '糕饼', '店', '商场', '写字楼'] },
+      { label: '自动售货机', level: 'safe', sceneKeywords: ['站口', '商场', '写字楼', '校园', '园区'] },
+      { label: '快递柜', level: 'safe', sceneKeywords: ['小区', '写字楼', '园区', '校园', '门口'] },
+      { label: '外摆椅', level: 'safe', sceneKeywords: ['咖啡', '餐饮', '店门口', '商圈', '步行街'] },
+      { label: '店门把手', level: 'safe', sceneKeywords: ['店', '商场', '商圈', '步行街', '小区'] },
+      { label: '外卖架', level: 'safe', sceneKeywords: ['外卖', '店门口', '写字楼', '商圈', '站口'] },
+      { label: '柜台边', level: 'safe', sceneKeywords: ['柜台', '店', '商场', '便利店', '餐饮'] },
+      { label: '取号牌', level: 'safe', sceneKeywords: ['取号', '餐饮', '咖啡', '店门口', '商场'] },
+      { label: '冷柜门', level: 'safe', sceneKeywords: ['便利店', '超市', '商店', '商场', '小区'] },
+      { label: '收银口', level: 'scene-bound', sceneKeywords: ['便利店', '餐饮', '商店', '咖啡'] },
+      { label: '打包台', level: 'scene-bound', sceneKeywords: ['外卖', '餐饮', '咖啡', '打包'] },
+      { label: '小推车', level: 'scene-bound', sceneKeywords: ['摊', '站', '夜市', '菜', '集市'] },
+      { label: '价签', level: 'scene-bound', sceneKeywords: ['店', '超市', '菜', '档口'] },
+      { label: '蒸汽', level: 'scene-bound', sceneKeywords: ['餐饮', '早餐', '小吃', '面', '包子'], timePhases: ['清晨', '上午', '黄昏', '夜间'] },
+      { label: '餐桌边', level: 'scene-bound', sceneKeywords: ['餐饮', '咖啡', '小吃', '饭馆'] },
+      { label: '菜单牌', level: 'scene-bound', sceneKeywords: ['菜单', '餐饮', '咖啡', '小吃'] },
+      { label: '一次性餐具', level: 'scene-bound', sceneKeywords: ['外卖', '餐饮', '桌', '打包'] },
+      { label: '等餐的人', level: 'scene-bound', sceneKeywords: ['餐饮', '外卖', '咖啡', '站口'], timePhases: ['上午', '午后', '黄昏', '夜间'] },
+      { label: '塑料凳', level: 'scene-bound', sceneKeywords: ['小吃', '摊', '店门口', '早餐'] },
+      { label: '打包袋', level: 'scene-bound', sceneKeywords: ['外卖', '打包', '餐饮', '咖啡'] },
+      { label: '便利店门边', level: 'scene-bound', sceneKeywords: ['便利店', '商店', '站口', '写字楼'] },
+      { label: '快递堆放点', level: 'scene-bound', sceneKeywords: ['快递', '小区', '写字楼', '门口'] },
+      { label: '小卖部台面', level: 'scene-bound', sceneKeywords: ['小卖部', '校园', '小区', '站口'] },
+      { label: '熟食柜台', level: 'scene-bound', sceneKeywords: ['熟食', '超市', '市场', '档口', '商场'] },
+      { label: '饮品封口台', level: 'scene-bound', sceneKeywords: ['奶茶', '饮品', '咖啡', '外带', '商场'] },
+      { label: '菜市场过道', level: 'scene-bound', sceneKeywords: ['市场', '菜', '档口', '摊', '商圈'] },
+      { label: '收货小推板车', level: 'scene-bound', sceneKeywords: ['商店', '超市', '市场', '写字楼', '后门'] },
+      { label: '摊位', level: 'hard-evidence', sceneKeywords: ['摊', '夜市', '集市', '早餐'], poiTypeKeywords: ['餐饮服务', '购物服务'] },
+      { label: '档口台面', level: 'hard-evidence', sceneKeywords: ['档口', '小吃', '市场', '餐饮'], poiTypeKeywords: ['餐饮服务'] },
+      { label: '后厨窗口', level: 'hard-evidence', sceneKeywords: ['后厨', '档口', '餐饮'], poiTypeKeywords: ['餐饮服务'] },
+      { label: '早餐摊', level: 'hard-evidence', sceneKeywords: ['早餐', '早点', '摊', '站口'], timePhases: ['清晨', '上午'] },
+      { label: '夜市摊', level: 'hard-evidence', sceneKeywords: ['夜市', '摊', '小吃', '集市'], timePhases: ['黄昏', '夜间'] },
+      { label: '烤炉边', level: 'hard-evidence', sceneKeywords: ['烤', '串', '餐饮', '夜市'], timePhases: ['黄昏', '夜间'] },
+      { label: '菜摊台面', level: 'hard-evidence', sceneKeywords: ['菜', '市场', '摊', '档口'], poiTypeKeywords: ['购物服务'] },
+      { label: '站口小店', level: 'hard-evidence', sceneKeywords: ['站口', '地铁', '公交', '小店'], poiNameKeywords: ['站', '地铁', '公交'] },
+      { label: '咖啡外带口', level: 'hard-evidence', sceneKeywords: ['咖啡', '外带', '写字楼', '站口'], poiTypeKeywords: ['餐饮服务'] },
+      { label: '奶茶取杯台', level: 'hard-evidence', sceneKeywords: ['奶茶', '饮品', '外带', '商圈', '站口'] },
+      { label: '面包出炉口', level: 'hard-evidence', sceneKeywords: ['面包', '烘焙', '糕饼', '店', '商场'] },
+      { label: '快递车', level: 'hard-evidence', sceneKeywords: ['快递', '小区', '写字楼', '园区', '门口'] },
+      { label: '地铁口闸外小店', level: 'hard-evidence', sceneKeywords: ['地铁', '站口', '小店', '商圈', '写字楼'], poiNameKeywords: ['地铁站', '站'] },
+    ],
+    avoid: ['树冠', '云层', '纯风景视角'],
+    instruction: '优先看摊位、门口、招牌、排队、冒热气的地方和人与货物打交道的痕迹，不要把任务写成纯风景观察。',
+  },
+};
+
+function assignNativeHints(target, labels, patch) {
+  labels.forEach((label) => {
+    target[label] = Object.assign({}, target[label] || {}, patch);
+  });
+}
+
+function buildPreferenceObjectNativeHints() {
+  const hints = {
+    自然景观: {},
+    人文历史: {},
+    市井烟火: {},
+  };
+
+  assignNativeHints(hints.自然景观, [
+    '树影', '枝叶', '树冠', '花坛边', '花枝', '草木边缘', '路边绿植', '地上的叶子', '泥土边',
+    '林荫道边', '花圃边', '草坡', '竹影', '园路转弯处', '绿篱边', '落花边', '灌木边', '树皮纹路', '草叶尖',
+    '树下阴影', '草地边', '树池边', '路边花箱', '草坪转角', '树梢空隙', '树干纹路',
+  ], {
+    typecodePrefixes: ['0605', '1101', '1102', '11', '1203', '1412'],
+    aoiTypecodePrefixes: ['060500', '060501', '110100', '110101', '110102', '110103', '110105', '120300', '120302', '120303', '141200', '141201', '141202', '141203', '141204', '141207'],
+    aoiKeywords: ['花鸟鱼虫市场', '花卉市场', '公园广场', '公园', '动物园', '植物园', '城市广场', '住宅区', '住宅小区', '宿舍', '学校', '高等院校', '中学', '小学', '幼儿园', '学校内部设施'],
+    poiTypeKeywords: ['风景名胜', '公园广场', '花鸟鱼虫市场', '住宅区', '学校'],
+  });
+  assignNativeHints(hints.自然景观, ['小喷泉', '喷泉水雾'], {
+    typecodePrefixes: ['1101', '1201', '1202', '1203', '1412'],
+    aoiTypecodePrefixes: ['110105', '120100', '120200', '120201', '120203', '120300', '120302', '141200', '141201', '141202', '141207'],
+    aoiKeywords: ['城市广场', '产业园区', '楼宇相关', '商务写字楼', '商住两用楼宇', '住宅区', '住宅小区', '学校', '高等院校', '中学', '学校内部设施'],
+    poiTypeKeywords: ['风景名胜', '公园广场', '商务住宅', '住宅区', '学校'],
+  });
+  assignNativeHints(hints.自然景观, ['院里的树', '墙边植物', '石边苔痕'], {
+    typecodePrefixes: ['1102', '14', '1203'],
+    aoiTypecodePrefixes: ['110204', '110205', '110206', '110207', '140100', '140200', '140400', '140500', '140800', '140900', '120300', '120302', '141200', '141201', '141207'],
+    aoiKeywords: ['纪念馆', '寺庙道观', '教堂', '回教寺', '博物馆', '展览馆', '美术馆', '图书馆', '文化宫', '档案馆', '住宅区', '住宅小区', '学校', '高等院校', '学校内部设施'],
+  });
+  assignNativeHints(hints.自然景观, [
+    '风吹动的水纹', '水面', '岸线', '倒影', '桥下阴影', '岸边石头', '水边台阶', '湖边步道',
+    '水生植物', '湿地边的草', '桥边水面', '荷叶', '水边栏杆外的景色', '芦苇边',
+  ], {
+    typecodePrefixes: ['1101', '1102', '11'],
+    aoiTypecodePrefixes: ['110101', '110103', '110105', '110200', '110201', '110202', '110203'],
+    aoiKeywords: ['植物园', '城市广场', '世界遗产', '国家级景点', '省级景点'],
+    aoiAliasKeywords: ['公园', '景区', '湿地', '河', '湖', '水'],
+    poiNameKeywords: ['桥', '河', '湖', '水', '园', '湿地'],
+    poiTypeKeywords: ['风景名胜', '公园广场'],
+  });
+  assignNativeHints(hints.自然景观, ['柳枝'], {
+    typecodePrefixes: ['1101', '1102', '11'],
+    aoiTypecodePrefixes: ['110101', '110103', '110105', '110200', '110202', '120302'],
+    aoiKeywords: ['公园', '植物园', '城市广场', '风景名胜', '国家级景点', '住宅小区'],
+    poiNameKeywords: ['柳', '桥', '河', '湖', '园'],
+  });
+
+  assignNativeHints(hints.人文历史, [
+    '门洞', '窗框', '台阶', '墙面纹理', '墙角', '砖缝', '窗台边', '入口台基', '旧式栏杆', '门框边线',
+    '长窗格', '柱脚', '石阶边线', '砖雕边', '屋脊线', '门把手', '墙砖边', '扶手转角', '柱身线条', '檐下地面',
+    '屋檐', '牌匾', '檐角', '廊柱', '旧墙转角', '铭牌', '立面细部', '门前石阶', '旧砖路面',
+    '檐下阴影', '旧木构件', '碑刻边缘', '匾额边框', '拐角砖面', '回廊转角', '碑座', '校门边线',
+    '图书馆门前台阶', '校史墙',
+  ], {
+    typecodePrefixes: ['1102', '1401', '1402', '1404', '1405', '1408', '1409', '1412', '14'],
+    aoiTypecodePrefixes: ['110204', '110205', '110206', '110207', '140100', '140200', '140400', '140500', '140800', '140900', '141200', '141201', '141202', '141203', '141207'],
+    aoiKeywords: ['纪念馆', '寺庙道观', '教堂', '回教寺', '博物馆', '展览馆', '美术馆', '图书馆', '文化宫', '档案馆', '学校', '高等院校', '中学', '小学', '学校内部设施'],
+    aoiAliasKeywords: ['校园', '校门', '校史', '古建', '旧墙', '门楼'],
+    poiTypeKeywords: ['风景名胜', '科教文化服务', '博物馆', '图书馆', '学校'],
+  });
+  assignNativeHints(hints.人文历史, [
+    '门环', '牌坊', '拱门', '石栏杆', '城楼边线', '宫墙边沿', '牌楼立柱', '旧门钉',
+    '钟楼边线', '石狮底座', '城墙垛口', '校训碑',
+  ], {
+    typecodePrefixes: ['1102', '1401', '1402', '1404', '1405', '1408', '1412', '14'],
+    aoiTypecodePrefixes: ['110201', '110202', '110203', '110204', '110205', '110206', '110207', '140100', '140200', '140400', '140500', '140800', '141200', '141201', '141202'],
+    aoiKeywords: ['世界遗产', '国家级景点', '省级景点', '纪念馆', '寺庙道观', '教堂', '回教寺', '博物馆', '展览馆', '美术馆', '图书馆', '文化宫', '学校', '高等院校', '中学'],
+  });
+
+  assignNativeHints(hints.市井烟火, [
+    '店门口', '招牌', '排队的人', '外带口', '店外停留的人', '门口小桌', '门边价牌', '取餐的人', '纸袋杯套',
+    '便利店冰柜', '水果筐', '面包柜', '自动售货机', '快递柜', '外摆椅', '店门把手', '外卖架', '柜台边', '取号牌', '冷柜门',
+    '收银口', '打包台', '价签', '蒸汽', '餐桌边', '菜单牌', '一次性餐具', '等餐的人', '塑料凳',
+    '打包袋', '便利店门边', '快递堆放点', '小卖部台面', '熟食柜台', '饮品封口台', '菜市场过道',
+    '收货小推板车',
+  ], {
+    typecodePrefixes: ['05', '0508', '0509', '06', '0602', '0604', '0607', '0610', '07', '0705', '1505', '1507'],
+    aoiTypecodePrefixes: ['050300', '050400', '050500', '050600', '050800', '050900', '060200', '060400', '060700', '061000', '061001', '070500', '120201', '120203', '120302', '120304', '150500', '150501', '150700', '150702'],
+    aoiKeywords: ['快餐厅', '休闲餐饮场所', '咖啡厅', '茶艺馆', '糕饼店', '甜品店', '便民商店/便利店', '超级市场', '综合市场', '特色商业街', '步行街', '物流速递', '商务写字楼', '商住两用楼宇', '住宅小区', '社区中心', '地铁站', '出入口', '公交车站', '普通公交站'],
+    aoiAliasKeywords: ['商圈', '商业街', '市场', '店', '档口', '外带'],
+    businessAreaKeywords: ['商圈', '广场', '步行街', '商业街', '市场', '美食街'],
+    poiTypeKeywords: ['餐饮服务', '购物服务', '生活服务', '交通设施服务'],
+  });
+  assignNativeHints(hints.市井烟火, [
+    '小推车', '摊位', '档口台面', '后厨窗口', '早餐摊', '夜市摊', '烤炉边', '菜摊台面',
+    '水果筐', '熟食柜台', '菜市场过道',
+  ], {
+    typecodePrefixes: ['0503', '0504', '0505', '0506', '0604', '0607', '0610'],
+    aoiTypecodePrefixes: ['050300', '050400', '050500', '050600', '060700', '060703', '060704', '060705', '060706', '061000', '061001'],
+    aoiKeywords: ['快餐厅', '休闲餐饮场所', '咖啡厅', '茶艺馆', '综合市场', '农副产品市场', '果品市场', '蔬菜市场', '水产海鲜市场', '特色商业街', '步行街'],
+    businessAreaKeywords: ['美食街', '步行街', '市场', '夜市'],
+  });
+  assignNativeHints(hints.市井烟火, ['面包柜', '面包出炉口'], {
+    typecodePrefixes: ['0508', '0509', '0504', '0610'],
+    aoiTypecodePrefixes: ['050800', '050900', '050400', '061000', '061001', '120201'],
+    aoiKeywords: ['糕饼店', '甜品店', '休闲餐饮场所', '特色商业街', '步行街', '商务写字楼'],
+    businessAreaKeywords: ['商圈', '步行街'],
+    poiTypeKeywords: ['餐饮服务', '糕饼店', '甜品店'],
+  });
+  assignNativeHints(hints.市井烟火, ['饮品封口台', '奶茶取杯台', '外摆椅', '咖啡外带口'], {
+    typecodePrefixes: ['0504', '0505', '0506', '0509', '0610', '15'],
+    aoiTypecodePrefixes: ['050400', '050500', '050600', '050900', '061000', '061001', '120201', '150500', '150501', '150700', '150702'],
+    aoiKeywords: ['休闲餐饮场所', '咖啡厅', '茶艺馆', '甜品店', '特色商业街', '步行街', '商务写字楼', '地铁站', '出入口', '公交车站', '普通公交站'],
+    businessAreaKeywords: ['商圈', '步行街', '美食街'],
+    poiTypeKeywords: ['餐饮服务', '咖啡厅', '茶艺馆', '甜品店'],
+  });
+  assignNativeHints(hints.市井烟火, ['便利店冰柜', '自动售货机', '快递柜', '快递车', '收货小推板车'], {
+    typecodePrefixes: ['0602', '0604', '0705', '1505', '1507'],
+    aoiTypecodePrefixes: ['060200', '060400', '070500', '070501', '120201', '120203', '120302', '120304', '141207', '150500', '150501', '150700', '150702'],
+    aoiKeywords: ['便民商店/便利店', '超级市场', '物流速递', '物流仓储场地', '商务写字楼', '商住两用楼宇', '住宅小区', '社区中心', '学校内部设施', '地铁站', '出入口', '公交车站', '普通公交站'],
+    aoiAliasKeywords: ['便利店', '超市', '快递', '站口'],
+    poiTypeKeywords: ['购物服务', '生活服务', '物流速递', '交通设施服务'],
+  });
+  assignNativeHints(hints.市井烟火, ['站口小店'], {
+    typecodePrefixes: ['06', '15'],
+    aoiTypecodePrefixes: ['060200', '061000', '061001', '150200', '150203', '150500', '150501', '150700', '150702'],
+    aoiKeywords: ['便民商店/便利店', '特色商业街', '步行街', '火车站', '出站口', '地铁站', '出入口', '公交车站', '普通公交站'],
+  });
+  assignNativeHints(hints.市井烟火, ['地铁口闸外小店'], {
+    typecodePrefixes: ['0602', '0610', '1505'],
+    aoiTypecodePrefixes: ['060200', '061000', '061001', '150500', '150501'],
+    aoiKeywords: ['便民商店/便利店', '特色商业街', '步行街', '地铁站', '出入口'],
+    poiTypeKeywords: ['购物服务', '交通设施服务'],
+  });
+
+  return hints;
+}
+
+function mergeUniqueFieldList(left, right) {
+  return uniqText([].concat(left || []).concat(right || []), 20);
+}
+
+function finalizePreferenceObjectLibrary(baseLibrary, nativeHints) {
+  return Object.keys(baseLibrary || {}).reduce((result, preference) => {
+    const config = baseLibrary[preference] || {};
+    const hintBucket = nativeHints && nativeHints[preference] ? nativeHints[preference] : {};
+    result[preference] = Object.assign({}, config, {
+      objects: Array.isArray(config.objects)
+        ? config.objects.map((item) => {
+          const hint = hintBucket[item.label] || {};
+          return Object.assign({}, item, {
+            sceneKeywords: mergeUniqueFieldList(item.sceneKeywords, hint.sceneKeywords),
+            typecodePrefixes: mergeUniqueFieldList(item.typecodePrefixes, hint.typecodePrefixes),
+            aoiTypecodePrefixes: mergeUniqueFieldList(item.aoiTypecodePrefixes, hint.aoiTypecodePrefixes),
+            aoiKeywords: mergeUniqueFieldList(item.aoiKeywords, hint.aoiKeywords),
+            aoiAliasKeywords: mergeUniqueFieldList(item.aoiAliasKeywords, hint.aoiAliasKeywords),
+            businessAreaKeywords: mergeUniqueFieldList(item.businessAreaKeywords, hint.businessAreaKeywords),
+            poiTypeKeywords: mergeUniqueFieldList(item.poiTypeKeywords, hint.poiTypeKeywords),
+            poiNameKeywords: mergeUniqueFieldList(item.poiNameKeywords, hint.poiNameKeywords),
+          });
+        })
+        : [],
+    });
+    return result;
+  }, {});
+}
+
+const PREFERENCE_OBJECT_NATIVE_HINTS = buildPreferenceObjectNativeHints();
+const PREFERENCE_OBJECT_LIBRARY = finalizePreferenceObjectLibrary(BASE_PREFERENCE_OBJECT_LIBRARY, PREFERENCE_OBJECT_NATIVE_HINTS);
+const GLOBAL_SAFE_OBJECT_GROUPS = Object.keys(PREFERENCE_OBJECT_LIBRARY).reduce((result, preference) => {
+  const config = PREFERENCE_OBJECT_LIBRARY[preference] || {};
+  result[preference] = uniqText(
+    (Array.isArray(config.objects) ? config.objects : [])
+      .filter((item) => item && item.level === 'safe')
+      .map((item) => item.label),
+    12
+  );
+  return result;
+}, {});
+
+function buildGlobalSafeObjects(event, limit = 12) {
+  const seed = getGenerationSeed(event);
+  const preferenceKeys = Object.keys(GLOBAL_SAFE_OBJECT_GROUPS);
+  const orderedKeys = rotateBySeed(preferenceKeys, seed, 'global-safe-groups');
+  const rotatedGroups = orderedKeys.map((key, index) => rotateBySeed(
+    GLOBAL_SAFE_OBJECT_GROUPS[key] || [],
+    seed,
+    `global-safe:${key}:${index}`
+  ));
+  const result = [];
+  let cursor = 0;
+  while (result.length < limit) {
+    let appended = false;
+    for (let index = 0; index < rotatedGroups.length; index += 1) {
+      const candidate = rotatedGroups[index][cursor];
+      if (candidate && !result.includes(candidate)) {
+        result.push(candidate);
+        appended = true;
+        if (result.length >= limit) {
+          break;
+        }
+      }
+    }
+    if (!appended) {
+      break;
+    }
+    cursor += 1;
+  }
+  return result;
+}
+
+const PREFERENCE_LEVEL_THRESHOLD = {
+  safe: 1.5,
+  'scene-bound': 3.5,
+  'hard-evidence': 5.5,
+};
+
+const WATER_OBJECT_LABELS = new Set([
+  '风吹动的水纹', '水面', '岸线', '倒影', '桥下阴影', '岸边石头', '水边台阶', '湖边步道',
+  '水生植物', '湿地边的草', '桥边水面', '荷叶', '水边栏杆外的景色', '芦苇边', '喷泉水雾', '小喷泉', '柳枝',
+]);
+
+const HISTORIC_STRONG_LABELS = new Set([
+  '门环', '牌坊', '拱门', '石栏杆', '城楼边线', '宫墙边沿', '牌楼立柱', '旧门钉',
+  '钟楼边线', '石狮底座', '城墙垛口', '校训碑',
+]);
+
+const MARKET_STRONG_LABELS = new Set([
+  '摊位', '档口台面', '后厨窗口', '早餐摊', '夜市摊', '烤炉边', '菜摊台面',
+]);
+
+const WATER_EVIDENCE_KEYWORDS = ['河', '湖', '水', '湿地', '滨水', '桥', '喷泉', '公园', '风景名胜', '公园广场', '景区'];
+const HISTORIC_EVIDENCE_KEYWORDS = ['故宫', '博物馆', '纪念馆', '展览馆', '美术馆', '图书馆', '文化宫', '档案馆', '寺', '祠', '牌坊', '门楼', '城楼', '城墙', '风景名胜', '学校', '校园'];
+const MARKET_EVIDENCE_KEYWORDS = ['餐饮', '快餐', '咖啡', '茶艺', '糕饼', '甜品', '便利店', '超市', '市场', '商业街', '步行街', '地铁站', '公交车站', '商场', '店', '物流'];
+const URBAN_CONFLICT_KEYWORDS = ['商务写字楼', '楼宇', '住宅区', '停车场', '地铁站', '公交车站', '物流速递', '生活服务', '购物服务', '商场', '商圈'];
+const QUIET_CONFLICT_KEYWORDS = ['博物馆', '图书馆', '美术馆', '展览馆', '纪念馆', '公园', '风景名胜', '学校', '住宅区'];
+
+function normalizeEnvironmentContext(event) {
+  const contextPacket = getContextPacket(event);
+  return {
+    season: String(event.season || contextPacket.season || '').trim(),
+    weather: String(event.weather || contextPacket.weather || '').trim(),
+  };
+}
+
+function includesAnyKeyword(values, keywords) {
+  if (!Array.isArray(values) || !Array.isArray(keywords) || !keywords.length) {
+    return false;
+  }
+  return values.some((value) => {
+    const text = String(value || '').trim();
+    return text && keywords.some((keyword) => keyword && text.includes(keyword));
+  });
+}
+
+function collectKeywordMatches(values, keywords, limit = 4) {
+  if (!Array.isArray(values) || !Array.isArray(keywords) || !keywords.length) {
+    return [];
+  }
+  const matches = [];
+  values.forEach((value) => {
+    const text = String(value || '').trim();
+    if (!text) {
+      return;
+    }
+    if (keywords.some((keyword) => keyword && text.includes(keyword)) && !matches.includes(text)) {
+      matches.push(text);
+    }
+  });
+  return matches.slice(0, limit);
+}
+
+function matchesTypecodePrefix(values, prefixes) {
+  if (!Array.isArray(values) || !Array.isArray(prefixes) || !prefixes.length) {
+    return false;
+  }
+  return values.some((value) => {
+    const text = String(value || '').trim();
+    return text && prefixes.some((prefix) => prefix && text.startsWith(String(prefix).trim()));
+  });
+}
+
+function collectTypecodeMatches(values, prefixes, limit = 4) {
+  if (!Array.isArray(values) || !Array.isArray(prefixes) || !prefixes.length) {
+    return [];
+  }
+  const matches = [];
+  values.forEach((value) => {
+    const text = String(value || '').trim();
+    if (!text) {
+      return;
+    }
+    if (prefixes.some((prefix) => prefix && text.startsWith(String(prefix).trim())) && !matches.includes(text)) {
+      matches.push(text);
+    }
+  });
+  return matches.slice(0, limit);
+}
+
+function isNativeTypecode(value) {
+  return /^\d{4,6}$/.test(String(value || '').trim());
+}
+
+function calculateLayerScore(groups, layerCap = Infinity) {
+  let score = 0;
+  const reasons = [];
+  (Array.isArray(groups) ? groups : []).forEach((group) => {
+    const matches = Array.isArray(group.matches) ? group.matches : [];
+    if (!matches.length) {
+      return;
+    }
+    const extraHitCount = Math.max(0, matches.length - 1);
+    let contribution = Number(group.base || 0) + (Math.min(extraHitCount, Number(group.extraCap || 0)) * Number(group.extra || 0));
+    if (Number.isFinite(Number(group.cap))) {
+      contribution = Math.min(contribution, Number(group.cap));
+    }
+    score += contribution;
+    if (group.reason) {
+      reasons.push(group.reason);
+    }
+  });
+  return {
+    score: Number(Math.min(score, layerCap).toFixed(2)),
+    reasons: uniqText(reasons, 8),
+  };
+}
+
+function buildEvidenceKeywordPool(evidence) {
+  return uniqText([
+    ...(evidence.poiNames || []),
+    ...(evidence.poiTypes || []),
+    ...(evidence.aoiTexts || []),
+    ...(evidence.nativeCategoryTexts || []),
+    ...(evidence.businessAreaTexts || []),
+    ...(evidence.contextTexts || []),
+  ], 40);
+}
+
+function scoreConflictPenalty(candidate, evidence) {
+  const evidenceTexts = buildEvidenceKeywordPool(evidence);
+  const penaltyReasons = [];
+  let penaltyScore = 0;
+  const hasWaterEvidence = includesAnyKeyword(evidenceTexts, WATER_EVIDENCE_KEYWORDS);
+  const hasHistoricEvidence = includesAnyKeyword(evidenceTexts, HISTORIC_EVIDENCE_KEYWORDS);
+  const hasMarketEvidence = includesAnyKeyword(evidenceTexts, MARKET_EVIDENCE_KEYWORDS);
+  const hasUrbanConflict = includesAnyKeyword(evidenceTexts, URBAN_CONFLICT_KEYWORDS);
+  const hasQuietConflict = includesAnyKeyword(evidenceTexts, QUIET_CONFLICT_KEYWORDS);
+
+  if (WATER_OBJECT_LABELS.has(candidate.label) && !hasWaterEvidence && hasUrbanConflict) {
+    penaltyScore += 2.5;
+    penaltyReasons.push('缺少水域或园景锚点');
+  }
+
+  if (HISTORIC_STRONG_LABELS.has(candidate.label) && !hasHistoricEvidence && hasUrbanConflict) {
+    penaltyScore += 3;
+    penaltyReasons.push('缺少明确人文历史锚点');
+  }
+
+  if (MARKET_STRONG_LABELS.has(candidate.label) && !hasMarketEvidence && hasQuietConflict) {
+    penaltyScore += 2.5;
+    penaltyReasons.push('缺少明确市井经营锚点');
+  }
+
+  if (Array.isArray(candidate.timePhases) && candidate.timePhases.length && evidence.timePhase && !candidate.timePhases.includes(evidence.timePhase)) {
+    penaltyScore += 1.5;
+    penaltyReasons.push('当前时间段不匹配');
+  }
+  if (Array.isArray(candidate.seasons) && candidate.seasons.length && evidence.season && !candidate.seasons.includes(evidence.season)) {
+    penaltyScore += 1;
+    penaltyReasons.push('当前季节不匹配');
+  }
+  if (Array.isArray(candidate.weathers) && candidate.weathers.length && evidence.weather && !candidate.weathers.includes(evidence.weather)) {
+    penaltyScore += 1;
+    penaltyReasons.push('当前天气不匹配');
+  }
+
+  return {
+    penaltyScore: Number(penaltyScore.toFixed(2)),
+    penaltyReasons: uniqText(penaltyReasons, 6),
+  };
+}
+
+function scorePreferenceObjectCandidate(candidate, evidence) {
+  const threshold = PREFERENCE_LEVEL_THRESHOLD[candidate.level] || 3;
+  let score = candidate.level === 'safe' ? 1 : 0;
+  const baseScore = candidate.level === 'safe' ? 0.5 : 0;
+  const reasons = [];
+  const nativeCategoryPrefixes = uniqText(
+    Array.isArray(candidate.typecodePrefixes) ? candidate.typecodePrefixes : [],
+    10
+  );
+  const matchedNativeCategoryCodes = collectTypecodeMatches(evidence.nativeCategoryCodes, nativeCategoryPrefixes);
+  const matchedNativeCategoryTexts = collectKeywordMatches(evidence.nativeCategoryTexts, candidate.sceneKeywords || []);
+  const matchedContextTexts = collectKeywordMatches(evidence.contextTexts, candidate.sceneKeywords || []);
+  const matchedPoiTypes = collectKeywordMatches(evidence.poiTypes, candidate.poiTypeKeywords || []);
+  const matchedPoiTypecodes = collectTypecodeMatches(evidence.poiTypecodes, candidate.typecodePrefixes || []);
+  const matchedPoiNames = collectKeywordMatches(evidence.poiNames, candidate.poiNameKeywords || []);
+  const matchedAoiTypecodes = collectTypecodeMatches(evidence.aoiTypecodes, candidate.aoiTypecodePrefixes || []);
+  const matchedAoiTexts = uniqText([]
+    .concat(collectKeywordMatches(evidence.aoiTexts, candidate.aoiKeywords || []))
+    .concat(collectKeywordMatches(evidence.aoiTexts, candidate.aoiAliasKeywords || [])), 4);
+  const matchedBusinessAreas = collectKeywordMatches(evidence.businessAreaTexts, candidate.businessAreaKeywords || []);
+  if (matchedNativeCategoryCodes.length) {
+    score += 3;
+    reasons.push('命中高德分类编码');
+  }
+  if (matchedNativeCategoryTexts.length) {
+    score += 2;
+    reasons.push('命中高德分类文本');
+  }
+  if (matchedContextTexts.length) {
+    score += 1;
+    reasons.push('命中地点语义');
+  }
+  if (matchedPoiTypes.length) {
+    score += 3;
+    reasons.push('命中POI类型');
+  }
+  if (matchedPoiTypecodes.length) {
+    score += 3;
+    reasons.push('命中POI分类编码');
+  }
+  if (matchedPoiNames.length) {
+    score += 4;
+    reasons.push('命中POI名称');
+  }
+  if (matchedAoiTypecodes.length) {
+    score += 3;
+    reasons.push('命中AOI类型编码');
+  }
+  if (matchedAoiTexts.length) {
+    score += 3;
+    reasons.push('命中AOI');
+  }
+  if (matchedBusinessAreas.length) {
+    score += 1;
+    reasons.push('命中商圈');
+  }
+  if (Array.isArray(candidate.timePhases) && candidate.timePhases.includes(evidence.timePhase)) {
+    score += 1;
+    reasons.push('命中时间段');
+  }
+  if (Array.isArray(candidate.seasons) && candidate.seasons.includes(evidence.season)) {
+    score += 1;
+    reasons.push('命中季节');
+  }
+  if (Array.isArray(candidate.weathers) && candidate.weathers.includes(evidence.weather)) {
+    score += 1;
+    reasons.push('命中天气');
+  }
+  const hardAnchorLayer = calculateLayerScore([
+    { matches: matchedPoiNames, base: 4, extra: 0.5, extraCap: 2, cap: 5, reason: '命中POI名称' },
+    { matches: matchedAoiTexts, base: 4, extra: 0.5, extraCap: 2, cap: 5, reason: '命中AOI' },
+  ], 8);
+  const structuralLayer = calculateLayerScore([
+    { matches: matchedPoiTypecodes, base: 2.5, extra: 0.5, extraCap: 2, cap: 3.5, reason: '命中POI分类编码' },
+    { matches: matchedAoiTypecodes, base: 2.5, extra: 0.5, extraCap: 2, cap: 3.5, reason: '命中AOI类型编码' },
+    { matches: matchedNativeCategoryCodes, base: 1.5, extra: 0.5, extraCap: 1, cap: 2, reason: '命中高德分类编码' },
+    { matches: matchedPoiTypes, base: 1.5, extra: 0.5, extraCap: 2, cap: 2.5, reason: '命中POI类型' },
+    { matches: matchedNativeCategoryTexts, base: 1, extra: 0.25, extraCap: 2, cap: 1.5, reason: '命中高德分类文本' },
+  ], 6);
+  const semanticLayer = calculateLayerScore([
+    { matches: matchedContextTexts, base: 0.75, extra: 0.25, extraCap: 2, cap: 1.25, reason: '命中地点语义' },
+    { matches: matchedBusinessAreas, base: 0.75, extra: 0.25, extraCap: 1, cap: 1, reason: '命中商圈' },
+  ], 2);
+  const timeLayer = calculateLayerScore([
+    { matches: Array.isArray(candidate.timePhases) && candidate.timePhases.includes(evidence.timePhase) ? [evidence.timePhase] : [], base: 0.75, reason: '命中时间段' },
+    { matches: Array.isArray(candidate.seasons) && candidate.seasons.includes(evidence.season) ? [evidence.season] : [], base: 0.5, reason: '命中季节' },
+    { matches: Array.isArray(candidate.weathers) && candidate.weathers.includes(evidence.weather) ? [evidence.weather] : [], base: 0.5, reason: '命中天气' },
+  ], 1.75);
+  const conflictPenalty = scoreConflictPenalty(candidate, evidence);
+  score = Number((
+    baseScore
+    + hardAnchorLayer.score
+    + structuralLayer.score
+    + semanticLayer.score
+    + timeLayer.score
+    - conflictPenalty.penaltyScore
+  ).toFixed(2));
+  const finalReasons = uniqText([
+    ...hardAnchorLayer.reasons,
+    ...structuralLayer.reasons,
+    ...semanticLayer.reasons,
+    ...timeLayer.reasons,
+    ...conflictPenalty.penaltyReasons.map((reason) => `冲突扣分:${reason}`),
+  ], 12);
+  const scoreBreakdown = {
+    baseScore,
+    hardAnchorScore: hardAnchorLayer.score,
+    structuralScore: structuralLayer.score,
+    semanticScore: semanticLayer.score,
+    timeScore: timeLayer.score,
+    penaltyScore: conflictPenalty.penaltyScore,
+    finalScore: score,
+  };
+  const hasSpecificEvidence = hardAnchorLayer.score > 0 || structuralLayer.score >= 2.5;
+  const passesHardEvidenceGate = candidate.level !== 'hard-evidence' || hasSpecificEvidence;
+  return {
+    label: candidate.label,
+    level: candidate.level,
+    score,
+    threshold,
+    available: score >= threshold && passesHardEvidenceGate,
+    reasons: finalReasons,
+    passesHardEvidenceGate,
+    matchedNativeCategoryCodes,
+    matchedNativeCategoryTexts,
+    matchedContextTexts,
+    matchedPoiTypes,
+    matchedPoiTypecodes,
+    matchedPoiNames,
+    matchedAoiTypecodes,
+    matchedAoiTexts,
+    matchedBusinessAreas,
+    scoreBreakdown,
+    penalties: conflictPenalty.penaltyReasons,
+  };
+}
+
+function formatPreferenceObjectEvidence(item) {
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  const parts = [];
+  if (item.matchedNativeCategoryTexts && item.matchedNativeCategoryTexts.length) {
+    parts.push(`高德类型=${item.matchedNativeCategoryTexts.join('、')}`);
+  }
+  if (item.matchedAoiTexts && item.matchedAoiTexts.length) {
+    parts.push(`AOI=${item.matchedAoiTexts.join('、')}`);
+  }
+  if (item.matchedContextTexts && item.matchedContextTexts.length) {
+    parts.push(`地点语义=${item.matchedContextTexts.join('、')}`);
+  }
+  if (item.matchedBusinessAreas && item.matchedBusinessAreas.length) {
+    parts.push(`商圈=${item.matchedBusinessAreas.join('、')}`);
+  }
+  if (item.matchedPoiTypes && item.matchedPoiTypes.length) {
+    parts.push(`POI类型=${item.matchedPoiTypes.join('、')}`);
+  }
+  if (item.matchedPoiNames && item.matchedPoiNames.length) {
+    parts.push(`POI=${item.matchedPoiNames.join('、')}`);
+  }
+  return parts.join('；');
+}
+
+function buildPreferenceObjectSummary(item) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+  const evidenceParts = [];
+  if (item.matchedPoiNames && item.matchedPoiNames.length) {
+    evidenceParts.push(`附近可对照 ${item.matchedPoiNames.slice(0, 2).join('、')}`);
+  }
+  if (item.matchedAoiTexts && item.matchedAoiTexts.length) {
+    evidenceParts.push(`AOI 更接近 ${item.matchedAoiTexts.slice(0, 2).join('、')}`);
+  }
+  if (item.matchedBusinessAreas && item.matchedBusinessAreas.length) {
+    evidenceParts.push(`商圈线索有 ${item.matchedBusinessAreas.slice(0, 2).join('、')}`);
+  }
+  if (item.matchedPoiTypes && item.matchedPoiTypes.length) {
+    evidenceParts.push(`周边类型像 ${item.matchedPoiTypes.slice(0, 2).join('、')}`);
+  }
+  if (item.matchedNativeCategoryTexts && item.matchedNativeCategoryTexts.length) {
+    evidenceParts.push(`整体语境偏 ${item.matchedNativeCategoryTexts.slice(0, 2).join('、')}`);
+  }
+  if (item.matchedContextTexts && item.matchedContextTexts.length) {
+    evidenceParts.push(`地点提到 ${item.matchedContextTexts.slice(0, 2).join('、')}`);
+  }
+  return {
+    label: item.label,
+    level: item.level,
+    summary: evidenceParts.slice(0, 3).join('；') || '属于当前场景里更稳妥的可用对象',
+  };
+}
+
+function chooseTaskPlaceLabel(locationSignals, nearbySummary) {
+  const preferred = [
+    ...(nearbySummary.poiNames || []),
+    nearbySummary.primaryAoiName,
+    locationSignals.locationName,
+    locationSignals.locationContext,
+    locationSignals.sceneTag,
+  ].map((item) => String(item || '').trim()).filter(Boolean);
+  return preferred.find((item) => (
+    item
+    && item !== '当前位置'
+    && item !== '城市街道'
+    && item !== nearbySummary.dominantScene
+  )) || '这片地方';
+}
+
+function buildPreferenceContext(event) {
+  const preference = normalizePreference(event);
+  const nearbySummary = normalizeNearbySummary(event);
+  const locationSignals = normalizeLocationSignals(event);
+  const timeContext = normalizeTimeContext(event);
+  const environment = normalizeEnvironmentContext(event);
+  const library = preference && PREFERENCE_OBJECT_LIBRARY[preference]
+    ? PREFERENCE_OBJECT_LIBRARY[preference]
+    : null;
+  if (!library) {
+    return {
+      preference,
+      availableObjects: [],
+      blockedObjects: [],
+      safeObjects: buildGlobalSafeObjects(event, 12),
+      evidenceNotes: [],
+      objectDetails: [],
+      objectHints: [],
+      avoidHints: [],
+      instruction: '',
+    };
+  }
+  const evidence = {
+    nativeCategoryCodes: uniqText([
+      nearbySummary.dominantSceneId,
+      nearbySummary.primaryAoiTypecode,
+      ...nearbySummary.poiTypecodes,
+      ...nearbySummary.sceneCandidates.map((item) => item && item.id).filter(Boolean),
+    ].filter((item) => isNativeTypecode(item)), 12),
+    nativeCategoryTexts: uniqText([
+      nearbySummary.dominantScene,
+      nearbySummary.primaryAoiType,
+      ...nearbySummary.sceneCandidates.map((item) => item && item.label).filter(Boolean),
+      ...nearbySummary.poiTypes,
+    ], 12),
+    contextTexts: uniqText([
+      nearbySummary.primaryAoiName,
+      ...nearbySummary.aoiNames,
+      locationSignals.sceneTag,
+      locationSignals.locationContext,
+      locationSignals.locationName,
+    ], 12),
+    poiNames: uniqText(nearbySummary.poiNames || [], 8),
+    poiTypes: uniqText(nearbySummary.poiTypes || [], 6),
+    poiTypecodes: uniqText(nearbySummary.poiTypecodes || [], 12),
+    aoiTypecodes: uniqText(
+      []
+        .concat(nearbySummary.primaryAoiTypecode || [])
+        .concat(nearbySummary.aoiTypecodes || [])
+        .filter((item) => isNativeTypecode(item)),
+      8
+    ),
+    aoiTexts: uniqText([nearbySummary.primaryAoiName, nearbySummary.primaryAoiType].concat(nearbySummary.aoiNames || []), 8),
+    businessAreaTexts: uniqText(nearbySummary.businessAreaNames || [], 6),
+    timePhase: timeContext.timePhase || '',
+    season: environment.season,
+    weather: environment.weather,
+  };
+  const scoredObjects = (library.objects || [])
+    .map((candidate) => scorePreferenceObjectCandidate(candidate, evidence))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return String(left.label || '').localeCompare(String(right.label || ''), 'zh-Hans-CN');
+    });
+  const availableCandidates = scoredObjects
+    .filter((item) => item.available);
+  const preferredAvailableCandidates = availableCandidates
+    .slice()
+    .sort((left, right) => {
+      const levelOrder = {
+        'hard-evidence': 3,
+        'scene-bound': 2,
+        safe: 1,
+      };
+      const leftOrder = levelOrder[left.level] || 0;
+      const rightOrder = levelOrder[right.level] || 0;
+      if (rightOrder !== leftOrder) {
+        return rightOrder - leftOrder;
+      }
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return String(left.label || '').localeCompare(String(right.label || ''), 'zh-Hans-CN');
+    });
+  const availableObjects = preferredAvailableCandidates
+    .map((item) => item.label);
+  const blockedObjects = scoredObjects
+    .filter((item) => !item.available)
+    .map((item) => item.label)
+    .slice(0, 6);
+  const safeObjects = availableCandidates
+    .filter((item) => item.level === 'safe')
+    .map((item) => item.label)
+    .slice(0, 6);
+  const availableDetails = preferredAvailableCandidates
+    .slice(0, 6);
+  const evidenceNotes = availableDetails
+    .slice(0, 4)
+    .map((item) => `${item.label}：${formatPreferenceObjectEvidence(item) || item.reasons.join('、') || '基础安全对象'}`);
+  const objectDetails = availableDetails
+    .slice(0, 3)
+    .map((item) => buildPreferenceObjectSummary(item))
+    .filter(Boolean);
+  return {
+    preference,
+    availableObjects,
+    blockedObjects,
+    safeObjects,
+    evidenceNotes,
+    objectDetails,
+    objectHints: availableObjects,
+    avoidHints: uniqText(library.avoid || [], 5),
+    instruction: String(library.instruction || '').trim(),
+  };
+}
+
 function buildCompactValidationContext(promptContext) {
   const context = promptContext && typeof promptContext === 'object' ? promptContext : {};
   const locationSignals = context.locationSignals && typeof context.locationSignals === 'object'
@@ -364,7 +1279,6 @@ function buildCompactValidationContext(promptContext) {
     timeHints: uniqText(timeContext.timeHints || [], 3),
     nearbyScene: nearbySummary.dominantScene || '',
     poiNames: uniqText(nearbySummary.poiNames || [], 3),
-    activityHints: uniqText(nearbySummary.activityHints || [], 2),
   };
 }
 
@@ -743,38 +1657,49 @@ function buildTaskSkeletonHints(categories, timePhase, walkMode, options = {}) {
   const recentHistory = normalizeRecentMissionHistory(options.event || {}, 8);
   const sharedSkeletons = combined
     ? [
-        '寻找：先找到一个同时呼应多个方向的对象或位置',
-        '比较：比较同一方向在两处位置上的差异',
-        '停留：在同一处多停20到30秒，看它如何变化',
-        '回头看：走过以后再回头看一次，判断前后感受有什么变化',
-        '换个位置：换一个站位或高度，再看两个方向怎样重新叠在一起',
-        '先猜再确认：先做一个判断，再去找现场证据支持或推翻它',
-        '倒推原因：先从结果感受出发，再往回想它为什么会在这里成立',
+        '找交集：先找到一个同时能带出两个方向的对象、位置或瞬间',
+        '分两层看：先抓第一个方向，再补看第二个方向怎么叠上来',
+        '比较两处：比较同一方向在两处地方怎样分别呼应另一个方向',
+        '停一下等变化：在一个点多停20到30秒，看两个方向怎样先后出现',
+        '换个位置：往前后左右挪一步，看两个方向会不会重新叠在一起',
+        '回头再看：走过以后回头确认，哪个方向是你刚才差点漏掉的',
+        '先猜再确认：先猜这两个方向会在这里怎么碰上，再找现场证据',
+        '顺着线索走：顺着一个方向的线索往前走，看看它什么时候带出另一个方向',
       ]
     : [
-        '寻找：先找到一个明确对象或位置',
-        '比较：比较两处细节的差异',
-        '停留：在同一处多停20到30秒',
-        '回头看：走过以后再回头看一次，判断哪个细节最留下来',
-        '换个位置：换一个站位或高度，再看对象关系是否变化',
+        '找一处：先找到一个明确对象或位置，不要一上来就写抽象感受',
+        '比较两处：比较两处细节到底哪里不一样',
+        '停一下：在同一处多停20到30秒，看有没有第二层线索冒出来',
+        '回头看：走过以后回头再看一次，确认最留下来的那个细节',
+        '换个位置：换一个站位或高度，再看对象会不会变得更明显',
         '先猜再确认：先做一个判断，再去找现场证据支持或推翻它',
-        '倒推原因：先从一个结果感受出发，再往回想它为什么出现在这里',
-        '顺着找：顺着一条线索往前走，看看它会把你带到哪里',
+        '顺着找：顺着一条线索往前走，看看它把你带到哪里',
+        '只盯一个点：缩小范围，只看一个角落、一个物件或一小段路',
       ];
   const singleThemeSkeletonMap = {
     形状: [
-      '找一处：先抓住一个具体结构、边角或轮廓转折',
-      '绕着看：围着同一个对象看它的外形怎么变',
-      '换个角度：退后或走近，再看线条怎样变化',
-      '从远到近：先看整体外形，再贴近看局部',
-      '贴近细部：只盯一个边角、接缝或转折',
+      '看方圆：先找一个最容易说出是方是圆的对象',
+      '看直弯：找栏杆、屋檐、路沿或墙边，看它更像直线还是弧线',
+      '看高低宽窄：比较两个对象谁更高、谁更矮、谁更宽、谁更窄',
+      '看尖圆：找一个尖角或圆角最明显的位置',
+      '看轮廓：退后一点，看门洞、窗框、招牌边框或屋檐外形',
+      '看边角：只盯一个转角、拐角或边沿，看它是利落还是圆缓',
+      '看框口：找门洞、窗框、栏杆格这类带框的形',
+      '绕着看：围着同一个对象走半圈，看它的形有没有变',
+      '近远对照：先远看整体，再走近看局部哪里最不一样',
+      '找重复：找一组重复出现的形，看它们排得整不整齐',
     ],
     色彩: [
-      '找一组颜色：先找到最能代表此刻的一组颜色',
-      '比较色差：比较同一对象在两处位置的颜色差异',
-      '看颜色怎么变：站定之后看颜色怎样随着位置或光线改变',
-      '找最突出的那一块：只抓住最先跳出来的色块',
-      '顺着颜色再找下一处：让一种颜色带你走到下一处线索',
+      '找一组颜色：先找到最能代表此刻的一组颜色搭配',
+      '找最跳的一块：先抓住第一眼最跳出来的色块',
+      '比较色差：比较同一类对象在两处位置的颜色差异',
+      '看明暗：站定不动，只看亮处和暗处怎样分开',
+      '看新旧：找一处颜色最能看出新旧痕迹的地方',
+      '看材质色：比较同一种颜色落在不同材质上有什么差别',
+      '顺着一种颜色走：盯住一种颜色，看看它会把你带到哪里',
+      '找反差：找一处颜色反差最大的地方',
+      '看颜色怎么变：走近或走远，再看颜色有没有变得更明显',
+      '只看边上的颜色：别看主体，专看边缘、角落或背景色',
     ],
     声音: [
       '停一下听：先停下来，只抓离你最近的一层声音',
@@ -782,6 +1707,11 @@ function buildTaskSkeletonHints(categories, timePhase, walkMode, options = {}) {
       '顺着声音走几步：跟着一条声音线索移动一小段',
       '等下一次出现：等同一种声音再出现一次',
       '回头再听：走过以后回头听，判断刚才漏掉了什么',
+      '分前后景：先分清近处声和远处声谁更占上风',
+      '找触发点：听一个声音是在什么动作之后出现的',
+      '换个位置听：挪一步，再听同一个声音有没有变化',
+      '找停留声：找一种会让人停一下的声音',
+      '找节奏变化：听某段路上声音什么时候突然变密或变稀',
     ],
     数字: [
       '先猜再确认：先猜一个数字线索的意思，再走近确认',
@@ -789,6 +1719,11 @@ function buildTaskSkeletonHints(categories, timePhase, walkMode, options = {}) {
       '核对两个线索：拿两个数字提示互相核对',
       '判断哪个更像提示：找出最像给人指路的数字信息',
       '找一个会影响行动的数字：抓住一个会让你决定往哪走的数字',
+      '找顺序：找一组有前后顺序的数字或编号',
+      '找变体：找一个不是标准写法、但你能认出来的数字',
+      '找提示牌：找一个数字信息最像是在提醒人做什么',
+      '找重复数字：找一个重复出现的数字模式',
+      '比较两个数字：看两个数字线索谁更直接影响判断',
     ],
     气味: [
       '闻到后找来源：先确认一股味道，再找它从哪里来',
@@ -796,22 +1731,31 @@ function buildTaskSkeletonHints(categories, timePhase, walkMode, options = {}) {
       '等风过来：先停一会，等味道自己过来',
       '比较前后变化：比较同一条路上前后两处气味差异',
       '找最容易停下的一处：找一处会让你因为味道停一下的地方',
+      '找最先闻到的那一下：刚冒出来的那股味道最像从哪里来',
+      '找变强点：往前走几步，判断味道在哪一小段突然变强',
+      '找变淡点：退一步，看看味道从哪里开始散掉',
+      '比较两股味：分清同一处是不是混着两种味道',
+      '找残留味：找一种人走了、东西收了但味道还在的线索',
     ],
   };
   const skeletons = suppressThemeSpecificSkeletons
     ? [...(singleThemeSkeletonMap[normalizedCategories[0]] || sharedSkeletons)]
     : [...sharedSkeletons];
   if (timePhase === '黄昏' || timePhase === '夜间') {
-    skeletons.push('等待：等一个变化发生，比如亮灯、人流收拢、声音变密');
+    skeletons.push('等亮起来：等灯光、招牌或窗口亮起来后再看一次');
+    skeletons.push('看收拢：等人流、声音或停留点慢慢收拢出来');
   }
   if (timePhase === '清晨' || timePhase === '上午') {
-    skeletons.push('看开场：抓住刚开始出现的变化，比如开门、上班、第一波停留');
+    skeletons.push('看开场：抓住刚开始出现的变化，比如开门、摆摊、第一波穿行');
+    skeletons.push('看刚启动：留意这片地方从静到动的那一下');
   }
   if (timePhase === '午后') {
     skeletons.push('看人怎么绕：观察人们为了光线、阴影、热度而怎样改变停留和路线');
+    skeletons.push('找避让：看人们会为了晒、热、亮、挤而绕开什么');
   }
   if (timePhase === '凌晨') {
     skeletons.push('看谁还在：找还在继续工作的线索，看它如何维持这片地方的运转');
+    skeletons.push('找没停下的痕迹：看哪些动作到了这个时间还在继续');
   }
   if (!suppressThemeSpecificSkeletons && (normalizedCategories.includes('声音') || normalizedCategories.includes('气味'))) {
     skeletons.push(combined ? '判断来源：判断声音或气味与另一个方向如何相遇' : '判断来源：判断声音或气味从哪里来');
@@ -832,7 +1776,7 @@ function buildTaskSkeletonHints(categories, timePhase, walkMode, options = {}) {
     skeletons.push('分前后听：先分清前景声和背景声，再判断谁在主导你的注意力');
   }
   if (!suppressThemeSpecificSkeletons && normalizedCategories.includes('气味')) {
-    skeletons.push('找边界：在气味变强或变弱的地方停一下，判断它从哪里开始变化');
+    skeletons.push('找边界：在气味变强或变弱的地方停一下，看它从哪里开始变化');
   }
   const orderedBase = rotateBySeed(uniqText(skeletons, 12), seed, `skeleton:${normalizedCategories.join('|')}:${timePhase}:${combined ? 'combined' : 'single'}`);
   const ordered = suppressThemeSpecificSkeletons
@@ -845,6 +1789,7 @@ function buildPromptContextBlock(event, options = {}) {
   const locationSignals = normalizeLocationSignals(event);
   const timeContext = normalizeTimeContext(event);
   const nearbySummary = normalizeNearbySummary(event);
+  const preferenceContext = buildPreferenceContext(event);
   const skeletonHints = buildTaskSkeletonHints(
     options.categories || [],
     timeContext.timePhase,
@@ -858,17 +1803,27 @@ function buildPromptContextBlock(event, options = {}) {
     `时间段：${timeContext.timePhase || '未提供'}`,
     `日期类型：${timeContext.weekdayType || '未提供'}`,
     `时间线索：${timeContext.timeHints.length ? timeContext.timeHints.join('、') : '未提供'}`,
-    `附近场景：${nearbySummary.dominantScene || '未提供'}`,
-    `附近候选场景：${nearbySummary.sceneCandidates.length ? nearbySummary.sceneCandidates.map((item) => item.label || item.id).filter(Boolean).join('、') : '未提供'}`,
-    `附近类型：${nearbySummary.poiTypes.length ? nearbySummary.poiTypes.join('、') : '未提供'}`,
+    `偏好：${preferenceContext.preference || '未提供'}`,
+    `可用偏好对象：${preferenceContext.availableObjects.length ? preferenceContext.availableObjects.join('、') : '未提供'}`,
+    `不建议偏好对象：${preferenceContext.blockedObjects.length ? preferenceContext.blockedObjects.join('、') : '未提供'}`,
+    `保守偏好对象：${preferenceContext.safeObjects && preferenceContext.safeObjects.length ? preferenceContext.safeObjects.join('、') : '未提供'}`,
+    `偏好对象摘要：${preferenceContext.objectDetails && preferenceContext.objectDetails.length ? preferenceContext.objectDetails.map((item) => `${item.label}[${item.summary}]`).join('；') : '未提供'}`,
+    `偏好约束：${preferenceContext.instruction || '未提供'}`,
+    `高德原生主分类：${nearbySummary.dominantScene || '未提供'}`,
+    `高德原生候选分类：${nearbySummary.sceneCandidates.length ? nearbySummary.sceneCandidates.map((item) => item.label || item.id).filter(Boolean).join('、') : '未提供'}`,
+    `高德类型文本：${nearbySummary.poiTypes.length ? nearbySummary.poiTypes.join('、') : '未提供'}`,
+    `主 AOI：${nearbySummary.primaryAoiName || nearbySummary.primaryAoiType || '未提供'}`,
+    `AOI 列表：${nearbySummary.aoiNames.length ? nearbySummary.aoiNames.join('、') : '未提供'}`,
+    `热点商圈：${nearbySummary.businessAreaNames.length ? nearbySummary.businessAreaNames.join('、') : '未提供'}`,
     `附近 POI：${nearbySummary.poiNames.length ? nearbySummary.poiNames.join('、') : '未提供'}`,
-    `附近活动线索：${nearbySummary.activityHints.length ? nearbySummary.activityHints.join('、') : '未提供'}`,
+    '偏好对象验证只依据高德原生分类、AOI、商圈、POI 文本和时间环境，不依据旧自定义场景桶。',
     `优先任务骨架：${skeletonHints.join('；')}`,
   ];
   return {
     locationSignals,
     timeContext,
     nearbySummary,
+    preferenceContext,
     skeletonHints,
     text: lines.join('\n'),
   };
@@ -878,53 +1833,50 @@ function buildAnchoredMission(event, options = {}) {
   const timeContext = normalizeTimeContext(event);
   const nearbySummary = normalizeNearbySummary(event);
   const locationSignals = normalizeLocationSignals(event);
-  const scene = nearbySummary.dominantScene || locationSignals.locationContext || locationSignals.locationName || '附近';
+  const preferenceContext = buildPreferenceContext(event);
+  const scene = chooseTaskPlaceLabel(locationSignals, nearbySummary);
   const nearbyAnchor = nearbySummary.poiNames[0] || '';
   const focusPool = []
-    .concat(nearbySummary.activityHints || [])
     .concat(timeContext.timeHints || [])
     .concat(nearbySummary.poiNames || [])
+    .concat(preferenceContext.objectHints || [])
     .filter(Boolean);
   const focus = focusPool.length ? focusPool[Math.floor(Math.random() * Math.min(focusPool.length, 4))] : '';
+  const preferredObject = preferenceContext.objectHints.length
+    ? preferenceContext.objectHints[Math.floor(Math.random() * Math.min(preferenceContext.objectHints.length, 5))]
+    : '';
   const timeLabel = timeContext.timePhase || '此刻';
   const categories = normalizeCategoryList(options.categories || []);
-  const categorySubjectMap = {
-    形状: '贴近形状主题',
-    色彩: '贴近色彩主题',
-    声音: '贴近声音主题',
-    数字: '贴近数字主题',
-    气味: '贴近气味主题',
-  };
   const subject = options.combined && categories.length
-    ? `同时呼应${categories.join('和')}`
+    ? `同时带出${categories.join('和')}`
     : categories.length
-      ? (categorySubjectMap[categories[0]] || `贴近${categories[0]}主题`)
-      : '最贴近此刻';
+      ? `最能带出${categories[0]}感`
+      : '最能带出此刻感受';
   const anchorTemplates = nearbyAnchor
     ? [
-        `先把目光落在${nearbyAnchor}附近，找一处${subject}的细节`,
-        `从${nearbyAnchor}开始看，留意一处${subject}的地方`,
-        `把${nearbyAnchor}当入口，找一处${subject}的细节`,
+        `先把目光落在${nearbyAnchor}${preferredObject ? `旁边的${preferredObject}` : '附近'}，找一处${subject}的细节`,
+        `从${nearbyAnchor}开始看，留意一处${subject}的${preferredObject || '地方'}`,
+        `把${nearbyAnchor}当入口，找一处${subject}的${preferredObject || '细节'}`,
       ]
     : [];
   const templates = focus
     ? [
-        `在${scene}找一处${subject}的细节，留意${focus}`,
-        `${timeLabel}里先在${scene}停一下，找一处${subject}的细节，看看${focus}是怎么出现的`,
-        `沿着${scene}慢慢走，找到一处${subject}的地方，注意${focus}`,
-        `别急着经过${scene}，找一处${subject}的细节，留意${focus}`,
-        `绕着${scene}看一圈，找一处${subject}的细节，留意${focus}`,
-        `在${scene}先慢半步，看看哪一处${subject}的地方最先被${focus}带出来`,
-        `${timeLabel}的${scene}里，找一处${subject}的细节，判断${focus}为什么会落在这里`,
-        nearbyAnchor ? `从${nearbyAnchor}往外看，找一处${subject}的细节，留意${focus}` : '',
+        `在${scene}先看${preferredObject || focus}，找一处${subject}的细节`,
+        `${timeLabel}里先在${scene}停一下，看看哪一处${preferredObject || focus} ${subject}`.replace(/\s+/g, ''),
+        `沿着${scene}慢慢走，找到一处${preferredObject || focus}，留意它怎样带出${subject}`,
+        `别急着经过${scene}，先盯住${preferredObject || focus}，找一处${subject}的细节`,
+        `绕着${scene}看一圈，找一处${preferredObject || focus}，留意${focus}`,
+        `在${scene}先慢半步，看看哪一处${preferredObject || focus}最先把${subject}带出来`,
+        `${timeLabel}的${scene}里，找一处${preferredObject || focus}，看它怎么把${subject}带出来`,
+        nearbyAnchor ? `从${nearbyAnchor}往外看，先看${preferredObject || focus}，找一处${subject}的细节` : '',
       ]
     : [
-        `在${scene}找一处${subject}的细节`,
-        `${timeLabel}里先在${scene}停一下，找一处${subject}的细节`,
-        `沿着${scene}慢慢走，找到一处${subject}的细节`,
-        `别急着穿过${scene}，先找一处${subject}的地方`,
-        `${timeLabel}的${scene}里，找一处最能代表此刻的${subject}细节`,
-        `${scene}里先选一个停下来的点，再找一处${subject}的细节`,
+        `在${scene}${preferredObject ? `先看${preferredObject}，` : ''}找一处${subject}的细节`,
+        `${timeLabel}里先在${scene}停一下，${preferredObject ? `看${preferredObject}` : `找一处${subject}的细节`}`,
+        `沿着${scene}慢慢走，${preferredObject ? `找到一处${preferredObject}` : `找到一处${subject}的细节`}`,
+        `别急着穿过${scene}，先找一处${preferredObject || subject}`,
+        `${timeLabel}的${scene}里，找一处最能代表此刻的${preferredObject || subject}细节`,
+        `${scene}里先选一个停下来的点，再看${preferredObject || `一处${subject}的细节`}`,
       ];
   const basePool = uniqText([].concat(anchorTemplates, templates).filter(Boolean), 16);
   const seed = getGenerationSeed(event);
@@ -945,7 +1897,6 @@ function containsContextAnchor(text, event) {
     ...timeContext.timeHints,
     nearbySummary.dominantScene,
     ...nearbySummary.poiNames,
-    ...nearbySummary.activityHints,
   ].filter(Boolean);
   return keywords.some((keyword) => keyword && mission.includes(keyword));
 }
@@ -1073,9 +2024,11 @@ module.exports = {
   getContextPacket,
   normalizeLocationSignals,
   normalizeTimeContext,
+  normalizePreference,
   normalizeNearbySummary,
   normalizeRecentMissionHistory,
   normalizeCategoryList,
+  buildPreferenceContext,
   buildTaskSkeletonHints,
   buildPromptContextBlock,
   cleanText,
@@ -1087,6 +2040,7 @@ module.exports = {
   buildSecondaryValidationPrompt,
   buildSecondaryValidationRepairPrompt,
   buildThemeRewritePrompt,
+  chooseTaskPlaceLabel,
   buildAnchoredMission,
   containsContextAnchor,
   finalizeTheme,

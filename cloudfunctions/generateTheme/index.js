@@ -1,21 +1,49 @@
 const cloud = require('wx-server-sdk');
-const { chatJson } = require('./ai');
-const { retrieveContext, buildFallbackTheme, buildPrompt, buildRagModelInput } = require('./rag');
+const { chatJsonWithMeta, getAiConfig } = require('./ai');
 const {
   finalizeTheme,
   normalizeLocationSignals,
+  normalizeTimeContext,
+  normalizeNearbySummary,
+  buildPreferenceContext,
+  normalizeRecentMissionHistory,
+  buildPromptContextBlock,
   summarizeThemeValidation,
-  buildSecondaryValidationPrompt,
-  buildSecondaryValidationRepairPrompt,
-  buildThemeRewritePrompt,
+  chooseTaskPlaceLabel,
 } = require('./runtime');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
-const includeDebugContext = process.env.DEBUG_RAG_CONTEXT === 'true';
-const RUNTIME_VERSION = '2026-04-13-single-theme-validation-fallback-r3';
-const VALIDATION_LOOP_MAX_PASSES = 2;
-const VALIDATION_REPAIR_MAX_ATTEMPTS = 1;
+const RUNTIME_VERSION = '2026-04-14-direct-ai-r5';
+
+function buildModelRequestDebug(systemPrompt, userPrompt) {
+  const config = getAiConfig();
+  return {
+    provider: 'dashscope-compatible',
+    request: {
+      model: config.model,
+      temperature: 0.9,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+    },
+  };
+}
+
+function buildModelResponseDebug(responseMeta) {
+  const meta = responseMeta && typeof responseMeta === 'object' ? responseMeta : {};
+  return {
+    responseId: String(meta.responseId || '').trim(),
+    model: String(meta.responseModel || '').trim(),
+    finishReason: String(meta.finishReason || '').trim(),
+    usage: meta.usage && typeof meta.usage === 'object' ? meta.usage : null,
+    rawText: String(meta.rawText || ''),
+    strippedText: String(meta.strippedText || ''),
+    parsedJson: meta.parsed && typeof meta.parsed === 'object' ? meta.parsed : null,
+  };
+}
 
 function normalizeGeneratedTitle(title) {
   const text = String(title || '').trim();
@@ -49,18 +77,6 @@ function normalizeMissionText(mission) {
   return String(mission);
 }
 
-function normalizeTheme(theme, walkMode) {
-  const missionCount = walkMode === 'advanced' ? 3 : 1;
-  const missions = Array.isArray(theme.missions)
-    ? theme.missions.map(normalizeMissionText).slice(0, missionCount)
-    : [];
-  return {
-    ...theme,
-    title: normalizeGeneratedTitle(theme.title || ''),
-    missions: missions.length ? missions : ['寻找一个让你驻足的细节'],
-  };
-}
-
 function normalizeSelectedThemes(selectedThemes, event) {
   const limit = event && event.walkMode === 'pure' ? 1 : 2;
   return (Array.isArray(selectedThemes) ? selectedThemes : [])
@@ -69,915 +85,213 @@ function normalizeSelectedThemes(selectedThemes, event) {
     .slice(0, limit);
 }
 
-function isNumberMission(mission) {
-  const text = String(mission || '');
-  return /数字|数一数|数清|数出|计数|数量|几个|多少|门牌|编号|楼层|步数|密码|罗马数字|汉字数字|英文数字|隐形数字/.test(text)
-    || /像(?:数字|[0-9０-９一二三四五六七八九十零两])/.test(text)
-    || /(?:凑齐|收集|找到|找出|寻找|记录|拍下|拍到|数清|观察).{0,8}(?:[0-9０-９]+|[一二三四五六七八九十零两])(?:个|片|只|扇|盏|层|步|次|组|处)/.test(text)
-    || /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|iv|vi|vii|viii|ix|x)\b/i.test(text);
+function normalizeTheme(theme, walkMode) {
+  const missionCount = walkMode === 'advanced' ? 3 : 1;
+  const missions = Array.isArray(theme && theme.missions)
+    ? theme.missions.map(normalizeMissionText).filter(Boolean).slice(0, missionCount)
+    : [];
+  return {
+    ...(theme && typeof theme === 'object' ? theme : {}),
+    title: normalizeGeneratedTitle(theme && theme.title || ''),
+    description: String(theme && theme.description || '').trim(),
+    missions: missions.length ? missions : ['寻找一个让你驻足的细节'],
+  };
 }
 
-function hasDisallowedCoreActionForTheme(mission, theme) {
-  const text = String(mission || '');
-  if (!text || theme === '数字') {
-    return false;
-  }
-  return /(?:^|[，。；、\s])(?:数清|数一数|数出|统计)|(?:几个|多少|编号|序号|票号|出口号|楼层|门牌)/.test(text);
-}
-
-function isShapeMission(mission) {
-  const text = String(mission || '');
-  return /形状|轮廓|线条|弧|圆角|几何|对称|拱|边角|门洞|窗框|边界|负空间|方向线|轮廓节奏/.test(text);
-}
-
-function isColorMission(mission) {
-  const text = String(mission || '');
-  return /色|颜色|色彩|红|蓝|黄|绿|渐变|撞色|明暗|色块|反光|光影|色温|亮面|阴影|褪色|高光|配色|色阶/.test(text);
-}
-
-function isSoundMission(mission) {
-  const text = String(mission || '');
-  return /声音|声|听|回响|风声|脚步|铃声|叫卖|环境声|提示音|广播|讲解|快门|交谈/.test(text);
-}
-
-function isSmellMission(mission) {
-  const text = String(mission || '');
-  return /气味|味道|香|臭|闻|潮气|草木味|烟火味|食物香|香味|热气|冷气|泥土味|机油味|雨水味|咖啡香|清洁味|酒气|烤物味/.test(text);
-}
-
-const themeRules = {
-  形状: {
-    matcher: isShapeMission,
-    title: (locationName) => `${locationName || '这片街区'}的形状漫步`,
-    description: (locationName) => `在 ${locationName || '这片街区'} 里寻找最能体现形状关系与空间变化的细节。`,
-    fallbackMissions: [
-      '找一处最能体现形状关系的细节',
-      '比较两处对象在空间里的摆放差异',
-      '记录一个会改变整体感觉的结构变化',
-    ],
-  },
-  色彩: {
-    matcher: isColorMission,
-    title: (locationName) => `${locationName || '这片街区'}的色彩漫步`,
-    description: (locationName) => `在 ${locationName || '这片街区'} 里寻找此刻最有存在感的颜色关系与生活痕迹。`,
-    fallbackMissions: [
-      '找一处最能代表此刻气质的颜色组合',
-      '比较两处颜色在生活环境里的不同作用',
-      '记录一种会改变现场感觉的颜色关系',
-    ],
-  },
-  声音: {
-    matcher: isSoundMission,
-    title: (locationName) => `${locationName || '这片街区'}的声音漫步`,
-    description: (locationName) => `把 ${locationName || '这片街区'} 当作今天的声场，留意声音怎样组织行动、停留和关系。`,
-    fallbackMissions: [
-      '找一个最能说明此刻节奏的声音线索',
-      '比较两种声音怎样改变你的停留方式',
-      '记录一个会影响人们动作的声音时刻',
-    ],
-  },
-  数字: {
-    matcher: isNumberMission,
-    title: (locationName) => `${locationName || '这片街区'}的数字漫步`,
-    description: (locationName) => `在 ${locationName || '这片街区'} 里寻找数字怎样藏在规则、顺序、判断和行动里。`,
-    fallbackMissions: [
-      '找一处最像数字线索的现场规则',
-      '比较两种数字信息怎样影响你的判断',
-      '记录一个只有在这里才成立的数字提示',
-    ],
-  },
-  气味: {
-    matcher: isSmellMission,
-    title: (locationName) => `${locationName || '这片街区'}的气味漫步`,
-    description: (locationName) => `顺着 ${locationName || '这片街区'} 的空气流动，寻找气味怎样和行动、停留、时段连在一起。`,
-    fallbackMissions: [
-      '找一处最能说明此刻空气状态的气味变化',
-      '比较两处气味带来的停留感差异',
-      '记录一个会提醒你这里正在发生什么的气味线索',
-    ],
-  },
-};
-
-function forceThemeAlignment(theme, event, fallbackTheme) {
-  const selectedThemes = normalizeSelectedThemes(event.selectedThemes);
-  if (selectedThemes.length !== 1) {
-    return theme;
-  }
-
-  const onlyTheme = selectedThemes[0];
-  const rule = themeRules[onlyTheme];
-  if (!rule) {
-    return theme;
-  }
-
+function buildDirectFallbackTheme(event, categories) {
   const locationSignals = normalizeLocationSignals(event);
-  const currentMissions = Array.isArray(theme.missions) ? theme.missions : [];
-  const alignedMissions = currentMissions.filter((mission) => !hasDisallowedCoreActionForTheme(mission, onlyTheme));
-
+  const timeContext = normalizeTimeContext(event);
+  const nearbySummary = normalizeNearbySummary(event);
+  const preferenceContext = buildPreferenceContext(event);
+  const primaryTheme = categories[0] || '漫步';
+  const locationName = locationSignals.locationName || '这片街区';
+  const sceneName = chooseTaskPlaceLabel(locationSignals, nearbySummary) || locationName;
+  const timePhase = timeContext.timePhase || '此刻';
+  const missionCount = event.walkMode === 'advanced' ? 3 : 1;
+  const preferredObject = preferenceContext.objectHints[0] || '';
+  const fallbackMissionPool = categories.length > 1
+    ? [
+        `在${sceneName}${preferredObject ? `先看${preferredObject}，` : ''}找一处同时呼应${categories.join('和')}的细节`,
+        `比较${sceneName}里两处${preferredObject || '地方'}怎样分别带出${categories.join('和')}`,
+        `停一下，看${timePhase}的这片地方怎么把${categories.join('和')}带到一起`,
+      ]
+    : [
+        `在${sceneName}${preferredObject ? `先看${preferredObject}，` : ''}找一处最能看出${primaryTheme}的地方`,
+        `停一下，看${sceneName}里哪一处最容易让人想到${primaryTheme}`,
+        `比较${sceneName}里两处${preferredObject || '地方'}怎样分别体现${primaryTheme}`,
+      ];
   return {
-    ...theme,
-    category: onlyTheme,
-    title: String(theme.title || '').trim() || rule.title(locationSignals.locationName),
-    description: String(theme.description || '').trim() || rule.description(locationSignals.locationName),
-    missions: alignedMissions.slice(0, event.walkMode === 'advanced' ? 3 : 1),
+    title: categories.length > 1 ? `${categories.join('×')}漫步` : `${primaryTheme}漫步`,
+    description: `${timePhase}里，从${locationName}出发，抓住一条更贴近当下的观察线索。`,
+    category: categories.length > 1 ? '组合' : primaryTheme,
+    missions: fallbackMissionPool.slice(0, missionCount),
+    vibeColor: '#5a5a40',
   };
 }
 
-function normalizeAiSuggestedTheme(payload) {
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-  const title = String(payload.title || '').trim();
-  const description = String(payload.description || '').trim();
-  const missions = Array.isArray(payload.missions)
-    ? payload.missions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
-    : [];
-  if (!title && !description && !missions.length) {
-    return null;
-  }
-  return { title, description, missions };
-}
-
-function snapshotTheme(theme) {
-  const normalizedTheme = theme && typeof theme === 'object' ? theme : {};
-  return {
-    title: String(normalizedTheme.title || '').trim(),
-    description: String(normalizedTheme.description || '').trim(),
-    missions: Array.isArray(normalizedTheme.missions)
-      ? normalizedTheme.missions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3)
-      : [],
-  };
-}
-
-function cloneJsonSafe(value) {
-  if (value === undefined) {
-    return undefined;
-  }
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch (error) {
-    return null;
-  }
-}
-
-function summarizePrecheckValidation(validation) {
-  const normalizedValidation = validation && typeof validation === 'object' ? validation : {};
-  return {
-    stage: String(normalizedValidation.stage || '').trim(),
-    ok: !!normalizedValidation.ok,
-    score: Number.isFinite(Number(normalizedValidation.score))
-      ? Number(normalizedValidation.score)
-      : null,
-    reasons: Array.isArray(normalizedValidation.reasons)
-      ? normalizedValidation.reasons.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
-      : [],
-    hasAnchor: !!normalizedValidation.hasAnchor,
-    anchorCount: Number.isFinite(Number(normalizedValidation.anchorCount))
-      ? Number(normalizedValidation.anchorCount)
-      : 0,
-    genericMissionCount: Number.isFinite(Number(normalizedValidation.genericMissionCount))
-      ? Number(normalizedValidation.genericMissionCount)
-      : 0,
-    varietyRatio: Number.isFinite(Number(normalizedValidation.varietyRatio))
-      ? Number(normalizedValidation.varietyRatio)
-      : null,
-    similarPairCount: Number.isFinite(Number(normalizedValidation.similarPairCount))
-      ? Number(normalizedValidation.similarPairCount)
-      : 0,
-  };
-}
-
-function summarizeAiValidationForLoop(aiValidation, rawPayload, missingFields, repairPromptCount, validationComplete) {
-  const normalizedValidation = aiValidation && typeof aiValidation === 'object' ? aiValidation : {};
-  return {
-    stage: 'ai-review',
-    ok: normalizedValidation.ok === undefined ? null : !!normalizedValidation.ok,
-    score: Number.isFinite(Number(normalizedValidation.score))
-      ? Number(normalizedValidation.score)
-      : null,
-    failedChecks: Array.isArray(normalizedValidation.failedChecks)
-      ? normalizedValidation.failedChecks.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
-      : [],
-    failedMissionIndexes: Array.isArray(normalizedValidation.failedMissionIndexes)
-      ? normalizedValidation.failedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
-      : [],
-    abstractMissionIndexes: Array.isArray(normalizedValidation.abstractMissionIndexes)
-      ? normalizedValidation.abstractMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
-      : [],
-    repeatedMissionIndexes: Array.isArray(normalizedValidation.repeatedMissionIndexes)
-      ? normalizedValidation.repeatedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
-      : [],
-    reasons: Array.isArray(normalizedValidation.reasons)
-      ? normalizedValidation.reasons.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
-      : [],
-    reviewComment: String(normalizedValidation.reviewComment || '').trim(),
-    rewriteAdvice: String(normalizedValidation.rewriteAdvice || '').trim(),
-    shouldRewrite: !!normalizedValidation.shouldRewrite,
-    rewriteScope: String(normalizedValidation.rewriteScope || '').trim(),
-    rewrittenTheme: normalizedValidation.rewrittenTheme
-      ? snapshotTheme(normalizedValidation.rewrittenTheme)
-      : null,
-    fieldPresence: cloneJsonSafe(normalizedValidation.fieldPresence) || {},
-    fieldSources: cloneJsonSafe(normalizedValidation.fieldSources) || {},
-    validationComplete: !!validationComplete,
-    missingFields: Array.isArray(missingFields)
-      ? missingFields.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 12)
-      : [],
-    repairPromptCount: Number(repairPromptCount) || 0,
-    raw: cloneJsonSafe(rawPayload) || null,
-  };
-}
-
-function normalizeAiValidationResult(payload) {
-  const normalizedPayload = payload && typeof payload === 'object' ? payload : {};
-  const hasScoreField = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(normalizedPayload, 'score');
-  const hasFailedChecksField = Array.isArray(normalizedPayload.failedChecks);
-  const hasReasonsField = Array.isArray(normalizedPayload.reasons);
-  const hasReviewCommentField = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(normalizedPayload, 'reviewComment');
-  const hasRewriteAdviceField = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(normalizedPayload, 'rewriteAdvice');
-  const hasRewriteScopeField = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(normalizedPayload, 'rewriteScope');
-  const hasShouldRewriteField = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(normalizedPayload, 'shouldRewrite');
-  const hasOkField = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(normalizedPayload, 'ok');
-  const hasFailedMissionIndexesField = Array.isArray(normalizedPayload.failedMissionIndexes);
-  const hasAbstractIndexesField = Array.isArray(normalizedPayload.abstractMissionIndexes);
-  const hasRepeatedIndexesField = Array.isArray(normalizedPayload.repeatedMissionIndexes);
-  const hasRewrittenThemeField = payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(normalizedPayload, 'rewrittenTheme');
-  const rawReasons = Array.isArray(normalizedPayload.reasons)
-    ? normalizedPayload.reasons.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4)
-    : [];
-  const failedChecks = Array.isArray(normalizedPayload.failedChecks)
-    ? normalizedPayload.failedChecks.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 6)
-    : [];
-  const rawFailedMissionIndexes = Array.isArray(normalizedPayload.failedMissionIndexes)
-    ? normalizedPayload.failedMissionIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item)).slice(0, 6)
-    : [];
-  const rawAbstractMissionIndexes = Array.isArray(normalizedPayload.abstractMissionIndexes)
-    ? normalizedPayload.abstractMissionIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item)).slice(0, 6)
-    : [];
-  const rawRepeatedMissionIndexes = Array.isArray(normalizedPayload.repeatedMissionIndexes)
-    ? normalizedPayload.repeatedMissionIndexes.map((item) => Number(item)).filter((item) => Number.isInteger(item)).slice(0, 6)
-    : [];
-  const inferredFailedMissionIndexes = []
-    .concat(rawFailedMissionIndexes)
-    .concat(rawAbstractMissionIndexes)
-    .concat(rawRepeatedMissionIndexes)
-    .filter((item, index, source) => Number.isInteger(item) && item >= 0 && source.indexOf(item) === index)
-    .slice(0, 6);
-  const failedMissionIndexes = inferredFailedMissionIndexes;
-  const abstractMissionIndexes = rawAbstractMissionIndexes.length
-    ? rawAbstractMissionIndexes
-    : failedChecks.includes('concreteness')
-      ? failedMissionIndexes
-      : [];
-  const repeatedMissionIndexes = rawRepeatedMissionIndexes.length
-    ? rawRepeatedMissionIndexes
-    : failedChecks.includes('novelty')
-      ? failedMissionIndexes
-      : [];
-  const ok = normalizedPayload.ok === undefined ? !normalizedPayload.shouldRewrite : !!normalizedPayload.ok;
-  const hasScore = Number.isFinite(Number(normalizedPayload.score));
-  const score = hasScore
-    ? Number(normalizedPayload.score)
-    : null;
-  const reviewComment = String(normalizedPayload.reviewComment || '').trim();
-  const rewriteAdvice = String(normalizedPayload.rewriteAdvice || '').trim();
-  const rewriteScope = String(normalizedPayload.rewriteScope || '').trim();
-  const rewrittenTheme = normalizeAiSuggestedTheme(normalizedPayload.rewrittenTheme);
-  if (!payload || typeof payload !== 'object') {
-    return {
-      stage: 'ai-review',
-      ok,
-      score,
-      failedChecks,
-      reasons: rawReasons,
-      reviewComment,
-      rewriteAdvice,
-      shouldRewrite: false,
-      failedMissionIndexes,
-      abstractMissionIndexes,
-      repeatedMissionIndexes,
-      rewriteScope,
-      rewrittenTheme,
-      fieldPresence: {
-        ok: false,
-        score: false,
-        failedChecks: false,
-        reasons: false,
-        reviewComment: false,
-        rewriteAdvice: false,
-        shouldRewrite: false,
-        failedMissionIndexes: false,
-        abstractMissionIndexes: false,
-        repeatedMissionIndexes: false,
-        rewriteScope: false,
-        rewrittenTheme: false,
-      },
-      fieldSources: {
-        score: 'missing',
-        failedChecks: 'missing',
-        reasons: 'missing',
-        reviewComment: 'missing',
-        rewriteAdvice: 'missing',
-        rewrittenTheme: 'missing',
-      },
-    };
-  }
-  return {
-    stage: 'ai-review',
-    ok,
-    score,
-    failedChecks,
-    reasons: rawReasons,
-    reviewComment,
-    rewriteAdvice,
-    shouldRewrite: !!normalizedPayload.shouldRewrite,
-    failedMissionIndexes,
-    abstractMissionIndexes,
-    repeatedMissionIndexes,
-    rewriteScope,
-    rewrittenTheme,
-    fieldPresence: {
-      ok: hasOkField,
-      score: hasScoreField,
-      failedChecks: hasFailedChecksField,
-      reasons: hasReasonsField,
-      reviewComment: hasReviewCommentField,
-      rewriteAdvice: hasRewriteAdviceField,
-      shouldRewrite: hasShouldRewriteField,
-      failedMissionIndexes: hasFailedMissionIndexesField || !!failedMissionIndexes.length,
-      abstractMissionIndexes: hasAbstractIndexesField || (failedChecks.includes('concreteness') && !!abstractMissionIndexes.length),
-      repeatedMissionIndexes: hasRepeatedIndexesField || (failedChecks.includes('novelty') && !!repeatedMissionIndexes.length),
-      rewriteScope: hasRewriteScopeField,
-      rewrittenTheme: hasRewrittenThemeField,
-    },
-    fieldSources: {
-      score: hasScoreField && hasScore ? 'ai' : 'missing',
-      failedChecks: hasFailedChecksField ? 'ai' : 'missing',
-      reasons: hasReasonsField ? 'ai' : 'missing',
-      reviewComment: hasReviewCommentField && reviewComment ? 'ai' : 'missing',
-      rewriteAdvice: hasRewriteAdviceField && rewriteAdvice ? 'ai' : 'missing',
-      rewrittenTheme: hasRewrittenThemeField && rewrittenTheme ? 'ai' : 'missing',
-    },
-  };
-}
-
-function collectIncompleteValidationFields(aiValidation) {
-  const validation = aiValidation && typeof aiValidation === 'object' ? aiValidation : {};
-  const fieldPresence = validation.fieldPresence && typeof validation.fieldPresence === 'object'
-    ? validation.fieldPresence
-    : {};
-  const missing = [];
-  if (!fieldPresence.ok) {
-    missing.push('ok');
-  }
-  if (!fieldPresence.score || validation.score == null) {
-    missing.push('score');
-  }
-  if (!fieldPresence.failedChecks) {
-    missing.push('failedChecks');
-  }
-  if (!fieldPresence.reasons || !Array.isArray(validation.reasons) || validation.reasons.length < 2) {
-    missing.push('reasons');
-  }
-  if (!fieldPresence.reviewComment || !String(validation.reviewComment || '').trim()) {
-    missing.push('reviewComment');
-  }
-  if (!fieldPresence.rewriteAdvice || !String(validation.rewriteAdvice || '').trim()) {
-    missing.push('rewriteAdvice');
-  }
-  if (!fieldPresence.shouldRewrite) {
-    missing.push('shouldRewrite');
-  }
-  if (Array.isArray(validation.failedChecks) && validation.failedChecks.length) {
-    const failedMissionIndexes = Array.isArray(validation.failedMissionIndexes) ? validation.failedMissionIndexes : [];
-    if (!fieldPresence.failedMissionIndexes || !failedMissionIndexes.length) {
-      missing.push('failedMissionIndexes');
-    }
-  }
-  if (!fieldPresence.abstractMissionIndexes) {
-    missing.push('abstractMissionIndexes');
-  }
-  if (!fieldPresence.repeatedMissionIndexes) {
-    missing.push('repeatedMissionIndexes');
-  }
-  if (Array.isArray(validation.failedChecks) && validation.failedChecks.includes('concreteness')) {
-    if (!Array.isArray(validation.abstractMissionIndexes) || !validation.abstractMissionIndexes.length) {
-      missing.push('abstractMissionIndexes');
-    }
-  }
-  if (Array.isArray(validation.failedChecks) && validation.failedChecks.includes('novelty')) {
-    if (!Array.isArray(validation.repeatedMissionIndexes) || !validation.repeatedMissionIndexes.length) {
-      missing.push('repeatedMissionIndexes');
-    }
-  }
-  if (!fieldPresence.rewriteScope || !['none', 'mission-only', 'title-description', 'full'].includes(String(validation.rewriteScope || '').trim())) {
-    missing.push('rewriteScope');
-  }
-  if (validation.shouldRewrite && (!fieldPresence.rewrittenTheme || !validation.rewrittenTheme)) {
-    missing.push('rewrittenTheme');
-  }
-  return missing;
-}
-
-function collectRepairTargetIndexes(aiValidation) {
-  return []
-    .concat(Array.isArray(aiValidation && aiValidation.failedMissionIndexes) ? aiValidation.failedMissionIndexes : [])
-    .concat(Array.isArray(aiValidation && aiValidation.abstractMissionIndexes) ? aiValidation.abstractMissionIndexes : [])
-    .concat(Array.isArray(aiValidation && aiValidation.repeatedMissionIndexes) ? aiValidation.repeatedMissionIndexes : [])
-    .filter((item, index, source) => Number.isInteger(item) && item >= 0 && source.indexOf(item) === index);
-}
-
-async function requestCompleteAiValidation(theme, event, options) {
-  const systemPrompt = '你是遛遛小程序的主题质检助手。只返回合法 JSON，不要输出额外解释。';
-  let rawPayload = await chatJson(
-    systemPrompt,
-    buildSecondaryValidationPrompt(theme, event, options)
-  );
-  let aiValidation = normalizeAiValidationResult(rawPayload);
-  let missingFields = collectIncompleteValidationFields(aiValidation);
-  let repairPromptCount = 0;
-  const rawResponses = [{
-    step: 'review',
-    payload: cloneJsonSafe(rawPayload) || null,
-    missingFields: missingFields.slice(0, 12),
-  }];
-
-  while (missingFields.length && repairPromptCount < VALIDATION_REPAIR_MAX_ATTEMPTS) {
-    rawPayload = await chatJson(
-      systemPrompt,
-      buildSecondaryValidationRepairPrompt(theme, event, {
-        ...options,
-        previousValidation: rawPayload,
-        missingFields,
-      })
-    );
-    aiValidation = normalizeAiValidationResult(rawPayload);
-    missingFields = collectIncompleteValidationFields(aiValidation);
-    repairPromptCount += 1;
-    rawResponses.push({
-      step: `repair-${repairPromptCount}`,
-      payload: cloneJsonSafe(rawPayload) || null,
-      missingFields: missingFields.slice(0, 12),
-    });
-  }
-
-  return {
-    aiValidation,
-    rawPayload,
-    missingFields,
-    repairPromptCount,
-    rawResponses,
-  };
-}
-
-async function requestTargetedRewrite(theme, event, aiValidation, options) {
-  const systemPrompt = '你是遛遛小程序的主题改写助手。只返回合法 JSON，不要输出额外解释。';
-  const rewritePayload = await chatJson(
-    systemPrompt,
-    buildThemeRewritePrompt(theme, event, {
-      ...options,
-      aiValidation,
-      suggestedTheme: aiValidation && aiValidation.rewrittenTheme ? aiValidation.rewrittenTheme : null,
-    })
-  );
-  return normalizeTheme(rewritePayload, event.walkMode);
-}
-
-function buildValidationResult(precheckValidation, aiValidation, extras = {}) {
-  return {
-    ...precheckValidation,
-    ok: extras.validationComplete ? aiValidation.ok !== false : false,
-    stage: 'ai-review',
-    precheckScore: precheckValidation.score,
-    precheckReasons: precheckValidation.reasons,
-    score: aiValidation.score != null ? aiValidation.score : precheckValidation.score,
-    reasons: aiValidation.reasons.length ? aiValidation.reasons : precheckValidation.reasons,
-    aiOk: aiValidation.ok,
-    aiScore: aiValidation.score,
-    aiFailedChecks: aiValidation.failedChecks,
-    aiFailedMissionIndexes: aiValidation.failedMissionIndexes,
-    aiReasons: aiValidation.reasons,
-    aiReviewComment: aiValidation.reviewComment,
-    aiRewriteAdvice: aiValidation.rewriteAdvice,
-    aiAbstractMissionIndexes: aiValidation.abstractMissionIndexes,
-    aiRepeatedMissionIndexes: aiValidation.repeatedMissionIndexes,
-    aiRewriteScope: aiValidation.rewriteScope,
-    aiSuggestedTheme: aiValidation.rewrittenTheme,
-    aiAppliedRepairStrategy: extras.appliedRepairStrategy || 'none',
-    aiAppliedRepairIndexes: extras.appliedRepairIndexes || [],
-    aiFieldSources: aiValidation.fieldSources,
-    aiShouldRewrite: aiValidation.shouldRewrite,
-    aiOriginalTheme: extras.originalTheme || null,
-    aiValidationComplete: !!extras.validationComplete,
-    aiValidationMissingFields: Array.isArray(extras.missingFields) ? extras.missingFields : [],
-    aiRepairPromptCount: Number(extras.repairPromptCount) || 0,
-    aiLoopPassCount: Number(extras.loopPassCount) || 1,
-    aiLoopRewriteCount: Number(extras.loopRewriteCount) || 0,
-    aiLoopStopReason: String(extras.loopStopReason || '').trim(),
-    aiLoopPassSummaries: Array.isArray(extras.loopPassSummaries) ? extras.loopPassSummaries : [],
-    aiLoopDetails: Array.isArray(extras.loopDetails) ? extras.loopDetails : [],
-    secondaryValidationUsed: true,
-  };
-}
-
-function decideAiRepairStrategy(aiValidation) {
-  const failedMissionIndexes = Array.isArray(aiValidation && aiValidation.failedMissionIndexes)
-    ? aiValidation.failedMissionIndexes
-    : [];
-  const requestedScope = String(aiValidation && aiValidation.rewriteScope || '').trim();
-  if (failedMissionIndexes.length) {
-    if (requestedScope === 'full' || requestedScope === 'mission-only') {
-      return requestedScope;
-    }
-    return 'mission-only';
-  }
-  if (['mission-only', 'title-description', 'full'].includes(requestedScope)) {
-    return requestedScope;
-  }
-  const failedChecks = Array.isArray(aiValidation && aiValidation.failedChecks)
-    ? aiValidation.failedChecks
-    : [];
-  if (failedChecks.length && failedChecks.every((item) => ['concreteness', 'novelty'].includes(item))) {
-    return 'mission-only';
-  }
-  return 'full';
-}
-
-function mergeThemeByRepairStrategy(theme, rewrittenTheme, aiValidation, strategy, walkMode) {
-  const baseTheme = theme && typeof theme === 'object' ? theme : {};
-  const suggestedTheme = rewrittenTheme && typeof rewrittenTheme === 'object' ? rewrittenTheme : {};
-  const normalizedStrategy = strategy || 'full';
-  const targetedIndexes = collectRepairTargetIndexes(aiValidation);
-  if (normalizedStrategy === 'title-description') {
-    if (targetedIndexes.length && Array.isArray(suggestedTheme.missions) && suggestedTheme.missions.length) {
-      const currentMissions = Array.isArray(baseTheme.missions) ? [...baseTheme.missions] : [];
-      targetedIndexes.forEach((missionIndex, offset) => {
-        const replacement = suggestedTheme.missions[offset] || suggestedTheme.missions[missionIndex] || suggestedTheme.missions[0] || '';
-        if (replacement) {
-          currentMissions[missionIndex] = replacement;
-        }
-      });
-      return normalizeTheme({
-        ...baseTheme,
-        title: String(suggestedTheme.title || '').trim() || baseTheme.title,
-        description: String(suggestedTheme.description || '').trim() || baseTheme.description,
-        missions: currentMissions,
-      }, walkMode);
-    }
-    return normalizeTheme({
-      ...baseTheme,
-      title: String(suggestedTheme.title || '').trim() || baseTheme.title,
-      description: String(suggestedTheme.description || '').trim() || baseTheme.description,
-      missions: Array.isArray(baseTheme.missions) ? baseTheme.missions : [],
-    }, walkMode);
-  }
-  if (normalizedStrategy === 'mission-only') {
-    const currentMissions = Array.isArray(baseTheme.missions) ? [...baseTheme.missions] : [];
-    const suggestedMissions = Array.isArray(suggestedTheme.missions) ? suggestedTheme.missions : [];
-    if (targetedIndexes.length && suggestedMissions.length) {
-      targetedIndexes.forEach((missionIndex, offset) => {
-        const replacement = suggestedMissions[offset] || suggestedMissions[missionIndex] || suggestedMissions[0] || '';
-        if (replacement) {
-          currentMissions[missionIndex] = replacement;
-        }
-      });
-    } else if (suggestedMissions.length) {
-      return normalizeTheme({
-        ...baseTheme,
-        missions: suggestedMissions,
-      }, walkMode);
-    }
-    return normalizeTheme({
-      ...baseTheme,
-      missions: currentMissions,
-    }, walkMode);
-  }
-  return normalizeTheme({
-    ...baseTheme,
-    ...suggestedTheme,
-  }, walkMode);
-}
-
-async function maybeRunSecondaryValidation(theme, event, fallbackTheme, options) {
-  const originalTheme = snapshotTheme(theme);
-  const baseValidation = summarizeThemeValidation(theme, event, {
-    ...options,
-    allowSecondaryValidation: true,
+function buildDirectPrompt(event, categories) {
+  const locationSignals = normalizeLocationSignals(event);
+  const timeContext = normalizeTimeContext(event);
+  const nearbySummary = normalizeNearbySummary(event);
+  const preferenceContext = buildPreferenceContext(event);
+  const promptContext = buildPromptContextBlock(event, {
+    categories,
+    walkMode: event.walkMode,
+    combined: categories.length > 1,
   });
-  try {
-    let currentTheme = theme;
-    let finalValidation = summarizeThemeValidation(currentTheme, event, {
-      ...options,
-      allowSecondaryValidation: true,
-    });
-    const loopPassSummaries = [];
-    let loopRewriteCount = 0;
-    let totalRepairPromptCount = 0;
-    let lastAppliedRepairStrategy = 'none';
-    let lastAppliedRepairIndexes = [];
-    let loopStopReason = 'passed';
-    const loopDetails = [];
+  const recentHistory = normalizeRecentMissionHistory(event, 6);
+  const generationContext = event && event.generationContext && typeof event.generationContext === 'object'
+    ? event.generationContext
+    : {};
+  const contextPacket = generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
+    ? generationContext.contextPacket
+    : {};
+  const generationSeed = String(
+    event.generationSeed
+    || generationContext.generationSeed
+    || (contextPacket.generation && contextPacket.generation.seed)
+    || ''
+  ).trim();
+  const previousThemeTitle = String(
+    contextPacket.generation && contextPacket.generation.previousThemeTitle || ''
+  ).trim();
+  const previousMissions = Array.isArray(contextPacket.generation && contextPacket.generation.previousMissions)
+    ? contextPacket.generation.previousMissions.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4)
+    : [];
+  const missionCount = event.walkMode === 'advanced' ? 3 : 1;
+  const compactModelInput = {
+    walkMode: event.walkMode || 'pure',
+    selectedThemes: categories,
+    mood: event.mood || '',
+    weather: event.weather || '',
+    season: event.season || '',
+    preference: preferenceContext.preference || '',
+    preferenceGuide: {
+      availableObjects: preferenceContext.availableObjects,
+      blockedObjects: preferenceContext.blockedObjects.slice(0, 4),
+      safeObjects: preferenceContext.safeObjects.slice(0, 6),
+      objectDetails: preferenceContext.objectDetails.slice(0, 6),
+      instruction: preferenceContext.instruction,
+    },
+    location: {
+      name: locationSignals.locationName || '当前位置',
+      sceneTag: locationSignals.sceneTag || '',
+    },
+    time: {
+      timePhase: timeContext.timePhase || '',
+      timeHints: timeContext.timeHints || [],
+    },
+    nearby: {
+      nearbyScene: nearbySummary.dominantScene || '',
+      aoi: nearbySummary.primaryAoiName || nearbySummary.primaryAoiType || '',
+      businessAreas: nearbySummary.businessAreaNames.slice(0, 3),
+      poiTypes: nearbySummary.poiTypes.slice(0, 4),
+      pois: nearbySummary.poiNames.slice(0, 5),
+    },
+    previousThemeTitle,
+    previousMissions,
+    recentMissionHistory: recentHistory.map((item) => item.mission).filter(Boolean).slice(0, 6),
+    generationSeed,
+  };
 
-    for (let passIndex = 0; passIndex < VALIDATION_LOOP_MAX_PASSES; passIndex += 1) {
-      const precheckValidation = summarizeThemeValidation(currentTheme, event, {
-        ...options,
-        allowSecondaryValidation: true,
-      });
-      const passInputTheme = snapshotTheme(currentTheme);
-      const {
-        aiValidation,
-        rawPayload,
-        missingFields,
-        repairPromptCount,
-        rawResponses,
-      } = await requestCompleteAiValidation(currentTheme, event, options);
-      const validationComplete = missingFields.length === 0;
-      totalRepairPromptCount += repairPromptCount;
-      const appliedRepairIndexes = collectRepairTargetIndexes(aiValidation);
-      const passDetail = {
-        pass: passIndex + 1,
-        inputTheme: passInputTheme,
-        precheck: summarizePrecheckValidation(precheckValidation),
-        review: summarizeAiValidationForLoop(
-          aiValidation,
-          rawPayload,
-          missingFields,
-          repairPromptCount,
-          validationComplete
-        ),
-        reviewAttempts: (Array.isArray(rawResponses) ? rawResponses : []).map((item, attemptIndex) => ({
-          step: String(item && item.step || `attempt-${attemptIndex + 1}`).trim(),
-          missingFields: Array.isArray(item && item.missingFields)
-            ? item.missingFields.map((field) => String(field || '').trim()).filter(Boolean).slice(0, 12)
-            : [],
-          payload: cloneJsonSafe(item && item.payload) || null,
-        })),
-        appliedRepairStrategy: 'none',
-        appliedRepairIndexes: [],
-        reviewSuggestedTheme: snapshotTheme(aiValidation && aiValidation.rewrittenTheme ? aiValidation.rewrittenTheme : null),
-        rewrittenTheme: null,
-        stopReason: '',
-      };
+  return `你是“遛遛”小程序的城市漫步任务生成助手。请直接依据当前基础信息生成主题和任务，不做额外解释。
 
-      loopPassSummaries.push({
-        pass: passIndex + 1,
-        score: aiValidation.score,
-        ok: aiValidation.ok,
-        shouldRewrite: aiValidation.shouldRewrite,
-        rewriteScope: aiValidation.rewriteScope,
-        missingFields,
-        repairPromptCount,
-      });
+基础输入：
+${JSON.stringify(compactModelInput, null, 2)}
 
-      if (!validationComplete) {
-        loopStopReason = 'validation_incomplete_after_repair';
-        passDetail.stopReason = loopStopReason;
-        loopDetails.push(passDetail);
-        finalValidation = buildValidationResult(precheckValidation, aiValidation, {
-          validationComplete,
-          missingFields,
-          repairPromptCount: totalRepairPromptCount,
-          loopPassCount: passIndex + 1,
-          loopRewriteCount,
-          loopStopReason,
-          loopPassSummaries,
-          loopDetails,
-          originalTheme,
-          appliedRepairStrategy: lastAppliedRepairStrategy,
-          appliedRepairIndexes: lastAppliedRepairIndexes,
-        });
-        break;
-      }
+上下文摘要：
+${promptContext.text}
 
-      if (!aiValidation.shouldRewrite || !aiValidation.rewrittenTheme) {
-        loopStopReason = aiValidation.ok === false
-          ? 'ai_rejected_without_rewrite'
-          : 'passed';
-        passDetail.stopReason = loopStopReason;
-        loopDetails.push(passDetail);
-        finalValidation = buildValidationResult(precheckValidation, aiValidation, {
-          validationComplete,
-          missingFields,
-          repairPromptCount: totalRepairPromptCount,
-          loopPassCount: passIndex + 1,
-          loopRewriteCount,
-          loopStopReason,
-          loopPassSummaries,
-          loopDetails,
-          originalTheme,
-          appliedRepairStrategy: lastAppliedRepairStrategy,
-          appliedRepairIndexes: lastAppliedRepairIndexes,
-        });
-        break;
-      }
-
-      lastAppliedRepairStrategy = decideAiRepairStrategy(aiValidation);
-      lastAppliedRepairIndexes = appliedRepairIndexes;
-      let rewriteCandidate = aiValidation.rewrittenTheme;
-      try {
-        rewriteCandidate = await requestTargetedRewrite(currentTheme, event, aiValidation, options);
-      } catch (rewriteError) {
-        rewriteCandidate = aiValidation.rewrittenTheme;
-      }
-      const rewrittenTheme = mergeThemeByRepairStrategy(
-        currentTheme,
-        rewriteCandidate,
-        aiValidation,
-        lastAppliedRepairStrategy,
-        event.walkMode
-      );
-      const alignedRewrittenTheme = forceThemeAlignment(rewrittenTheme, event, fallbackTheme);
-      currentTheme = finalizeTheme(alignedRewrittenTheme, event, fallbackTheme, options);
-      currentTheme = {
-        ...currentTheme,
-        finalization: {
-          ...(currentTheme.finalization || {}),
-          aiRepairStrategy: lastAppliedRepairStrategy,
-          aiRepairIndexes: lastAppliedRepairIndexes,
-          aiFailedChecks: aiValidation.failedChecks || [],
-        },
-      };
-      loopRewriteCount += 1;
-      passDetail.appliedRepairStrategy = lastAppliedRepairStrategy;
-      passDetail.appliedRepairIndexes = lastAppliedRepairIndexes;
-      passDetail.reviewSuggestedTheme = snapshotTheme(aiValidation.rewrittenTheme);
-      passDetail.rewrittenTheme = snapshotTheme(currentTheme);
-      passDetail.stopReason = passIndex === VALIDATION_LOOP_MAX_PASSES - 1
-        ? 'max_validation_passes_reached'
-        : 'rewrite_applied';
-      loopDetails.push(passDetail);
-
-      if (passIndex === VALIDATION_LOOP_MAX_PASSES - 1) {
-        loopStopReason = 'max_validation_passes_reached';
-        finalValidation = buildValidationResult(precheckValidation, aiValidation, {
-          validationComplete,
-          missingFields,
-          repairPromptCount: totalRepairPromptCount,
-          loopPassCount: passIndex + 1,
-          loopRewriteCount,
-          loopStopReason,
-          loopPassSummaries,
-          loopDetails,
-          originalTheme,
-          appliedRepairStrategy: lastAppliedRepairStrategy,
-          appliedRepairIndexes: lastAppliedRepairIndexes,
-        });
-      }
-    }
-
-    const nextTheme = {
-      ...currentTheme,
-      finalization: {
-        ...(currentTheme.finalization || {}),
-        aiLoopPassCount: finalValidation.aiLoopPassCount || loopPassSummaries.length,
-        aiLoopRewriteCount: finalValidation.aiLoopRewriteCount || loopRewriteCount,
-        aiLoopStopReason: finalValidation.aiLoopStopReason || loopStopReason,
-        aiRepairPromptCount: finalValidation.aiRepairPromptCount || totalRepairPromptCount,
-        aiLoopDetails: Array.isArray(finalValidation.aiLoopDetails) ? finalValidation.aiLoopDetails : [],
-        aiOriginalTheme: originalTheme,
-        aiValidationComplete: finalValidation.aiValidationComplete !== undefined
-          ? finalValidation.aiValidationComplete
-          : true,
-        aiValidationMissingFields: finalValidation.aiValidationMissingFields || [],
-      },
-    };
-
-    return {
-      theme: nextTheme,
-      validation: finalValidation,
-    };
-  } catch (error) {
-    return {
-      theme,
-      validation: {
-        ...baseValidation,
-        secondaryValidationUsed: true,
-        secondaryValidationError: error.message || 'secondary_validation_failed',
-      },
-    };
-  }
-}
-
-function shouldUseFallbackAfterValidation(validation) {
-  const normalizedValidation = validation && typeof validation === 'object' ? validation : {};
-  if (normalizedValidation.aiValidationComplete === false) {
-    return true;
-  }
-  if (String(normalizedValidation.aiLoopStopReason || '').trim() === 'max_validation_passes_reached') {
-    return true;
-  }
-  if (normalizedValidation.aiOk === false) {
-    return true;
-  }
-  return false;
-}
-
-function buildValidationFallbackReason(validation) {
-  const normalizedValidation = validation && typeof validation === 'object' ? validation : {};
-  const parts = [];
-  if (normalizedValidation.aiLoopStopReason) {
-    parts.push(String(normalizedValidation.aiLoopStopReason));
-  }
-  if (Array.isArray(normalizedValidation.aiFailedChecks) && normalizedValidation.aiFailedChecks.length) {
-    parts.push(`failed:${normalizedValidation.aiFailedChecks.join(',')}`);
-  }
-  if (normalizedValidation.aiScore != null) {
-    parts.push(`score:${normalizedValidation.aiScore}`);
-  }
-  return parts.join(' | ') || 'validation_rejected';
+生成要求：
+1. 只依据上面的基础信息直接生成，不要套用知识库样例，不要提及 RAG、检索、验证。
+2. 如果只选了 1 个主题，所有输出都只围绕这 1 个主题。
+3. 如果选了 2 个主题，要自然融合，不要简单并列成两句话。
+4. 任务必须短、真、能执行，像真人会收到的观察任务，不要写成散文。
+5. 任务必须体现当前时间段和场景感，但不要求每条都硬写地点名。
+6. 避免空话，例如“寻找一个细节”“感受一下周围”“观察这里的变化”。
+7. 避免抽象大词堆砌，例如“氛围、气质、秩序、关系、张力”单独充当观察对象。
+8. 如果基础输入里的 previousMissions 非空，必须逐条避开上一轮任务；先检查 previousMissions 用了哪些 availableObjects 对象，这些对象在这次生成中禁用，除非 availableObjects 剩下对象数量不够。
+9. 同一地点重复生成时，要主动换动作、换对象、换切入角度，不要复用上一轮任务句式。
+10. ${missionCount === 1 ? '只返回 1 条任务，尽量控制在 18 到 30 个字。' : '返回 3 条任务，每条尽量控制在 14 到 28 个字，三条任务要有明显差异。'}
+11. 标题尽量在 12 个字以内，描述尽量在 32 个字以内，不要带编号。
+12. 输出语言自然、具体、少 AI 味，不要解释为什么这样生成。
+13. 如果提供了偏好，优先从 preferenceGuide.availableObjects 里选观察对象；preferenceGuide.blockedObjects 里的对象不要主动写进任务。
+14. 偏好主要影响“看什么”，不是只在描述里提一下偏好名称。结合第 13 条，优先从偏好对象里选观察对象。
+15. preferenceGuide.objectDetails 给出了当前更值得参考的对象摘要。优先选这些文本证据更具体的对象，不要只根据“命中/未命中”做模糊判断。
+16. 输出前先静默检查对象与地点是否对应，如果拿不准preferenceGuide.availableObjects里的对象是否合适，退回preferenceGuide.safeObjects 里的对象。
+17. 高德原生分类名只作为内部上下文，不要把“生活服务场所、风景名胜、购物服务、商务住宅”这类分类名直接写进标题、描述或任务；如果需要写地点，只写具体 POI、AOI、商圈或自然说法。
+18. 好任务优先级：优先选近处、稳定、此刻容易找到的对象；优先用“看、听、找、比、停一下、顺着走、记下”这类自然动作；一条任务尽量只做一件事。
+19. 如果任务里涉及人物或状态解读，可以基于当下听到或看到的线索做轻量判断，但不要写成需要长时间跟踪、偷拍偷录或下结论式审问的任务。
+20. 每条任务必须是一句语义完整、自然收口的话，不能停在半截动作上。不要输出“找个……，停下”“在……旁，听……”这种没说完的句子；动作后面必须落到明确的观察对象、比较对象或判断目标。
+ 
+返回 JSON：
+{
+  "title": "主题标题",
+  "description": "简短描述",
+  "category": "主题名",
+  "missions": ["任务1", "任务2", "任务3"],
+  "vibeColor": "十六进制颜色"
+}`;
 }
 
 exports.main = async (event) => {
-  const ragContext = retrieveContext(event);
-  const ragModelInput = buildRagModelInput(ragContext);
-  const fallbackTheme = normalizeTheme(buildFallbackTheme(event, ragContext), event.walkMode);
-  const prompt = buildPrompt(event, ragContext);
+  const categories = normalizeSelectedThemes(event.selectedThemes, event);
+  const fallbackTheme = normalizeTheme(buildDirectFallbackTheme(event, categories), event.walkMode);
+  const prompt = buildDirectPrompt(event, categories);
+  const systemPrompt = '你是遛遛小程序的城市漫步策划助手。只返回合法 JSON，不要输出额外解释。';
+  const modelRequest = buildModelRequestDebug(systemPrompt, prompt);
 
   try {
-    const theme = normalizeTheme(await chatJson(
-      '你是遛遛小程序的城市漫步策划助手。只返回合法 JSON，不要输出额外解释。',
+    const aiResult = await chatJsonWithMeta(
+      systemPrompt,
       prompt
-    ), event.walkMode);
-    const alignedTheme = forceThemeAlignment(theme, event, fallbackTheme);
-    const finalizedTheme = finalizeTheme(alignedTheme, event, fallbackTheme, {
-      categories: normalizeSelectedThemes(event.selectedThemes, event),
+    );
+    const generatedTheme = normalizeTheme(aiResult.parsed, event.walkMode);
+    const modelResponse = buildModelResponseDebug(aiResult);
+
+    const finalizedTheme = finalizeTheme({
+      ...fallbackTheme,
+      ...generatedTheme,
+      category: categories.length > 1 ? '组合' : (categories[0] || String(generatedTheme.category || '').trim() || fallbackTheme.category),
+    }, event, fallbackTheme, {
+      categories,
+      combined: categories.length > 1,
       preferAnchoredFill: true,
     });
-    const reviewResult = await maybeRunSecondaryValidation(finalizedTheme, event, fallbackTheme, {
-      categories: normalizeSelectedThemes(event.selectedThemes, event),
-      preferAnchoredFill: true,
-      currentPlan: ragContext.generationPlan || null,
-    });
-    if (shouldUseFallbackAfterValidation(reviewResult.validation)) {
-      const alignedFallbackTheme = forceThemeAlignment(fallbackTheme, event, fallbackTheme);
-      const finalizedFallback = finalizeTheme(alignedFallbackTheme, event, fallbackTheme, {
-        categories: normalizeSelectedThemes(event.selectedThemes, event),
-        preferAnchoredFill: true,
-      });
-      return {
-        theme: {
-          ...finalizedFallback,
-          finalization: {
-            ...(finalizedFallback.finalization || {}),
-            aiOriginalTheme: snapshotTheme(finalizedTheme),
-            aiRepairStrategy: reviewResult.validation.aiAppliedRepairStrategy || 'none',
-            aiRepairIndexes: reviewResult.validation.aiAppliedRepairIndexes || [],
-            aiFailedChecks: reviewResult.validation.aiFailedChecks || [],
-            aiValidationComplete: reviewResult.validation.aiValidationComplete,
-            aiValidationMissingFields: reviewResult.validation.aiValidationMissingFields || [],
-            aiLoopPassCount: reviewResult.validation.aiLoopPassCount || 0,
-            aiLoopRewriteCount: reviewResult.validation.aiLoopRewriteCount || 0,
-            aiLoopStopReason: reviewResult.validation.aiLoopStopReason || '',
-            aiRepairPromptCount: reviewResult.validation.aiRepairPromptCount || 0,
-            aiLoopDetails: reviewResult.validation.aiLoopDetails || [],
-          },
-        },
-        source: 'rag-fallback',
-        validation: reviewResult.validation,
-        runtimeVersion: RUNTIME_VERSION,
-        ragPlan: ragContext.generationPlan || null,
-        ragDebug: ragContext.ragDebug || null,
-        ragModelInput: {
-          ragContext: ragModelInput,
-          generationPlan: ragContext.generationPlan || null,
-        },
-        ragContext: includeDebugContext ? ragContext : undefined,
-        reason: buildValidationFallbackReason(reviewResult.validation),
-      };
-    }
+
     return {
-      theme: reviewResult.theme,
-      source: 'rag+ai',
-      validation: reviewResult.validation,
+      theme: finalizedTheme,
+      source: 'ai-direct',
+      validation: summarizeThemeValidation(finalizedTheme, event, {
+        categories,
+        combined: categories.length > 1,
+      }),
       runtimeVersion: RUNTIME_VERSION,
-      ragPlan: ragContext.generationPlan || null,
-      ragDebug: ragContext.ragDebug || null,
-      ragModelInput: {
-        ragContext: ragModelInput,
-        generationPlan: ragContext.generationPlan || null,
-      },
-      ragContext: includeDebugContext ? ragContext : undefined,
+      ragPlan: null,
+      ragDebug: null,
+      ragModelInput: null,
+      modelRequest,
+      modelResponse,
+      reason: '',
     };
   } catch (error) {
-    const alignedFallbackTheme = forceThemeAlignment(fallbackTheme, event, fallbackTheme);
-    const finalizedFallback = finalizeTheme(alignedFallbackTheme, event, fallbackTheme, {
-      categories: normalizeSelectedThemes(event.selectedThemes, event),
+    const finalizedFallback = finalizeTheme(fallbackTheme, event, fallbackTheme, {
+      categories,
+      combined: categories.length > 1,
       preferAnchoredFill: true,
     });
     return {
       theme: finalizedFallback,
-      source: 'rag-fallback',
+      source: 'ai-direct-fallback',
       validation: summarizeThemeValidation(finalizedFallback, event, {
-        categories: normalizeSelectedThemes(event.selectedThemes, event),
+        categories,
+        combined: categories.length > 1,
       }),
       runtimeVersion: RUNTIME_VERSION,
-      ragPlan: ragContext.generationPlan || null,
-      ragDebug: ragContext.ragDebug || null,
-      ragModelInput: {
-        ragContext: ragModelInput,
-        generationPlan: ragContext.generationPlan || null,
-      },
-      ragContext: includeDebugContext ? ragContext : undefined,
+      ragPlan: null,
+      ragDebug: null,
+      ragModelInput: null,
+      modelRequest,
       reason: error.message || 'generate_failed',
     };
   }

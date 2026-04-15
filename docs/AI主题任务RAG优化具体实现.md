@@ -228,48 +228,36 @@
 
 ### 5.3 dominantScene
 
-`dominantScene` 不是地图接口直接返回的字段，而是本地规则推断结果。
-
-核心规则在探索页的 `NEARBY_SCENE_RULES`：
-
-- 历史景区游览带
-- 文博展览停留带
-- 城市地标与广场游览带
-- 公园或滨水慢行带
-- 校园与教育生活带
-- 居民街区生活带
-- 商业办公停留带
-- 餐饮与市井烟火带
-- 交通换乘流动带
-- 医院与民生服务带
+`dominantScene` 不是地图接口直接返回的字段，但当前也已经不再使用旧的本地场景桶规则。
 
 评分依据包括：
 
-- `sceneTag` 是否命中场景关键词
-- 附近 POI 名称、地址、类型是否命中场景关键词
+- 高德原生 `type / typecode`
+- 高德逆地理编码返回的 `AOI / businessAreas`
+- 附近 POI 名称、距离和排序位置
 - POI 距离远近
 - POI 在列表中的排序位置
 
 因此如果 `dominantScene` 和实际感觉不搭，优先检查：
 
 - `poiNames` 是否偏少或偏了
-- `poiTypes` 是否太粗
-- `sceneTag` 是否不准
+- `poiTypes / poiTypecodes` 是否太粗
+- `primaryAoiName / primaryAoiTypecode` 是否不准
 - `sceneCandidates` 的第一名和第二名分差是否很小
-- 是否需要扩充 `NEARBY_SCENE_RULES`
+- 是否需要补强原生 `typecode` 与偏好对象的映射
 
 ### 5.4 sceneCandidates
 
-`sceneCandidates` 是前 3 个有分数的候选场景。
+`sceneCandidates` 是前几名有分数的高德原生候选分类。
 
 字段含义：
 
 - `id`
-  - 场景内部 ID
+  - 当前通常是高德分类编码
 - `label`
-  - 场景中文名
+  - 高德分类文本
 - `score`
-  - 根据 POI、距离和 sceneTag 算出来的场景分
+  - 根据 POI、距离和 AOI 加权后的分类分
 
 它用于排查“为什么 chosenScene 和实际情况不搭”。
 
@@ -277,8 +265,8 @@
 
 `activityHints` 来自三层合并：
 
-1. 命中场景规则里的 `activityHints`
-2. POI 文本触发的补充线索
+1. 高德原生主分类触发的线索
+2. AOI / POI 文本触发的补充线索
 3. 当前时间段的 fallback 线索
 
 例如：
@@ -775,11 +763,11 @@ AI 复核负责：
 
 解决方向：
 
-- 扩充 `NEARBY_SCENE_RULES`
-- 调整关键词
+- 优先检查高德 `typecode / AOI / businessAreas`
 - 调整距离和排序权重
+- 补强偏好对象到 `typecode` 的映射
 - 引入更多 POI
-- 在调试面板中对比 `dominantScene` 与 `sceneCandidates`
+- 在调试面板中对比 `dominantScene`、`sceneCandidates`、`primaryAoi*`
 
 ### 11.5 为什么纯粹模式没有天气和偏好
 
