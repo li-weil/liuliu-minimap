@@ -70,10 +70,19 @@ function normalizePoi(item) {
   };
 }
 
+function comparePoiDistance(left, right) {
+  const leftDistance = Number.isFinite(Number(left && left.distance)) ? Number(left.distance) : Number.MAX_SAFE_INTEGER;
+  const rightDistance = Number.isFinite(Number(right && right.distance)) ? Number(right.distance) : Number.MAX_SAFE_INTEGER;
+  if (leftDistance !== rightDistance) {
+    return leftDistance - rightDistance;
+  }
+  return String(left && left.name || '').localeCompare(String(right && right.name || ''), 'zh-CN');
+}
+
 exports.main = async (event) => {
   const latitude = Number(event.lat !== undefined ? event.lat : event.latitude);
   const longitude = Number(event.lng !== undefined ? event.lng : event.longitude);
-  const limit = Math.min(24, Math.max(1, Number(event.limit) || 18));
+  const limit = Math.min(18, Math.max(1, Number(event.limit) || 18));
   const radius = Math.min(5000, Math.max(500, Number(event.radius) || 3500));
 
   if (!AMAP_WEB_KEY) {
@@ -99,5 +108,9 @@ exports.main = async (event) => {
     throw new Error((response && (response.info || response.infocode)) || 'amap_nearby_failed');
   }
 
-  return (response.pois || []).map(normalizePoi).filter(Boolean);
+  return (response.pois || [])
+    .map(normalizePoi)
+    .filter(Boolean)
+    .sort(comparePoiDistance)
+    .slice(0, limit);
 };

@@ -96,8 +96,20 @@ async function chatJsonWithMeta(systemPrompt, userPrompt) {
 
   const rawText = String(parseAssistantText(payload) || '');
   const strippedText = stripCodeFence(rawText);
+  let parsed;
+  try {
+    parsed = JSON.parse(strippedText || '{}');
+  } catch (error) {
+    error.rawText = rawText;
+    error.strippedText = strippedText;
+    error.finishReason = payload && payload.choices && payload.choices[0] ? payload.choices[0].finish_reason || '' : '';
+    error.responseId = String(payload && payload.id || '').trim();
+    error.responseModel = String(payload && payload.model || '').trim();
+    error.usage = payload && payload.usage && typeof payload.usage === 'object' ? payload.usage : null;
+    throw error;
+  }
   return {
-    parsed: JSON.parse(strippedText || '{}'),
+    parsed,
     rawText,
     strippedText,
     finishReason: payload && payload.choices && payload.choices[0] ? payload.choices[0].finish_reason || '' : '',

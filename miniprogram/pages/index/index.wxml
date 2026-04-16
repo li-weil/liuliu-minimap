@@ -230,66 +230,6 @@
             </view>
           </view>
 
-          <view wx:if="{{debugRagRows.length}}" class="debug-rag-card">
-            <view class="debug-rag-head">
-              <view class="debug-rag-title">RAG 字段说明</view>
-              <view class="debug-rag-hint">这里解释本次检索计划和调试字段，方便判断主题、场景、锚点有没有跑偏</view>
-            </view>
-            <view wx:for="{{debugRagRows}}" wx:key="key" class="debug-rag-row">
-              <view class="debug-rag-row-head">
-                <text class="debug-rag-group">{{item.group}}</text>
-                <text class="debug-rag-key">{{item.label}}</text>
-              </view>
-              <view class="debug-rag-value">{{item.value}}</view>
-              <view class="debug-rag-help">{{item.help}}</view>
-            </view>
-          </view>
-
-          <view wx:if="{{debugRagPlanLines.length}}" class="debug-json-card">
-            <view class="debug-json-head">
-              <view>
-                <view class="debug-json-title">rag.plan</view>
-                <view class="debug-json-hint">模型生成前的检索计划，包含目标主题、主场景、角度、锚点和反例约束</view>
-              </view>
-              <view class="debug-json-pill">RAG 计划</view>
-            </view>
-            <scroll-view scroll-y class="debug-json-scroll debug-json-scroll-compact">
-              <view class="debug-json-block">
-                <view wx:for="{{debugRagPlanLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
-              </view>
-            </scroll-view>
-          </view>
-
-          <view wx:if="{{debugRagDebugLines.length}}" class="debug-json-card">
-            <view class="debug-json-head">
-              <view>
-                <view class="debug-json-title">rag.debug</view>
-                <view class="debug-json-hint">检索过程的调试信息，包含场景候选分数、主题覆盖、锚点覆盖和召回模板 ID</view>
-              </view>
-              <view class="debug-json-pill">RAG 调试</view>
-            </view>
-            <scroll-view scroll-y class="debug-json-scroll debug-json-scroll-compact">
-              <view class="debug-json-block">
-                <view wx:for="{{debugRagDebugLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
-              </view>
-            </scroll-view>
-          </view>
-
-          <view wx:if="{{debugRagModelInputLines.length}}" class="debug-json-card">
-            <view class="debug-json-head">
-              <view>
-                <view class="debug-json-title">rag.modelInput</view>
-                <view class="debug-json-hint">真正传进模型 prompt 的 RAG 原始内容，用来核对模型到底参考了哪些场景、样例和生成计划</view>
-              </view>
-              <view class="debug-json-pill">入模 RAG</view>
-            </view>
-            <scroll-view scroll-y class="debug-json-scroll">
-              <view class="debug-json-block">
-                <view wx:for="{{debugRagModelInputLines}}" wx:key="index" class="debug-json-line">{{item}}</view>
-              </view>
-            </scroll-view>
-          </view>
-
           <view wx:if="{{debugModelRequestLines.length}}" class="debug-json-card">
             <view class="debug-json-head">
               <view>

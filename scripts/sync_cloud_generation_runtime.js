@@ -10,13 +10,6 @@ const syncPairs = [
       path.join(rootDir, 'cloudfunctions', 'generateCombinedTheme', 'runtime.js'),
     ],
   },
-  {
-    sourcePath: path.join(rootDir, 'cloudfunctions', 'shared', 'generation-rag-runtime.js'),
-    targets: [
-      path.join(rootDir, 'cloudfunctions', 'generateTheme', 'rag-runtime.js'),
-      path.join(rootDir, 'cloudfunctions', 'generateCombinedTheme', 'rag-runtime.js'),
-    ],
-  },
 ];
 
 function main() {

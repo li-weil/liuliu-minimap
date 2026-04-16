@@ -1,787 +1,239 @@
 # AI 主题任务内容全流程说明
 
-## 1. 文档目的
+本文档记录当前小程序“AI 生成主题与任务”的实际实现链路。当前方案已经从早期的主题 RAG、AI 二次验证、AI 改写循环，回退并收敛为更轻的直接模型生成方案：前端整理基础上下文，云函数构造完整 prompt，模型直接返回主题卡片 JSON；本地只做轻量结构检查和必要兜底。
 
-本文档用于说明当前项目里“AI 生成主题与任务内容”这条链路已经如何工作，覆盖从探索页选点、上下文组装、云函数生成、结果展示，到开始单人漫步 / 创建同行房间 / 后续记录复用主题快照的完整流程。
+## 1. 当前方案总览
 
-这份文档重点回答 6 件事：
+当前主线是：
 
-- 现在用户是从哪里触发 AI 生成的
-- 生成前到底给模型传了什么上下文
-- `generateTheme` 与 `generateCombinedTheme` 两条主生成链路分别做什么
-- shared runtime 如何统一处理 prompt 上下文、任务骨架和结果收口
-- 生成结果如何进入单人记录和同行房间
-- 当前如何调试、部署和排查这条链路
+1. 用户在探索页选择生成方式。
+2. 前端确认探索点、时间、天气、模式、主题、偏好和附近 AOI 等上下文。
+3. 前端调用云函数 `generateTheme` 或 `generateCombinedTheme`。
+4. 云函数根据上下文构造完整模型输入，包括 system prompt、固定协议、生成规则、策略输入、动态上下文、上下文摘要和返回格式。
+5. 模型直接生成主题内容 JSON。
+6. 云函数解析 JSON，做轻量结构检查。
+7. 如果模型返回任务数量不足或请求失败，使用本地 fallback 补足或兜底。
+8. 前端展示主题卡片，并在调试开关中展示真正传给模型的完整输入和模型原始返回。
 
-对应代码入口：
+当前不再使用：
 
-- [探索页](/D:/liuliu-minimap/miniprogram/pages/index/index.js)
-- [探索页视图](/D:/liuliu-minimap/miniprogram/pages/index/index.wxml)
-- [主题服务层](/D:/liuliu-minimap/miniprogram/services/theme.js)
-- [共享生成运行时](/D:/liuliu-minimap/cloudfunctions/shared/generation-runtime.js)
-- [单主题生成](/D:/liuliu-minimap/cloudfunctions/generateTheme/index.js)
-- [单主题 RAG](/D:/liuliu-minimap/cloudfunctions/generateTheme/rag.js)
-- [组合主题生成](/D:/liuliu-minimap/cloudfunctions/generateCombinedTheme/index.js)
-- [RAG 优化具体实现](/D:/liuliu-minimap/docs/AI主题任务RAG优化具体实现.md)
-- [单人记录落库](/D:/liuliu-minimap/cloudfunctions/createWalk/index.js)
-- [同行房间创建](/D:/liuliu-minimap/cloudfunctions/createTeamRoom/index.js)
+- 主题 RAG 检索。
+- AI 二次验证。
+- AI 改写循环。
+- finalize AI。
+- dominantScene / sceneId 场景体系。
+- 将 POI 作为主要约束输入给模型。
 
----
+仍然保留：
 
-## 2. 全链路概览
+- 偏好对象逻辑中的轻量 instruction。
+- 本地结构检查。
+- 任务不足或模型失败时的 fallback。
+- 调试面板中的完整模型输入、模型输出、结构检查和关键上下文。
 
-当前 AI 主题任务内容的主链路可以概括为：
+## 2. 前端入口
 
-`探索页设定探索点 -> 前端补齐时间/地点/附近上下文 -> 调用生成云函数 -> shared runtime 收口输出 -> 页面展示主题卡片 -> 用户开始单人漫步或发起同行 -> 主题快照与 generationContext 落库 -> 后续记录页 / 房间页继续围绕这套任务执行`
+主要代码在：
 
-如果拆成产品动作，完整流程是：
+- `miniprogram/pages/index/index.js`
+- `miniprogram/services/api.js`
 
-1. 用户在探索页确认探索点
-2. 页面获取或补齐附近 POI 与地点语境
-3. 页面根据当前时间、地点、天气、偏好、主题选择，构造 `generationContext`
-4. 页面调用两个生成云函数入口之一；随机生成会先在前端选主题，再复用 `generateTheme`
-5. 云函数结合本地知识、上下文和 AI 生成主题与任务
-6. shared runtime 压标题、压描述、压任务长度，并做必要的任务去重与兜底
-7. 主题卡片展示结果
-8. 用户点击“开始这次漫步”或“发起同行漫步”
-9. 单人模式写入 `walkRecords`，同行模式写入 `teamWalkRooms`
-10. 记录页或团队记录页后续继续消费这份 `themeSnapshot + generationContext`
+### 2.1 随机生成
 
----
+入口函数：
 
-## 3. 功能板块与页面职责
+```js
+handleRandomTheme()
+```
 
-### 3.1 探索页
+行为：
 
-对应页面：
+- 从当前可用主题中随机选择一个主题。
+- 调用单主题云函数 `generateTheme`。
+- 随机行为发生在前端，不依赖后端随机主题接口。
+- 后端只接收已经确定的主题。
 
-- [index.js](/D:/liuliu-minimap/miniprogram/pages/index/index.js)
+source 标签会被前端归一化：
 
-职责：
+- `ai-direct-raw` / `ai-direct` -> `random-direct`
+- `ai-direct-partial-fallback` -> `random-direct-partial-fallback`
+- `ai-direct-fallback` / `ai-direct-error` -> `random-direct-fallback`
 
-- 选择当前位置、搜索地点或手动确认探索点
-- 加载附近 POI
-- 获取地点语境
-- 生成单主题、随机主题、组合主题
-- 展示本次传给 AI 的调试上下文
-- 把生成结果用于单人开始漫步或同行房间创建
+### 2.2 选择生成
 
-### 3.2 记录页 / 团队记录页
+入口函数：
 
-对应页面：
+```js
+handleSelectedThemeGenerate()
+```
 
-- [record.js](/D:/liuliu-minimap/miniprogram/pages/record/record.js)
-- [team-record.js](/D:/liuliu-minimap/miniprogram/pages/team-record/team-record.js)
+行为：
 
-职责：
+- 用户必须先选择主题。
+- 如果没有选择主题，前端直接提示 `请先选择主题`，不会再自动随机选择。
+- 纯粹模式下只允许单主题生成。
+- 进阶模式下：
+  - 选择一个主题时，调用 `generateTheme`。
+  - 选择多个主题时，调用 `generateCombinedTheme`。
 
-- 基于探索页生成出来的主题快照执行任务
-- 记录任务素材、文字和打卡内容
-- 在单人模式下继续使用 `createWalk`
-- 在同行模式下围绕房间任务提交个人贡献
+### 2.3 普通生成入口
 
-### 3.3 云函数层
+入口函数：
 
-对应目录：
+```js
+handleGenerateTheme()
+```
 
-- [cloudfunctions](/D:/liuliu-minimap/cloudfunctions)
+行为：
 
-职责：
+- 确认探索点。
+- 整理附近地点和时间线索。
+- 根据当前主题选择情况决定调用单主题或组合主题云函数。
+- 如果没有显式选择主题，会从可用主题中随机选择一个。
 
-- 处理 AI 主题生成
-- 统一后处理主题结果
-- 把生成结果持久化到单人记录或同行房间
-- 在后续核验、成就、历史页中继续复用生成快照
+## 3. 等待体验链路
 
----
+前端使用全局 `generationStage` 做阶段式 loading。
 
-## 4. 生成入口与模式划分
+阶段顺序：
 
-探索页当前有 3 个生成操作入口：
+1. `正在确认探索点位置`
+2. `正在整理附近地点和时间线索`
+3. `正在生成漫步主题和任务`
+4. `正在整理任务卡片`
 
-1. `generateTheme`
-2. 前端随机挑主题后调用 `generateTheme`
-3. `generateCombinedTheme`
+体验策略：
 
-服务层入口在：
+- 阶段切换用连续进度条，不做生硬跳段。
+- 前置阶段会尽量复用已经准备好的探索点、附近地点和时间上下文。
+- 如果等待超过轻量阈值，会显示：
 
-- [theme.js](/D:/liuliu-minimap/miniprogram/services/theme.js)
+```text
+66 正在加速赶来，请耐心等待
+```
 
-同时页面还存在两套模式维度：
+失败时统一显示：
 
-- `walkMode`
-  - `pure`
-  - `advanced`
-- `journeyMode`
-  - 单人
-  - 同行
+```text
+66 迷路啦，请再次尝试生成
+```
 
-这两套模式分别影响：
+## 4. 前端上下文准备
 
-- `walkMode` 决定生成几个任务，以及纯粹模式还是进阶模式的 prompt 约束
-- `journeyMode` 决定生成完成后是走 `createWalk({ status: 'active' })` 还是 `createTeamRoom()`
+核心函数：
 
-当前主题方向包括：
+```js
+buildGenerationPayload(basePayload)
+```
 
-- 形状
-- 色彩
-- 声音
-- 数字
-- 气味
+它负责把页面状态整理成云函数入参。主要数据包括：
 
-其中：
+- 当前探索点。
+- 当前时间段。
+- 天气和季节。
+- 用户心情。
+- 用户偏好。
+- 当前选择主题。
+- 漫步模式。
+- 附近 AOI 信息。
+- 历史生成任务。
+- 调试用 `contextPacket`。
 
-- 纯粹模式只允许 1 个主题方向
-- 进阶模式可生成单主题，也可生成双主题组合
-- 纯粹模式下天气、偏好、心情会置空，季节仍按当前日期推断
-- 随机生成只是前端随机选一个主题，然后复用 `generateTheme`
+### 4.1 时间上下文
 
----
+前端会生成 `timeContext`，包括：
 
-## 5. 生成前置条件
+- 当前时间段。
+- 日期类型。
+- 适合当前时间段的时间线索。
+- 与天气组合后的时间骨架。
 
-### 5.1 必须先确认探索点
+时间骨架不直接写具体主题，而是描述当下最有代表性的城市线索，例如“谁还在运转”“哪里开始收摊”“哪里显得更安静”。
 
-探索页在真正发起生成前，会先判断是否已经确认探索点。
+### 4.2 地点上下文
 
-这一层是必要的，因为后续生成上下文依赖：
+当前地点信息主要来自高德逆地理结果，而不是普通周边 POI 检索。
 
-- `locationName`
-- `latitude`
-- `longitude`
-- `locationAddress`
+前端仍会整理地点上下文，重点字段包括：
 
-如果没有探索点，时间上下文之外的“附近感”就无法成立。
+- `location.name`
+- `location.region`
+- `nearby.aoi`
+- `nearby.aoiList`
+- `nearby.aoiTypes`
+- `nearby.businessAreas`
 
-### 5.2 页面会自动补齐地点上下文
+当前策略：
 
-探索页在生成前会优先补齐两类与“附近”有关的信息：
+- 这些字段保留在前端上下文、调试视图和 fallback 可用信息中。
+- `location.name` 不进入真正提交给模型的 prompt，因为它太具体，容易把任务锁死在某个建筑、食堂、店铺或入口。
+- `location.region` 会进入 prompt，提供省市区这类粗粒度地区语境。
+- `nearby.aoi`、`nearby.aoiList`、`nearby.aoiTypes`、`nearby.businessAreas` 仍会进入 prompt，作为轻量场域参考。
+- 不再把 `location.sceneTag` 传给模型。
+- 不再把 `nearby.nearbyScene` 传给模型。
+- 不再向模型强调“附近语境以某某为主”。
+- 不再把 POI 列表作为主要 prompt 约束。
+- 当前 direct AI 主链路更强调主题、时间、天气、偏好、任务骨架、省市区和 AOI 语境，让模型不要被某个具体当前位置名称锁死。
 
-1. `locationContext`
-   - 通过 [getLocationContext](/D:/liuliu-minimap/miniprogram/services/map.js)
-   - 通过高德逆地理编码补齐 `AOI / 商圈 / 道路 / 附近 POI`
-   - 返回一份更接近原生地图语义的地点上下文，而不是本地自定义场景标签
+### 4.3 `contextPacket` 的作用
 
-2. `nearbyPlaces`
-   - 通过 [fetchNearbyPois](/D:/liuliu-minimap/miniprogram/services/map.js)
-   - 用来获取真实附近 POI 列表
+`contextPacket` 是前端整理出的结构化上下文包，主要用于：
 
-相关前端补齐逻辑在：
+- 给云函数提供原始上下文。
+- 给调试视图展示前端传入的基础信息。
+- 方便排查模型输入之前的上下文是否正确。
 
-- [index.js](/D:/liuliu-minimap/miniprogram/pages/index/index.js)
+但它不是最终直接提交给模型的完整内容。
 
-关键方法包括：
+真正提交给模型的是云函数生成的：
 
-- `ensureGenerationLocationContext()`
-- `ensureGenerationNearbyPlaces()`
+```js
+modelRequest.request.messages
+```
 
----
+两者关系是：
 
-## 6. 前端上下文组装
+- `contextPacket` 是原料。
+- 云函数把 `contextPacket` 和其他 event 字段重新组织成 prompt。
+- `modelRequest.request.messages` 才是最终模型输入。
 
-### 6.1 `timeContext`
+## 5. 云函数入口
 
-探索页会根据当前本地时间构造 `timeContext`。
+单主题云函数：
 
-对应方法：
+```text
+cloudfunctions/generateTheme/index.js
+```
 
-- `buildTimeContext()`
+组合主题云函数：
 
-当前会包含：
+```text
+cloudfunctions/generateCombinedTheme/index.js
+```
 
-- `localTime`
-- `hour`
-- `timePhase`
-- `weekdayType`
-- `timeHints`
+共享运行时：
 
-时间段会被整理成更适合任务生成的节点，例如：
+```text
+cloudfunctions/shared/generation-runtime.js
+```
 
-- 清晨
-- 上午
-- 午后
-- 黄昏
-- 夜间
-- 凌晨
+同步后的运行时副本：
 
-这一步的意义是把“此刻”显式传给模型，而不是让模型自己猜现在是白天还是夜里。
+```text
+cloudfunctions/generateTheme/runtime.js
+cloudfunctions/generateCombinedTheme/runtime.js
+```
 
-### 6.2 `nearbySummary`
+同步脚本：
 
-探索页不会把原始 POI JSON 直接塞给模型，而是先压成一个可读摘要。
+```text
+scripts/sync_cloud_generation_runtime.js
+```
 
-对应方法：
+当修改共享规则、骨架、fallback、上下文构造逻辑后，需要运行：
 
-- `buildNearbySummary()`
-
-当前摘要结构包括：
-
-- `poiNames`
-- `poiTypes`
-- `poiTypecodes`
-- `dominantScene`
-- `dominantSceneId`
-- `sceneCandidates`
-- `aoiNames`
-- `aoiTypecodes`
-- `primaryAoiName`
-- `primaryAoiType`
-- `primaryAoiTypecode`
-- `businessAreaNames`
-- `activityHints`
-- `source`
-
-这样做的好处是：
-
-- prompt 更稳定
-- 不容易把无关字段一并带进模型
-- 更接近“附近画像”而不是“地图接口回包”
-
-字段来源说明：
-
-- `poiNames` 来自附近 POI 名称，最多保留 8 个去重结果
-- `poiTypes` 来自高德 POI 原生分类文本，优先取 `typeTertiary / typeSecondary / typePrimary`
-- `poiTypecodes` 来自高德 POI 原生 `typecode`
-- `dominantScene` 不再来自本地自定义场景桶，而是由高德原生分类与 AOI 加权后得到的“主分类摘要”
-- `dominantSceneId` 当前优先使用高德分类编码或主 AOI 类型编码
-- `sceneCandidates` 是高德原生候选分类前几名，用于排查主分类为什么会被选中
-- `aoiNames / aoiTypecodes / primaryAoi*` 来自高德逆地理编码返回的 AOI
-- `businessAreaNames` 来自高德逆地理编码返回的热点商圈
-- `activityHints` 来自高德原生分类、AOI、POI 文本和当前时间段 fallback 线索
-- `source` 当前为 `amap-native`
-
-这一步当前已经彻底舍弃旧的 `NEARBY_SCENE_RULES`。附近摘要和后续偏好对象验证统一建立在高德原生分类、AOI、商圈和 POI 文本之上。
-
-### 6.3 `contextPacket`
-
-探索页会把生成上下文组装成统一结构化对象 `contextPacket`。
-
-对应方法：
-
-- `buildGenerationContext()`
-- `buildGenerationPayload()`
-
-当前 `contextPacket` 主要分为 5 层：
-
-1. `location`
-2. `time`
-3. `weather`
-4. `userState`
-5. `nearby`
-
-同时为了兼容旧链路，页面仍会保留部分平铺字段，例如：
-
-- `locationName`
-- `locationContext`
-- `sceneTag`
-
-其中当前比较关键的新增字段包括：
-
-- `location.nativeContext`
-  - 保存高德逆地理编码原始整理结果
-- `nearby.poiTypecodes`
-  - 保存高德原生分类编码
-- `nearby.aoiNames / nearby.aoiTypecodes`
-  - 保存 AOI 证据
-- `nearby.businessAreaNames`
-  - 保存商圈证据
-
-这些字段会直接参与后端 prompt 组装与偏好对象验证。
-- `timeContext`
-- `nearbySummary`
-
-也就是说，当前实现已经是“结构化上下文优先，平铺字段兼容回退”的状态。
-
-### 6.4 调试视图
-
-探索页现在已经有“生成调试”面板。
-
-对应：
-
-- [index.wxml](/D:/liuliu-minimap/miniprogram/pages/index/index.wxml)
-- [index.wxss](/D:/liuliu-minimap/miniprogram/pages/index/index.wxss)
-
-页面会在每次生成前，把本次真正发给 AI 的 `contextPacket` 存入调试状态：
-
-- `lastGenerationContext`
-- `debugContextRows`
-- `debugContextLines`
-
-对应方法：
-
-- `buildGenerationDebugState()`
-- `toggleGenerationDebug()`
-
-这样在排查“为什么这次生成得不对”时，可以直接看到：
-
-- 当前时间段
-- 场景标签
-- 附近 POI
-- 活动线索
-- 原始 JSON
-- RAG 计划 `rag.plan`
-- RAG 调试信息 `rag.debug`
-- 实际传入模型 prompt 的 RAG 内容 `rag.modelInput`
-
----
-
-## 7. 生成入口的职责
-
-### 7.1 `generateTheme`
-
-用途：
-
-- 处理“按用户当前主题选择生成”的主链路
-
-特点：
-
-- 支持单主题生成
-- 支持基于本地知识和 RAG 场景检索来增强 prompt
-- 对单主题结果做“主题对齐”，避免跑偏
-
-核心文件：
-
-- [generateTheme/index.js](/D:/liuliu-minimap/cloudfunctions/generateTheme/index.js)
-- [generateTheme/rag.js](/D:/liuliu-minimap/cloudfunctions/generateTheme/rag.js)
-
-内部流程大致是：
-
-1. 从事件里解析 `contextPacket`
-2. 检索场景画像 `sceneProfiles`
-3. 选出参考任务模板 `missionTemplates`
-4. 构造带上下文块的 prompt
-5. 调用 AI
-6. 如果失败，回退到本地 fallback
-7. 对单主题结果做对齐
-8. 交给 shared runtime 统一收口
-
-### 7.2 随机生成如何工作
-
-当前探索页的“随机生成”不再使用独立随机云函数，而是：
-
-1. 前端先从主题池里随机挑一个方向
-2. 把这个方向作为 `selectedThemes`
-3. 直接调用 [generateTheme](/D:/liuliu-minimap/cloudfunctions/generateTheme/index.js)
-4. 页面展示层仍可保留 `random+ai / random-fallback` 的来源语义
-
-这样纯粹模式下，随机生成和选择生成只剩“主题是谁”的差异，不再因为两套云函数而分叉。
-
-### 7.3 `generateCombinedTheme`
-
-用途：
-
-- 处理两个及以上方向的组合生成
-
-特点：
-
-- 只服务进阶模式的组合场景
-- 核心目标不是简单拼接，而是让任务真正体现两个方向的关系
-- 会额外强调“不要引入第三个无关主题”
-
-核心文件：
-
-- [generateCombinedTheme/index.js](/D:/liuliu-minimap/cloudfunctions/generateCombinedTheme/index.js)
-
----
-
-## 8. shared runtime 的统一作用
-
-当前两个后端生成云函数已经不再各自维护完全独立的上下文和后处理逻辑，而是统一复用 shared runtime；随机生成作为前端入口复用 `generateTheme`。
-
-源码：
-
-- [generation-runtime.js](/D:/liuliu-minimap/cloudfunctions/shared/generation-runtime.js)
-- [generation-rag-runtime.js](/D:/liuliu-minimap/cloudfunctions/shared/generation-rag-runtime.js)
-
-部署副本：
-
-- [generateTheme/runtime.js](/D:/liuliu-minimap/cloudfunctions/generateTheme/runtime.js)
-- [generateTheme/rag-runtime.js](/D:/liuliu-minimap/cloudfunctions/generateTheme/rag-runtime.js)
-- [generateCombinedTheme/runtime.js](/D:/liuliu-minimap/cloudfunctions/generateCombinedTheme/runtime.js)
-- [generateCombinedTheme/rag-runtime.js](/D:/liuliu-minimap/cloudfunctions/generateCombinedTheme/rag-runtime.js)
-
-shared runtime 主要解决 6 件事：
-
-1. 统一读取上下文
-2. 统一生成 prompt 上下文块
-3. 统一检索 sceneProfiles / missionTemplates，生成共享 RAG 上下文
-4. 统一提供任务骨架提示
-5. 统一压缩标题、描述、任务长度
-6. 统一做重复任务去重和附近锚点兜底
-
-这套 shared runtime / shared RAG runtime 在最近一轮里又补了两件关键事：
-
-7. 单主题场景提示按主题过滤后再入模
-8. 校验从“关键词规则主判定”改为“结构预检 + 每次 AI 复核”
-
-共享检索运行时还会统一产出：
-
-- `generationIntent`
-- `generationPlan`
-- `ragDebug`
-- `ragModelInput`
-
-其中 `ragModelInput` 已移除知识库样例原句，并进一步瘦身为最小必要入模对象，主要保留：
-
-- `targetThemes`
-- `time`
-- `nearby`
-- `sceneCards`
-- `themeReferences`
-
-当前单主题还会额外做：
-
-- `referenceMissions.angle` 人类可读化
-- `sceneHints` 主题过滤
-- `antiPatterns` 主题化补齐
-
-### 8.1 统一读取上下文
-
-相关方法：
-
-- `getContextPacket()`
-- `normalizeLocationSignals()`
-- `normalizeTimeContext()`
-- `normalizeNearbySummary()`
-
-这一层负责：
-
-- 优先从 `generationContext.contextPacket` 取值
-- 回退到旧字段，保证兼容
-
-### 8.2 统一 prompt 上下文块
-
-相关方法：
-
-- `buildPromptContextBlock()`
-
-当前会统一拼出一段包含以下内容的上下文：
-
-- 地点
-- 场景标签
-- 当前时间
-- 时间段
-- 日期类型
-- 时间线索
-- 偏好
-- 可用偏好对象
-- 不建议偏好对象
-- 偏好证据
-- 偏好约束
-- 高德原生主分类
-- 高德原生候选分类
-- 高德类型文本
-- 高德类型编码
-- 主 AOI
-- 主 AOI 类型编码
-- AOI 列表
-- 热点商圈
-- 附近 POI
-- 优先任务骨架
-
-这样单主题、前端随机、组合生成都能共享同一种“此时此地”的描述方式。
-
-这里要特别说明两点：
-
-- “附近活动线索”已经不再直接喂给模型，避免无关提示干扰生成。
-- 偏好对象验证当前只依据高德原生分类、AOI、商圈、POI 文本和时间环境，不再依据旧自定义场景桶。
-
-### 8.3 任务骨架提示
-
-相关方法：
-
-- `buildTaskSkeletonHints()`
-
-当前骨架类型包括：
-
-- 寻找
-- 比较
-- 停留
-- 等待
-- 判断来源
-- 对照
-- 辨认数字
-
-它的作用不是直接输出任务，而是给模型一个更像“真实任务”的结构参考，降低散文化和重复句式。
-
-### 8.4 结果收口
-
-相关方法：
-
-- `compactMission()`
-- `missionsAreSimilar()`
-- `buildAnchoredMission()`
-- `containsContextAnchor()`
-- `finalizeTheme()`
-
-这一层会统一处理：
-
-- 限制标题长度
-- 限制描述长度
-- 限制任务长度
-- 去掉相似任务
-- 若任务条数不足，优先补 fallback mission，不够再补 anchored mission
-
-也就是说，最终展示给用户的任务，不完全等于模型原始回包，而是“模型回包 + 共享运行时整理”的结果。
-
-### 8.5 统一验证机制
-
-当前纯粹模式、进阶模式、组合模式都复用 `summarizeThemeValidation()`，但它现在只做结构预检。
-
-结构预检重点包括：
-
-- 任务条数是否正确
-- 是否存在明显泛化任务
-- 进阶模式任务之间是否过于相似
-- 结构预检分数是否低于参考线
-
-不再作为硬规则检查的内容：
-
-- 任务里是否必须直接写出地点名
-- 是否必须显式带 POI 或场景锚点
-- 是否靠关键词匹配来判定最终主题是否正确
-
-当前 AI 复核改为每次都跑。也就是：
-
-- shared runtime 先做结构预检
-- AI 再判断是否真正命中主题、是否跑偏、是否需要重写
-
-这样做是为了避免过去那种“关键词规则误判，但人看其实没问题”的情况。
-
----
-
-## 9. Prompt 与本地知识如何协同
-
-### 9.1 本地知识来源
-
-`generateTheme` 和 `generateCombinedTheme` 并不是纯裸 prompt，它们还会结合本地知识：
-
-- `sceneProfiles`
-- `missionTemplates`
-- 主题规则与 fallback 规则
-
-相关文件：
-
-- [generateTheme/knowledge.js](/D:/liuliu-minimap/cloudfunctions/generateTheme/knowledge.js)
-- [generateCombinedTheme/knowledge.js](/D:/liuliu-minimap/cloudfunctions/generateCombinedTheme/knowledge.js)
-
-### 9.2 生成逻辑不是完全开放式
-
-当前系统已经有比较强的约束，包括：
-
-- 纯粹模式只生成 1 个任务
-- 进阶模式生成 3 个任务
-- 单主题不能明显跑偏
-- 组合主题不能偷偷混入第三主题
-- 任务要短、清楚、可执行
-- 任务尽量带附近锚点
-- 五个单主题都带有自己的 `angles / antiPatterns / sceneHints` 过滤逻辑
-
-所以当前生成系统更接近：
-
-- “有约束的 AI 生成”
-
-而不是：
-
-- “给大模型自由发挥”
-
----
-
-## 10. 返回给前端的结果结构
-
-所有生成入口最终都会返回一个统一风格的主题对象，核心字段包括：
-
-- `title`
-- `description`
-- `category`
-- `missions`
-- `vibeColor`
-
-前端会进一步做一次主题修剪和展示整理，然后写入：
-
-- `currentTheme`
-
-供探索页主题卡片展示，以及后续开始漫步 / 发起同行使用。
-
-页面展示组件主要依赖：
-
-- [theme-card](/D:/liuliu-minimap/miniprogram/components/theme-card/theme-card.wxml)
-
----
-
-## 11. 生成后的两条业务落地路径
-
-### 11.1 单人模式
-
-当用户点击“开始这次漫步”时：
-
-1. 页面校验当前已经有 `currentTheme`
-2. 页面校验探索点已确认
-3. 页面校验用户已登录
-4. 页面调用 `createWalk({ status: 'active' })`
-
-云函数：
-
-- [createWalk/index.js](/D:/liuliu-minimap/cloudfunctions/createWalk/index.js)
-
-会落库到 `walkRecords` 的关键内容包括：
-
-- `themeTitle`
-- `themeSnapshot`
-- `locationName`
-- `locationContext`
-- `locationAddress`
-- `latitude`
-- `longitude`
-- `walkMode`
-- `season`
-- `generationContext`
-- `status=active`
-
-这意味着：
-
-- 后续记录页不是重新向 AI 要任务
-- 而是继续围绕探索页这一刻生成出来的主题快照执行
-
-### 11.2 同行模式
-
-当用户点击“发起同行漫步”时：
-
-1. 页面校验 `currentTheme`
-2. 页面校验探索点与登录状态
-3. 页面调用 `createTeamRoom()`
-
-云函数：
-
-- [createTeamRoom/index.js](/D:/liuliu-minimap/cloudfunctions/createTeamRoom/index.js)
-
-会写入：
-
-- `teamWalkRooms`
-- `teamWalkMembers`
-- `teamWalkActivities`
-
-房间记录里同样会保存：
-
-- `themeSnapshot`
-- `themeTitle`
-- `themeCategory`
-- `locationName`
-- `locationContext`
-- `locationAddress`
-- `season`
-- `generationContext`
-
-也就是说，同行模式复用的不是“另起一套任务系统”，而是探索页已经生成好的主题快照。
-
----
-
-## 12. 记录执行与任务核验如何复用生成内容
-
-主题一旦进入记录或房间之后，后续页面主要围绕以下内容工作：
-
-- 任务列表 `missions`
-- 主题标题与描述
-- 生成上下文 `generationContext`
-
-### 12.1 单人记录页
-
-记录页支持：
-
-- 文字
-- 图片
-- 视频
-- 录音
-- 路线追踪
-- 任务核验
-- 贴纸与陪伴文案
-
-相关云函数：
-
-- [verifyMission](/D:/liuliu-minimap/cloudfunctions/verifyMission/index.js)
-- [generateSticker](/D:/liuliu-minimap/cloudfunctions/generateSticker/index.js)
-
-### 12.2 保存完成记录
-
-单人模式结束时，页面会再次调用：
-
-- `createWalk({ id, status: 'finished' })`
-
-完成同一条记录的更新。
-
-这时主题快照不会被重新生成，而是延续开始时保存下来的那份生成结果。
-
----
-
-## 13. 调试与排查建议
-
-当前围绕 AI 生成链路，最重要的排查入口有 4 个：
-
-### 13.1 探索页调试面板
-
-重点看：
-
-- `contextPacket.location.sceneTag`
-- `contextPacket.time.timePhase`
-- `contextPacket.nearby.poiNames`
-- `contextPacket.nearby.activityHints`
-- `contextPacket.rag.plan.targetThemes`
-- `contextPacket.rag.plan.chosenScene`
-- `contextPacket.rag.debug.sceneCoverage`
-- `contextPacket.rag.modelInput`
-- `contextPacket.validation`
-
-如果这里就不对，后面 prompt 再怎么改也不会准。
-
-新增两个高优先级检查点：
-
-- `rag.modelInput.referenceMissions[].angle` 是否还是内部 id
-- `rag.modelInput.scenes[].missionHints` 是否还混入别的主题提示
-
-### 13.2 shared runtime
-
-重点看：
-
-- `buildPromptContextBlock()`
-- `buildTaskSkeletonHints()`
-- `finalizeTheme()`
-
-如果结果“AI 味重、太长、没附近感”，通常先看这一层。
-
-### 13.3 生成云函数
-
-重点看：
-
-- prompt 是否正确带入上下文
-- fallback 是否过强
-- 单主题对齐是否误伤
-
-### 13.4 落库链路
-
-重点看：
-
-- `createWalk`
-- `createTeamRoom`
-
-如果记录页看到的主题和探索页不一致，通常要检查这里是不是没把 `themeSnapshot` 或 `generationContext` 一起带上。
-
----
-
-## 14. 部署与运维依赖
-
-当前 AI 主题任务内容全流程依赖至少以下云函数：
-
-- `fetchNearbyPois`
-- `getLocationContext`
-- `generateTheme`
-- `generateCombinedTheme`
-- `createWalk`
-- `createTeamRoom`
-
-如果修改了 shared runtime 或共享检索层，还需要先执行：
-
-```bash
-node scripts/sync_cloud_generation_runtime.js
+```powershell
+node scripts\sync_cloud_generation_runtime.js
 ```
 
 然后重新部署：
@@ -789,30 +241,474 @@ node scripts/sync_cloud_generation_runtime.js
 - `generateTheme`
 - `generateCombinedTheme`
 
-同时需要确认：
+## 6. 云函数生成流程
 
-- 云函数权限规则允许探索阶段调用 `fetchNearbyPois`、`getLocationContext`、主题生成函数
-- AI 相关环境变量已经配置
-- 地图相关环境变量已经配置
+### 6.1 单主题生成
 
-部署和权限细节可继续参考：
+核心流程：
 
-- [云开发环境重建说明.md](/D:/liuliu-minimap/docs/云开发环境重建说明.md)
+```js
+normalizeSelectedThemes()
+buildPreparedRuntimeContext()
+buildDirectPrompt()
+chatJsonWithMeta()
+ensureThemeMissions()
+summarizeStructureCheck()
+```
 
----
+返回字段包括：
 
-## 15. 当前系统的真实定位
+- `theme`
+- `source`
+- `structureCheck`
+- `runtimeVersion`
+- `modelRequest`
+- `modelResponse`
+- `reason`
 
-当前这条链路的本质不是“单一 AI 接口”。
+### 6.2 组合主题生成
 
-它已经是一条完整的业务流水线，包含：
+核心流程：
 
-- 探索页选点
-- 结构化上下文组装
-- 云函数 AI 生成
-- shared runtime 统一收口
-- 主题展示
-- 单人 / 同行落库
-- 后续记录执行与核验复用
+```js
+normalizeCategories()
+buildPreparedRuntimeContext()
+buildPrompt()
+chatJsonWithMeta()
+ensureThemeMissions()
+summarizeStructureCheck()
+```
 
-因此后续无论要继续优化 prompt、接 Web 共用接口、增加埋点，还是调试“为什么今天生成不对”，都应该把它当成一条完整链路来看，而不是只盯着某一个模型 prompt。
+组合主题要求至少两个主题。如果主题数量不足，会返回 `combined-direct-error`。
+
+返回字段包括：
+
+- `theme`
+- `source`
+- `combinedCategories`
+- `structureCheck`
+- `runtimeVersion`
+- `modelRequest`
+- `modelResponse`
+- `reason`
+
+## 7. 真正提交给模型的内容
+
+模型输入由云函数组装，不是前端直接拼接。
+
+最终结构是 Chat Completions messages：
+
+```js
+[
+  {
+    role: 'system',
+    content: '你是遛遛小程序的城市漫步策划助手。只返回合法 JSON，不要输出额外解释。'
+  },
+  {
+    role: 'user',
+    content: '完整用户 prompt'
+  }
+]
+```
+
+组合主题使用类似的 system prompt：
+
+```text
+你是遛遛小程序的组合主题策划助手。只返回合法 JSON，不要输出额外解释。
+```
+
+### 7.1 固定协议
+
+固定协议位于 prompt 前部，用于提高隐式 prompt cache 命中率，也让模型优先看到稳定规则。
+
+固定协议包含：
+
+- `outputContract`
+- `rulePriority`
+- `contextPriority`
+- `conflictPolicy`
+- `generationRules`
+
+其中 `generationRules` 是主要约束规则，当前已经从上下文摘要中移出，集中放在固定协议内。
+
+### 7.2 策略输入
+
+策略输入描述这次生成的任务策略：
+
+- `walkMode`
+- `selectedThemes` 或 `categories`
+- `missionCount`
+- `themeTaskSkeletons`
+- `timeTaskSkeletons`
+
+`themeTaskSkeletons` 和 `timeTaskSkeletons` 是分开的字段：
+
+- `themeTaskSkeletons`：来自主题骨架。
+- `timeTaskSkeletons`：来自时间段和天气组合骨架。
+
+### 7.3 动态上下文
+
+动态上下文包含当次生成变化较大的信息，但不再包含过于具体的当前地点名。
+
+当前进入模型的动态字段主要是：
+
+- `mood`
+- `weather`
+- `season`
+- `preference`
+- `preferenceGuide.instruction`
+- `region`
+- `time.timePhase`
+- `time.timeHints`
+- `nearby.aoi`
+- `nearby.aoiList`
+- `nearby.aoiTypes`
+- `nearby.businessAreas`
+- `previousMissions`
+
+注意：
+
+- 不再传入大量编码类数据给模型。
+- 不再把 typecode、matchedNativeCodes 等编码字段塞进 prompt。
+- 不再把 `location.name` 这类具体点名塞进 prompt。
+- 保留 `region`，让模型知道省市区层面的城市语境。
+- AOI 和商圈只作为基本场域参考，不要求模型机械复述。
+- 模型主要依据中文文本理解语境。
+- `previousMissions` 用于减少连续重复。
+
+### 7.4 上下文摘要
+
+上下文摘要现在只保留很短的任务概括，不再承载完整生成规则。
+
+当前摘要主要说明：
+
+- 当前时间段。
+- 偏好情况。
+- 任务应该短、真实、可执行。
+
+过去摘要里重复出现的生成要求、地点名、AOI 列表、骨架内容等已经移除或移动到对应 JSON 字段。当前摘要不再写入具体当前位置名称。
+
+## 8. 模型调用
+
+模型调用文件：
+
+```text
+cloudfunctions/generateTheme/ai.js
+cloudfunctions/generateCombinedTheme/ai.js
+```
+
+接口形态：
+
+- 使用 DashScope 兼容 OpenAI Chat Completions 的接口格式。
+- 默认 base URL：
+
+```text
+https://dashscope.aliyuncs.com/compatible-mode/v1
+```
+
+模型配置来源：
+
+1. 环境变量 `AI_CHAT_MODEL`
+2. 本地配置文件中的 `model`
+3. 代码默认模型
+
+当前建议模型：
+
+```text
+qwen3.5-plus
+```
+
+但模型不是在业务逻辑里硬编码决定的。实际线上使用哪个模型，以云函数环境变量、云端配置和调试面板中的 `modelRequest.request.model` 为准。
+
+部署时应通过环境变量或云函数安全配置指定模型与密钥，避免把密钥和敏感配置写入仓库。
+
+关键请求参数：
+
+- `response_format: { type: 'json_object' }`
+- 单主题温度偏高，鼓励自然变化。
+- 组合主题温度更高，避免组合结果过于模板化。
+- 请求超时由环境变量或配置控制。
+
+模型返回后会记录：
+
+- `rawText`
+- `strippedText`
+- `parsed`
+- `finishReason`
+- `responseId`
+- `responseModel`
+- `usage`
+
+这些信息会进入前端调试视图，方便确认“模型到底返回了什么”。
+
+## 9. 任务骨架逻辑
+
+任务骨架由共享运行时生成：
+
+```js
+buildTaskSkeletonGroups()
+```
+
+当前设计：
+
+- 单主题使用对应主题的骨架库。
+- 组合主题不再传单主题骨架，使用组合基础骨架。
+- 时间骨架来自时间段和天气组合。
+- 骨架会根据 `generationSeed` 做轮转，避免每次固定取前几条。
+- 主题骨架和时间骨架分别放进 prompt 的不同字段。
+
+当前不再使用：
+
+```js
+buildTaskSkeletonHints()
+```
+
+该旧函数已经被移除，避免出现两套骨架入口。
+
+## 10. 偏好逻辑
+
+偏好包括：
+
+- 自然景观
+- 人文历史
+- 市井烟火
+
+当前 prompt 不再给模型塞完整偏好对象列表，而是保留轻量 instruction。
+
+原因：
+
+- 对象库过多会挤占 prompt。
+- 对象库过强会让模型机械套用。
+- 当前位置 POI 不稳定时，强绑定对象反而会导致错误任务。
+
+当前偏好主要用于影响任务对象方向，而不是作为硬性验证规则。
+
+纯粹模式没有偏好，prompt 不会强行写入某一类偏好对象。
+
+## 11. 地点信息策略
+
+当前地点策略已经从“POI 强约束”收敛为“去掉具体地点名，保留省市区和 AOI 场域参考”。
+
+### 11.1 为什么不强依赖 POI
+
+高德逆地理 POI 和周边 POI 存在明显偏向：
+
+- 餐饮和生活服务经常排在前面。
+- 著名景点、校园、园区等代表性地点不一定靠前。
+- 不指定类型时，结果不一定覆盖风景名胜。
+- 指定类型时能取到代表性地点，但不适合作为通用生成链路。
+
+因此当前 prompt 不再把 POI 作为核心输入。
+
+### 11.2 AOI 的使用方式
+
+AOI 仍然更适合表达用户所处的范围语境。它会作为轻量参考进入模型 prompt，但不再和 `location.name` 这种具体点名一起限制模型。
+
+当前传给模型：
+
+- `nearby.aoi`
+- `nearby.aoiList`
+- `nearby.aoiTypes`
+- `nearby.businessAreas`
+
+这样做的原因是：AOI 可以提供“这里大概是什么场域”的基本判断，但不会像具体地点名那样把模型锁死在某个建筑、食堂、店铺或入口。
+
+这些信息仍可以在调试面板中查看，用来判断定位和地图上下文是否合理。
+
+### 11.3 地区信息
+
+地区信息会进入 prompt，但只保留省市区这类粗粒度语境，不包含具体点位名。
+
+示例：
+
+```text
+广州市番禺区
+```
+
+它主要用于调试和后续可能的产品展示，不再要求模型根据地区生成任务。
+
+## 12. 结构检查
+
+当前没有 AI 验证机制。
+
+云函数只做本地轻量结构检查：
+
+```js
+summarizeStructureCheck()
+```
+
+检查内容包括：
+
+- 任务数量是否满足模式要求。
+- 任务是否过于泛泛。
+- 多个任务之间是否过于相似。
+- 结构分数。
+- 简要原因。
+
+它的作用是：
+
+- 给调试视图提供质量参考。
+- 帮助判断是否出现明显结构问题。
+- 不直接替代模型判断。
+
+它不会：
+
+- 重新把内容发给 AI 审核。
+- 使用关键词强行判定主题命中。
+- 自动改写模型结果。
+
+## 13. Fallback 机制
+
+fallback 仍然保留，主要处理两种情况：
+
+1. 模型请求失败。
+2. 模型返回任务数量不足。
+
+fallback 原则：
+
+- 不依赖偏好对象。
+- 不使用旧 RAG。
+- 尽量依据主题、时间和基础骨架生成可展示任务；模型失败或数量不足时，fallback 可以轻量参考地点上下文。
+- 数量不足时只补足缺失任务，不覆盖模型已经返回的有效内容。
+
+source 标签：
+
+- `ai-direct-raw`：模型完整返回，未使用 fallback。
+- `ai-direct-partial-fallback`：模型返回可用，但任务数量不足，本地补足。
+- `ai-direct-fallback`：模型请求失败或不可用，使用 fallback。
+- `combined-direct-raw`：组合主题模型完整返回。
+- `combined-direct-partial-fallback`：组合主题任务数量不足，本地补足。
+- `combined-direct-fallback`：组合主题模型失败，使用 fallback。
+- `combined-direct-error`：组合主题入参不足等前置错误。
+
+## 14. 前端结果处理
+
+前端收到云函数结果后，会做：
+
+```js
+normalizeThemeResponse()
+trimTheme()
+applyGeneratedThemeMetaToContext()
+```
+
+主要工作：
+
+- 兼容云函数返回结构。
+- 适配直接返回 theme 的情况。
+- 修剪标题和任务长度，适配 UI。
+- 保存生成来源。
+- 保存结构检查。
+- 保存模型完整输入。
+- 保存模型原始返回。
+- 保存本次任务到 `previousMissions`，用于下一次生成避免重复。
+
+注意：
+
+- 如果调试视图看到模型原始返回是完整的，但页面展示被截断，问题通常在前端卡片布局或展示层。
+- 如果模型原始返回本身不完整，问题才在 prompt 或模型输出。
+
+## 15. 调试视图
+
+探索页调试开关用于查看本次生成的真实链路。
+
+当前重点展示：
+
+- 结果来源。
+- 失败原因。
+- 运行时版本。
+- 模型名称。
+- 探索点经纬度。
+- 地点信息。
+- 结构检查结果。
+- 真正提交给模型的完整输入。
+- 模型原始返回。
+
+当前已经移除或弱化：
+
+- RAG 调试卡片。
+- AI 验证卡片。
+- AI 改写卡片。
+- finalize AI 卡片。
+- 历史残留的复检信息。
+- `contextPacket` 单独卡片。
+
+调试时最重要的是看：
+
+```text
+模型完整输入
+模型原始返回
+```
+
+因为它们分别对应：
+
+- 模型实际看到了什么。
+- 模型实际返回了什么。
+
+## 16. 部署和同步
+
+修改共享运行时后，需要同步：
+
+```powershell
+node scripts\sync_cloud_generation_runtime.js
+```
+
+该脚本会把：
+
+```text
+cloudfunctions/shared/generation-runtime.js
+```
+
+同步到：
+
+```text
+cloudfunctions/generateTheme/runtime.js
+cloudfunctions/generateCombinedTheme/runtime.js
+```
+
+然后部署云函数：
+
+- `generateTheme`
+- `generateCombinedTheme`
+
+如果只改了云函数入口文件，例如：
+
+```text
+cloudfunctions/generateTheme/index.js
+cloudfunctions/generateCombinedTheme/index.js
+```
+
+则不需要运行同步脚本，但仍然需要重新部署对应云函数。
+
+如果改了模型调用配置：
+
+```text
+cloudfunctions/generateTheme/ai.js
+cloudfunctions/generateCombinedTheme/ai.js
+```
+
+也需要重新部署对应云函数。
+
+## 17. 当前链路判断
+
+当前链路相比此前 RAG + AI 验证 + 改写循环更清楚：
+
+- 前端只负责收集上下文和展示调试。
+- 云函数负责构造完整 prompt。
+- 模型负责一次性生成主题任务。
+- 本地只负责结构兜底，不再过度干预内容。
+- 调试视图直接展示真实模型输入和真实模型返回。
+
+这套链路的核心取向是：减少具体地点名对模型的过度绑架，把生成自由度还给模型，同时通过省市区、AOI 语境、时间、主题骨架、偏好 instruction 和轻量规则维持基本质量。
+
+## 18. 后续可优化方向
+
+后续如果继续优化，优先考虑：
+
+1. 继续压缩动态上下文，减少无效 token。
+2. 将稳定规则尽量放在 prompt 前部，提高隐式缓存命中。
+3. 完善不同时间和天气组合下的时间骨架。
+4. 继续人工打磨各主题的任务骨架。
+5. 继续观察 AOI 质量，必要时补充指定类型 POI 作为旁路调试，不直接强塞进主 prompt。
+6. 对前端等待体验做更细腻的进度反馈。
+7. 对 fallback 做更自然的任务句式优化。
+8. 如果未来模型能力和接口能力允许，再考虑真正的联网 agent 或外部知识增强。

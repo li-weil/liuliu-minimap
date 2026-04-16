@@ -6,17 +6,17 @@ const {
   summarizeCoreTimeHints,
   normalizeNearbySummary,
   buildPreferenceContext,
-  normalizeRecentMissionHistory,
   buildPreparedRuntimeContext,
   buildPromptContextBlock,
-  finalizeTheme,
-  summarizeThemeValidation,
-  chooseTaskPlaceLabel,
+  summarizeStructureCheck,
+  buildTaskSkeletonGroups,
+  compactMission,
+  missionsAreSimilar,
 } = require('./runtime');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
-const RUNTIME_VERSION = '2026-04-14-combined-direct-ai-r5';
+const RUNTIME_VERSION = '2026-04-16-combined-direct-ai-fallback-r12';
 
 function buildModelRequestDebug(systemPrompt, userPrompt) {
   const config = getAiConfig();
@@ -80,6 +80,17 @@ function normalizeTheme(theme, walkMode) {
   };
 }
 
+function buildEmptyTheme(categories, walkMode) {
+  return normalizeTheme({
+    title: '',
+    description: '',
+    category: '组合',
+    missions: [],
+    vibeColor: '',
+    combinedCategories: categories,
+  }, walkMode);
+}
+
 function normalizeCategories(categories) {
   return (Array.isArray(categories) ? categories : [])
     .map((item) => String(item || '').replace(/漫步/g, '').trim())
@@ -87,31 +98,78 @@ function normalizeCategories(categories) {
     .slice(0, 3);
 }
 
-function buildFallbackTheme(event, categories, preparedContext = null) {
-  const prepared = preparedContext || buildPreparedRuntimeContext(event, {
-    categories,
-    walkMode: event.walkMode,
-    combined: true,
-  });
+function pickFallbackPlace(locationSignals, nearbySummary) {
+  return [
+    nearbySummary.primaryAoiName,
+    nearbySummary.aoiNames && nearbySummary.aoiNames[0],
+    locationSignals.locationName,
+  ].map((item) => String(item || '').trim())
+    .find((item) => item && item !== '当前位置' && item !== '城市街道') || '这片地方';
+}
+
+function buildFallbackRuntimeContext(event) {
+  return {
+    locationSignals: normalizeLocationSignals(event),
+    timeContext: normalizeTimeContext(event),
+    nearbySummary: normalizeNearbySummary(event),
+  };
+}
+
+function buildFallbackMissionPool(categories, event, preparedContext = null) {
+  const prepared = preparedContext || buildFallbackRuntimeContext(event);
   const locationSignals = prepared.locationSignals || normalizeLocationSignals(event);
   const timeContext = prepared.timeContext || normalizeTimeContext(event);
   const nearbySummary = prepared.nearbySummary || normalizeNearbySummary(event);
-  const preferenceContext = prepared.preferenceContext || buildPreferenceContext(event);
-  const sceneName = chooseTaskPlaceLabel(locationSignals, nearbySummary) || locationSignals.locationName || '这片街区';
-  const timePhase = timeContext.timePhase || '此刻';
-  const preferredObject = preferenceContext.objectHints[0] || '';
+  const place = pickFallbackPlace(locationSignals, nearbySummary);
+  const phase = timeContext.timePhase || '此刻';
+  const poiTypes = Array.isArray(nearbySummary.poiTypes) ? nearbySummary.poiTypes.filter(Boolean).slice(0, 3) : [];
+  const typeText = poiTypes.length ? poiTypes.join('、') : '附近可见的东西';
+  const skeletonGroups = buildTaskSkeletonGroups(categories, timeContext.timePhase, event.walkMode, {
+    combined: true,
+    event,
+  });
+  const skeletonMissions = []
+    .concat(skeletonGroups.themeSkeletons || [])
+    .concat(skeletonGroups.timeSkeletons || [])
+    .map((item) => String(item || '').replace(/^[^：:]+[：:]/, '').trim())
+    .filter(Boolean)
+    .map((item) => `${item.replace(/这片地方/g, place).replace(/附近/g, place)}，参考${typeText}`);
+  return [
+    `在${place}找一个能同时带出${categories.join('和')}的细节`,
+    `先看${categories[0]}，再判断它和${categories[1] || categories[0]}怎么叠在一起`,
+    `${phase}里沿着${place}走几步，找${categories.join('、')}同时出现的一刻`,
+  ].concat(skeletonMissions);
+}
+
+function ensureThemeMissions(theme, categories, event, preparedContext = null, reason = '') {
+  const missionCount = event.walkMode === 'advanced' ? 3 : 1;
+  const normalizedTheme = normalizeTheme(theme, event.walkMode);
+  const missions = normalizedTheme.missions.slice();
+  const fallbackPool = buildFallbackMissionPool(categories, event, preparedContext)
+    .map((item) => compactMission(item, event.walkMode))
+    .filter(Boolean);
+  fallbackPool.forEach((mission) => {
+    if (missions.length >= missionCount) {
+      return;
+    }
+    if (!missions.some((existing) => missionsAreSimilar(existing, mission))) {
+      missions.push(mission);
+    }
+  });
+  while (missions.length < missionCount) {
+    const index = missions.length + 1;
+    missions.push(compactMission(`在${pickFallbackPlace(normalizeLocationSignals(event), normalizeNearbySummary(event))}找第${index}个同时带出${categories.join('和')}的线索`, event.walkMode));
+  }
   return {
-    title: `${categories.join('×')}漫步`,
-    description: `${timePhase}里，把${categories.join('和')}放进${sceneName}的此刻。`,
+    ...normalizedTheme,
+    title: normalizedTheme.title || `${categories.join('×')}观察`,
+    description: normalizedTheme.description || '从当下附近可见线索开始。',
     category: '组合',
-    missions: event.walkMode === 'advanced'
-      ? [
-          `在${sceneName}${preferredObject ? `先看${preferredObject}，` : ''}找一处同时呼应${categories.join('和')}的细节`,
-          `比较两处${preferredObject || '地方'}怎样分别带出${categories.join('和')}`,
-        `停一下，看它们在这里是怎么碰到一起的`,
-        ]
-      : [`在${sceneName}${preferredObject ? `先看${preferredObject}，` : ''}找一处同时呼应${categories.join('和')}的细节`],
-    vibeColor: '#7c6a94',
+    missions: missions.slice(0, missionCount),
+    fallbackMeta: {
+      used: missions.length > normalizedTheme.missions.length || !!reason,
+      reason,
+    },
   };
 }
 
@@ -141,21 +199,19 @@ function buildPrompt(event, categories, preparedContext = null) {
     : [];
   const missionCount = event.walkMode === 'advanced' ? 3 : 1;
   const generationRules = [
-    '直接生成组合主题任务，不提及 RAG、知识库、检索或验证。',
+    '直接生成组合主题任务，不要输出生成过程说明。',
     `必须把主题 ${categories.join('、')} 融合在一起，不要拆成两段各写各的。`,
     '任务要短、具体、可执行，像真人会收到的任务卡片，不要写成散文。',
-    '要体现当前时间段和场景语境，但不要每条都机械重复地点名。',
+    '要体现当前时间段、漫步主题和 AOI 语境，不要机械重复地点名，不要让任务落到其他主题上。',
     '避免空话，例如“寻找一个细节”“感受一下周围”“观察这里的变化”。',
     '避免抽象大词堆砌，例如“氛围、气质、秩序、关系、张力”单独充当观察对象。',
     missionCount === 1 ? '只返回 1 条任务，尽量控制在 18 到 30 个字。' : '返回 3 条任务，每条尽量控制在 14 到 28 个字，三条任务要有明显差异。',
     '标题尽量在 12 个字以内，描述尽量在 32 个字以内。',
     '输出语言自然、具体、少 AI 味，不要解释为什么这样生成。',
-    '如果提供了偏好，优先从 preferenceGuide.availableObjects 里选观察对象；preferenceGuide.blockedObjects 里的对象不要主动写进任务。',
-    '如果 previousMissions 非空，必须逐条避开上一轮任务；先检查 previousMissions 用了哪些 availableObjects 对象，这些对象在这次生成中禁用，除非 availableObjects 剩下对象数量不够。',
-    'preferenceGuide.objectDetails 给出了当前更值得参考的对象摘要。优先选这些文本证据更具体的对象，不要只根据“命中/未命中”做模糊判断。',
-    '输出前先静默检查对象与地点是否对应，如果拿不准 preferenceGuide.availableObjects 里的对象是否合适，退回 preferenceGuide.safeObjects 里的对象。',
-    '高德原生分类名只作为内部上下文，不要把 nearby.poiTypes 这类分类名和 nearby.pois 具体名称直接写进标题、描述或任务；如果需要写地点，只写具体 AOI、商圈或自然说法。',
-    '好任务优先级：优先选近处、稳定、此刻容易找到的对象；优先用“看、听、找、比、停一下、顺着走、记下”这类自然动作；一条任务尽量只做一件事。',
+    '结合 AOI 层级、AOI 类型、时间、主题和偏好自行选择合适对象，优先选择常见、可现场确认、不依赖具体地名就能完成的对象。禁止选择让人生理厌恶的对象，比如垃圾桶',
+    '如果 previousMissions 非空，必须逐条避开上一轮任务，不要重复上一轮的对象、动作和句式。',
+    '地点判断只参考 region、nearby.aoi、nearby.aoiList、nearby.aoiTypes 和 businessAreas；不要依赖 location.name、POI 具体名称或 POI 类型。',
+    '好任务优先级：优先选近处、稳定、此刻容易找到的对象；去掉状语和不必要的动作指令，只保留核心动作',
     '如果任务里涉及人物或状态解读，可以基于当下听到或看到的线索做轻量判断，但不要写成需要长时间跟踪、偷拍偷录或下结论式审问的任务。',
     '每条任务必须是一句语义完整、自然收口的话，不能停在半截动作上。不要输出“找个……，停下”“在……旁，听……”这种没说完的句子；动作后面必须落到明确的观察对象、比较对象或判断目标。',
   ];
@@ -179,27 +235,18 @@ function buildPrompt(event, categories, preparedContext = null) {
     season: event.season || '',
     preference: preferenceContext.preference || '',
     preferenceGuide: {
-      availableObjects: preferenceContext.availableObjects,
-      blockedObjects: preferenceContext.blockedObjects.slice(0, 4),
-      safeObjects: preferenceContext.safeObjects,
-      objectDetails: preferenceContext.objectDetails.slice(0, 3),
       instruction: preferenceContext.instruction,
     },
-    location: {
-      name: locationSignals.locationName || '当前位置',
-      sceneTag: locationSignals.sceneTag || '',
-    },
+    region: locationSignals.locationRegion || '',
     time: {
       timePhase: timeContext.timePhase || '',
       timeHints: summarizeCoreTimeHints(timeContext),
     },
     nearby: {
-      nearbyScene: nearbySummary.dominantScene || '',
       aoi: nearbySummary.primaryAoiName || nearbySummary.primaryAoiType || '',
-      aoiList: nearbySummary.aoiNames.slice(0, 4),
+      aoiList: nearbySummary.aoiNames,
+      aoiTypes: (nearbySummary.aoiTypes || []),
       businessAreas: nearbySummary.businessAreaNames.slice(0, 2),
-      poiTypes: nearbySummary.poiTypes.slice(0, 5),
-      pois: nearbySummary.poiNames.slice(0, 3),
     },
     previousMissions,
   };
@@ -240,15 +287,12 @@ exports.main = async (event) => {
     };
     return {
       theme: needTheme,
-      source: 'combined-direct-fallback',
-      validation: summarizeThemeValidation(needTheme, event, {
+      source: 'combined-direct-error',
+      structureCheck: summarizeStructureCheck(needTheme, event, {
         categories,
         combined: true,
       }),
       runtimeVersion: RUNTIME_VERSION,
-      ragPlan: null,
-      ragDebug: null,
-      ragModelInput: null,
       reason: 'need_two_categories',
     };
   }
@@ -259,7 +303,6 @@ exports.main = async (event) => {
     combined: true,
     recentHistoryLimit: 10,
   });
-  const fallbackTheme = normalizeTheme(buildFallbackTheme(event, categories, preparedContext), event.walkMode);
   const prompt = buildPrompt(event, categories, preparedContext);
   const systemPrompt = '你是遛遛小程序的组合主题策划助手。只返回合法 JSON，不要输出额外解释。';
   const modelRequest = buildModelRequestDebug(systemPrompt, prompt);
@@ -269,53 +312,39 @@ exports.main = async (event) => {
       systemPrompt,
       prompt
     );
-    const generatedTheme = normalizeTheme(aiResult.parsed, event.walkMode);
+    const fallbackContext = buildFallbackRuntimeContext(event);
+    const generatedTheme = ensureThemeMissions(aiResult.parsed, categories, event, fallbackContext, '');
     const modelResponse = buildModelResponseDebug(aiResult);
-    const finalizedTheme = finalizeTheme({
-      ...fallbackTheme,
-      ...generatedTheme,
-      category: '组合',
-    }, event, fallbackTheme, {
-      categories,
-      combined: true,
-      preferAnchoredFill: true,
-    });
+    const fallbackUsed = generatedTheme.fallbackMeta && generatedTheme.fallbackMeta.used;
 
     return {
-      theme: finalizedTheme,
-      source: 'combined-direct',
-      validation: summarizeThemeValidation(finalizedTheme, event, {
+      theme: generatedTheme,
+      source: fallbackUsed ? 'combined-direct-partial-fallback' : 'combined-direct-raw',
+      structureCheck: summarizeStructureCheck(generatedTheme, event, {
         categories,
         combined: true,
       }),
       runtimeVersion: RUNTIME_VERSION,
       combinedCategories: categories,
-      ragPlan: null,
-      ragDebug: null,
-      ragModelInput: null,
       modelRequest,
       modelResponse,
       reason: '',
     };
   } catch (error) {
-    const finalizedFallback = finalizeTheme(fallbackTheme, event, fallbackTheme, {
-      categories,
-      combined: true,
-      preferAnchoredFill: true,
-    });
+    const modelResponse = buildModelResponseDebug(error);
+    const fallbackContext = buildFallbackRuntimeContext(event);
+    const fallbackTheme = ensureThemeMissions(buildEmptyTheme(categories, event.walkMode), categories, event, fallbackContext, error.message || 'generate_failed');
     return {
-      theme: finalizedFallback,
+      theme: fallbackTheme,
       source: 'combined-direct-fallback',
-      validation: summarizeThemeValidation(finalizedFallback, event, {
+      structureCheck: summarizeStructureCheck(fallbackTheme, event, {
         categories,
         combined: true,
       }),
       runtimeVersion: RUNTIME_VERSION,
       combinedCategories: categories,
-      ragPlan: null,
-      ragDebug: null,
-      ragModelInput: null,
       modelRequest,
+      modelResponse,
       reason: error.message || 'generate_failed',
     };
   }

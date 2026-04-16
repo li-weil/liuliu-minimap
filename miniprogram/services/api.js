@@ -9,6 +9,13 @@ const CLOUD_ENDPOINTS = new Set(
 );
 
 function normalizeThemeResponse(data, requestData, source) {
+  if (data && typeof data === 'object' && data.theme) {
+    return {
+      ...data,
+      source: data.source || source,
+      request: requestData,
+    };
+  }
   return {
     theme: data,
     source,
@@ -294,7 +301,7 @@ const ENDPOINTS = {
     web: {
       path: '/ai/themes/generate',
       method: 'POST',
-      normalizeResponse: (data, requestData) => normalizeThemeResponse(data, requestData, data && data.provider ? 'rag+ai' : 'rag-fallback'),
+      normalizeResponse: (data, requestData) => normalizeThemeResponse(data, requestData, data && data.provider ? 'ai-direct-raw' : 'ai-direct-fallback'),
     },
   },
   generateCombinedTheme: {
@@ -302,7 +309,7 @@ const ENDPOINTS = {
     web: {
       path: '/ai/themes/combine',
       method: 'POST',
-      normalizeResponse: (data, requestData) => normalizeThemeResponse(data, requestData, data && data.provider ? 'combined+ai' : 'combined-fallback'),
+      normalizeResponse: (data, requestData) => normalizeThemeResponse(data, requestData, data && data.provider ? 'combined-direct-raw' : 'combined-direct-fallback'),
     },
   },
   getLocationContext: {

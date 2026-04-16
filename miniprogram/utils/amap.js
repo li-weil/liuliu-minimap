@@ -257,6 +257,14 @@ function fetchAmapNearbyPois({ latitude, longitude, limit = 12, radius = 3000 })
           ? Number(item.distance)
           : getDistanceMeters({ latitude: lat, longitude: lng }, item),
       }))
+      .sort((a, b) => {
+        const distanceA = Number.isFinite(Number(a.distance)) ? Number(a.distance) : Number.MAX_SAFE_INTEGER;
+        const distanceB = Number.isFinite(Number(b.distance)) ? Number(b.distance) : Number.MAX_SAFE_INTEGER;
+        if (distanceA !== distanceB) {
+          return distanceA - distanceB;
+        }
+        return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN');
+      })
       .slice(0, limit)
   ));
 }
@@ -283,8 +291,16 @@ function normalizeAmapLocation(regeo, fallbackName) {
       district: poi.district || (regeoData.addressComponent && regeoData.addressComponent.district) || regeo.district || '',
       city: poi.cityname || (regeoData.addressComponent && regeoData.addressComponent.city) || '',
     }))
-    .filter(Boolean);
-  const topPoi = normalizedPois[0] || null;
+    .filter(Boolean)
+    .sort((left, right) => {
+      const leftDistance = Number.isFinite(Number(left.distance)) ? Number(left.distance) : Number.MAX_SAFE_INTEGER;
+      const rightDistance = Number.isFinite(Number(right.distance)) ? Number(right.distance) : Number.MAX_SAFE_INTEGER;
+      if (leftDistance !== rightDistance) {
+        return leftDistance - rightDistance;
+      }
+      return String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN');
+    });
+  const topPoi = normalizedPois.find((item) => Number.isFinite(Number(item.distance)) && Number(item.distance) <= 80) || null;
   const topPoiName = topPoi && topPoi.name ? String(topPoi.name).trim() : '';
   const descName = regeo.desc ? String(regeo.desc).replace(/附近$/, '').trim() : '';
   const fallback = fallbackName ? String(fallbackName).trim() : '';

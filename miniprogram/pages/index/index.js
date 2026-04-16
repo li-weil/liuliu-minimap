@@ -1,4 +1,4 @@
-const app = getApp();
+﻿const app = getApp();
 const {
   COMBINE_THEME_OPTIONS,
   PRESET_THEMES,
@@ -10,7 +10,7 @@ const {
 } = require('../../utils/constants');
 const { explainLocationError, getCurrentLocation } = require('../../utils/location');
 const { getRegeo, normalizeAmapLocation } = require('../../utils/amap');
-const { fetchNearbyPois, getLocationContext, searchLocations } = require('../../services/map');
+const { getLocationContext, searchLocations } = require('../../services/map');
 const { createTeamRoom } = require('../../services/team');
 const { generateCombinedTheme, generateTheme } = require('../../services/theme');
 const { createWalk } = require('../../services/walk');
@@ -227,19 +227,16 @@ function buildGenerationViewState({
 
 function normalizeRandomSource(source) {
   const normalized = String(source || '').trim();
-  if (normalized === 'rag+ai') {
-    return 'random+ai';
-  }
-  if (normalized === 'rag-fallback') {
-    return 'random-fallback';
-  }
-  if (normalized === 'ai-direct') {
+  if (normalized === 'ai-direct' || normalized === 'ai-direct-raw') {
     return 'random-direct';
   }
-  if (normalized === 'ai-direct-fallback') {
+  if (normalized === 'ai-direct-fallback' || normalized === 'ai-direct-error') {
     return 'random-direct-fallback';
   }
-  return normalized || 'random-fallback';
+  if (normalized === 'ai-direct-partial-fallback') {
+    return 'random-direct-partial-fallback';
+  }
+  return normalized || 'random-direct-fallback';
 }
 
 function buildGeneratedThemeMeta(theme) {
@@ -273,312 +270,30 @@ function normalizeThemeSnapshotMeta(theme) {
   };
 }
 
-function normalizeGenerationValidationMeta(validation) {
-  const normalizedValidation = validation && typeof validation === 'object' ? validation : null;
-  if (!normalizedValidation) {
-    return null;
-  }
-  const reasons = dedupeStrings(
-    []
-      .concat(Array.isArray(normalizedValidation.reasons) ? normalizedValidation.reasons : [])
-      .concat(Array.isArray(normalizedValidation.aiReasons) ? normalizedValidation.aiReasons : []),
-    6
-  );
-  return {
-    stage: normalizedValidation.stage ? String(normalizedValidation.stage).trim() : '',
-    ok: !!normalizedValidation.ok,
-    hasAnchor: !!normalizedValidation.hasAnchor,
-    genericMissionCount: Number(normalizedValidation.genericMissionCount) || 0,
-    matchedMissionIndexes: Array.isArray(normalizedValidation.matchedMissionIndexes)
-      ? normalizedValidation.matchedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 5)
-      : [],
-    missingCategories: normalizeGenerationThemeList(normalizedValidation.missingCategories || []),
-    categories: normalizeGenerationThemeList(normalizedValidation.categories || []),
-    shouldRunSecondaryValidation: !!normalizedValidation.shouldRunSecondaryValidation,
-    secondaryValidationUsed: !!normalizedValidation.secondaryValidationUsed,
-    secondaryValidationError: normalizedValidation.secondaryValidationError
-      ? String(normalizedValidation.secondaryValidationError).trim()
-      : '',
-    precheckScore: Number.isFinite(Number(normalizedValidation.precheckScore))
-      ? Number(normalizedValidation.precheckScore)
-      : null,
-    precheckReasons: dedupeStrings(normalizedValidation.precheckReasons || [], 6),
-    aiOk: normalizedValidation.aiOk === undefined ? null : !!normalizedValidation.aiOk,
-    aiShouldRewrite: !!normalizedValidation.aiShouldRewrite,
-    aiScore: Number.isFinite(Number(normalizedValidation.aiScore))
-      ? Number(normalizedValidation.aiScore)
-      : null,
-    aiFailedChecks: dedupeStrings(normalizedValidation.aiFailedChecks || [], 6),
-    aiFailedMissionIndexes: Array.isArray(normalizedValidation.aiFailedMissionIndexes)
-      ? normalizedValidation.aiFailedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
-      : [],
-    aiAbstractMissionIndexes: Array.isArray(normalizedValidation.aiAbstractMissionIndexes)
-      ? normalizedValidation.aiAbstractMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
-      : [],
-    aiRepeatedMissionIndexes: Array.isArray(normalizedValidation.aiRepeatedMissionIndexes)
-      ? normalizedValidation.aiRepeatedMissionIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
-      : [],
-    aiRewriteScope: String(normalizedValidation.aiRewriteScope || '').trim(),
-    aiAppliedRepairStrategy: String(normalizedValidation.aiAppliedRepairStrategy || '').trim(),
-    aiAppliedRepairIndexes: Array.isArray(normalizedValidation.aiAppliedRepairIndexes)
-      ? normalizedValidation.aiAppliedRepairIndexes.filter((item) => Number.isInteger(item)).slice(0, 6)
-      : [],
-    aiValidationComplete: normalizedValidation.aiValidationComplete === undefined
-      ? null
-      : !!normalizedValidation.aiValidationComplete,
-    aiValidationMissingFields: dedupeStrings(normalizedValidation.aiValidationMissingFields || [], 12),
-    aiRepairPromptCount: Number.isFinite(Number(normalizedValidation.aiRepairPromptCount))
-      ? Number(normalizedValidation.aiRepairPromptCount)
-      : 0,
-    aiLoopPassCount: Number.isFinite(Number(normalizedValidation.aiLoopPassCount))
-      ? Number(normalizedValidation.aiLoopPassCount)
-      : 0,
-    aiLoopRewriteCount: Number.isFinite(Number(normalizedValidation.aiLoopRewriteCount))
-      ? Number(normalizedValidation.aiLoopRewriteCount)
-      : 0,
-    aiLoopStopReason: String(normalizedValidation.aiLoopStopReason || '').trim(),
-    aiLoopPassSummaries: (Array.isArray(normalizedValidation.aiLoopPassSummaries)
-      ? normalizedValidation.aiLoopPassSummaries
-      : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        return {
-          pass: Number.isFinite(Number(item.pass)) ? Number(item.pass) : null,
-          score: Number.isFinite(Number(item.score)) ? Number(item.score) : null,
-          ok: item.ok === undefined ? null : !!item.ok,
-          shouldRewrite: item.shouldRewrite === undefined ? null : !!item.shouldRewrite,
-          rewriteScope: String(item.rewriteScope || '').trim(),
-          missingFields: dedupeStrings(item.missingFields || [], 8),
-          repairPromptCount: Number.isFinite(Number(item.repairPromptCount)) ? Number(item.repairPromptCount) : 0,
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 6),
-    aiLoopDetails: (Array.isArray(normalizedValidation.aiLoopDetails)
-      ? normalizedValidation.aiLoopDetails
-      : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        return {
-          pass: Number.isFinite(Number(item.pass)) ? Number(item.pass) : null,
-          validationComplete: item.review && item.review.validationComplete !== undefined
-            ? !!item.review.validationComplete
-            : item.validationComplete === undefined
-              ? null
-              : !!item.validationComplete,
-          missingFields: dedupeStrings(
-            []
-              .concat(item.review && Array.isArray(item.review.missingFields) ? item.review.missingFields : [])
-              .concat(Array.isArray(item.missingFields) ? item.missingFields : []),
-            12
-          ),
-          repairPromptCount: Number.isFinite(Number(item.review && item.review.repairPromptCount))
-            ? Number(item.review.repairPromptCount)
-            : Number.isFinite(Number(item.repairPromptCount))
-              ? Number(item.repairPromptCount)
-              : 0,
-          stopReason: String(item.stopReason || '').trim(),
-          appliedRepairStrategy: String(item.appliedRepairStrategy || '').trim(),
-          appliedRepairIndexes: Array.isArray(item.appliedRepairIndexes)
-            ? item.appliedRepairIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
-            : [],
-          inputTheme: normalizeThemeSnapshotMeta(item.inputTheme),
-          rewrittenTheme: normalizeThemeSnapshotMeta(item.rewrittenTheme),
-          precheck: item.precheck && typeof item.precheck === 'object'
-            ? {
-                stage: String(item.precheck.stage || '').trim(),
-                ok: item.precheck.ok === undefined ? null : !!item.precheck.ok,
-                score: Number.isFinite(Number(item.precheck.score)) ? Number(item.precheck.score) : null,
-                reasons: dedupeStrings(item.precheck.reasons || [], 8),
-                hasAnchor: item.precheck.hasAnchor === undefined ? null : !!item.precheck.hasAnchor,
-                anchorCount: Number.isFinite(Number(item.precheck.anchorCount)) ? Number(item.precheck.anchorCount) : 0,
-                genericMissionCount: Number.isFinite(Number(item.precheck.genericMissionCount))
-                  ? Number(item.precheck.genericMissionCount)
-                  : 0,
-                varietyRatio: Number.isFinite(Number(item.precheck.varietyRatio)) ? Number(item.precheck.varietyRatio) : null,
-                similarPairCount: Number.isFinite(Number(item.precheck.similarPairCount)) ? Number(item.precheck.similarPairCount) : 0,
-              }
-            : null,
-          review: item.review && typeof item.review === 'object'
-            ? {
-                stage: String(item.review.stage || '').trim(),
-                ok: item.review.ok === undefined ? null : !!item.review.ok,
-                score: Number.isFinite(Number(item.review.score)) ? Number(item.review.score) : null,
-                failedChecks: dedupeStrings(item.review.failedChecks || [], 8),
-                failedMissionIndexes: Array.isArray(item.review.failedMissionIndexes)
-                  ? item.review.failedMissionIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
-                  : [],
-                abstractMissionIndexes: Array.isArray(item.review.abstractMissionIndexes)
-                  ? item.review.abstractMissionIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
-                  : [],
-                repeatedMissionIndexes: Array.isArray(item.review.repeatedMissionIndexes)
-                  ? item.review.repeatedMissionIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
-                  : [],
-                reasons: dedupeStrings(item.review.reasons || [], 8),
-                reviewComment: String(item.review.reviewComment || '').trim(),
-                rewriteAdvice: String(item.review.rewriteAdvice || '').trim(),
-                shouldRewrite: item.review.shouldRewrite === undefined ? null : !!item.review.shouldRewrite,
-                rewriteScope: String(item.review.rewriteScope || '').trim(),
-                rewrittenTheme: normalizeThemeSnapshotMeta(item.review.rewrittenTheme),
-                fieldPresence: item.review.fieldPresence && typeof item.review.fieldPresence === 'object'
-                  ? item.review.fieldPresence
-                  : null,
-                fieldSources: item.review.fieldSources && typeof item.review.fieldSources === 'object'
-                  ? item.review.fieldSources
-                  : null,
-                raw: item.review.raw && typeof item.review.raw === 'object'
-                  ? item.review.raw
-                  : null,
-              }
-            : null,
-          reviewAttempts: (Array.isArray(item.reviewAttempts) ? item.reviewAttempts : [])
-            .map((attempt) => {
-              if (!attempt || typeof attempt !== 'object') {
-                return null;
-              }
-              return {
-                step: String(attempt.step || '').trim(),
-                missingFields: dedupeStrings(attempt.missingFields || [], 12),
-                payload: attempt.payload && typeof attempt.payload === 'object'
-                  ? attempt.payload
-                  : null,
-              };
-            })
-            .filter(Boolean)
-            .slice(0, 4),
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 6),
-    aiReviewComment: String(normalizedValidation.aiReviewComment || '').trim(),
-    aiRewriteAdvice: String(normalizedValidation.aiRewriteAdvice || '').trim(),
-    aiFieldSources: normalizedValidation.aiFieldSources && typeof normalizedValidation.aiFieldSources === 'object'
-      ? {
-          score: String(normalizedValidation.aiFieldSources.score || '').trim(),
-          failedChecks: String(normalizedValidation.aiFieldSources.failedChecks || '').trim(),
-          reasons: String(normalizedValidation.aiFieldSources.reasons || '').trim(),
-          reviewComment: String(normalizedValidation.aiFieldSources.reviewComment || '').trim(),
-          rewriteAdvice: String(normalizedValidation.aiFieldSources.rewriteAdvice || '').trim(),
-          rewrittenTheme: String(normalizedValidation.aiFieldSources.rewrittenTheme || '').trim(),
-        }
-      : null,
-    aiSuggestedTheme: normalizedValidation.aiSuggestedTheme && typeof normalizedValidation.aiSuggestedTheme === 'object'
-      ? {
-          title: String(normalizedValidation.aiSuggestedTheme.title || '').trim(),
-          description: String(normalizedValidation.aiSuggestedTheme.description || '').trim(),
-          missions: dedupeStrings(
-            Array.isArray(normalizedValidation.aiSuggestedTheme.missions)
-              ? normalizedValidation.aiSuggestedTheme.missions
-              : [],
-            6
-          ),
-        }
-      : null,
-    aiOriginalTheme: normalizedValidation.aiOriginalTheme && typeof normalizedValidation.aiOriginalTheme === 'object'
-      ? {
-          title: String(normalizedValidation.aiOriginalTheme.title || '').trim(),
-          description: String(normalizedValidation.aiOriginalTheme.description || '').trim(),
-          missions: dedupeStrings(
-            Array.isArray(normalizedValidation.aiOriginalTheme.missions)
-              ? normalizedValidation.aiOriginalTheme.missions
-              : [],
-            6
-          ),
-        }
-      : null,
-    reasons,
-  };
-}
-
-function normalizeGenerationFinalizationMeta(finalization) {
-  const normalizedFinalization = finalization && typeof finalization === 'object' ? finalization : null;
-  if (!normalizedFinalization) {
+function normalizeGenerationStructureCheckMeta(structureCheck) {
+  const normalized = structureCheck && typeof structureCheck === 'object' ? structureCheck : null;
+  if (!normalized) {
     return null;
   }
   return {
-    stage: normalizedFinalization.stage ? String(normalizedFinalization.stage).trim() : '',
-    rewritten: !!normalizedFinalization.rewritten,
-    replacementCount: Number(normalizedFinalization.replacementCount) || 0,
-    anchoredReplacementCount: Number(normalizedFinalization.anchoredReplacementCount) || 0,
-    fallbackReplacementCount: Number(normalizedFinalization.fallbackReplacementCount) || 0,
-    aiRepairStrategy: String(normalizedFinalization.aiRepairStrategy || '').trim(),
-    aiLoopPassCount: Number.isFinite(Number(normalizedFinalization.aiLoopPassCount))
-      ? Number(normalizedFinalization.aiLoopPassCount)
-      : 0,
-    aiLoopRewriteCount: Number.isFinite(Number(normalizedFinalization.aiLoopRewriteCount))
-      ? Number(normalizedFinalization.aiLoopRewriteCount)
-      : 0,
-    aiLoopStopReason: String(normalizedFinalization.aiLoopStopReason || '').trim(),
-    aiRepairPromptCount: Number.isFinite(Number(normalizedFinalization.aiRepairPromptCount))
-      ? Number(normalizedFinalization.aiRepairPromptCount)
-      : 0,
-    aiValidationComplete: normalizedFinalization.aiValidationComplete === undefined
-      ? null
-      : !!normalizedFinalization.aiValidationComplete,
-    aiValidationMissingFields: dedupeStrings(normalizedFinalization.aiValidationMissingFields || [], 12),
-    aiOriginalTheme: normalizedFinalization.aiOriginalTheme && typeof normalizedFinalization.aiOriginalTheme === 'object'
-      ? normalizeThemeSnapshotMeta(normalizedFinalization.aiOriginalTheme)
+    stage: normalized.stage ? String(normalized.stage).trim() : '',
+    ok: !!normalized.ok,
+    walkMode: String(normalized.walkMode || '').trim(),
+    modeConfig: normalized.modeConfig && typeof normalized.modeConfig === 'object'
+      ? normalized.modeConfig
       : null,
-    aiLoopDetails: (Array.isArray(normalizedFinalization.aiLoopDetails)
-      ? normalizedFinalization.aiLoopDetails
-      : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        return {
-          pass: Number.isFinite(Number(item.pass)) ? Number(item.pass) : null,
-          stopReason: String(item.stopReason || '').trim(),
-          appliedRepairStrategy: String(item.appliedRepairStrategy || '').trim(),
-          appliedRepairIndexes: Array.isArray(item.appliedRepairIndexes)
-            ? item.appliedRepairIndexes.filter((value) => Number.isInteger(value)).slice(0, 6)
-            : [],
-          inputTheme: normalizeThemeSnapshotMeta(item.inputTheme),
-          rewrittenTheme: normalizeThemeSnapshotMeta(item.rewrittenTheme),
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 6),
-    aiRepairIndexes: Array.isArray(normalizedFinalization.aiRepairIndexes)
-      ? normalizedFinalization.aiRepairIndexes
-        .map((item) => Number(item))
-        .filter((item) => Number.isInteger(item))
-        .slice(0, 8)
-      : [],
-    aiFailedChecks: dedupeStrings(normalizedFinalization.aiFailedChecks || [], 8),
-    changedMissionIndexes: Array.isArray(normalizedFinalization.changedMissionIndexes)
-      ? normalizedFinalization.changedMissionIndexes
-        .map((item) => Number(item))
-        .filter((item) => Number.isInteger(item))
-        .slice(0, 8)
-      : [],
-    reasons: dedupeStrings(normalizedFinalization.reasons || [], 8),
-    beforeMissions: dedupeStrings(normalizedFinalization.beforeMissions || [], 6),
-    afterMissions: dedupeStrings(normalizedFinalization.afterMissions || [], 6),
-    changeLog: (Array.isArray(normalizedFinalization.changeLog) ? normalizedFinalization.changeLog : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        const missionIndex = Number(item.missionIndex);
-        return {
-          type: String(item.type || '').trim(),
-          missionIndex: Number.isInteger(missionIndex) ? missionIndex : null,
-          before: String(item.before || '').trim(),
-          after: String(item.after || '').trim(),
-          reason: String(item.reason || '').trim(),
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 8),
+    categories: normalizeGenerationThemeList(normalized.categories || []),
+    genericMissionCount: Number(normalized.genericMissionCount) || 0,
+    varietyRatio: Number.isFinite(Number(normalized.varietyRatio)) ? Number(normalized.varietyRatio) : null,
+    similarPairCount: Number(normalized.similarPairCount) || 0,
+    insufficientMissionCount: !!normalized.insufficientMissionCount,
+    lowScore: !!normalized.lowScore,
+    score: Number.isFinite(Number(normalized.score)) ? Number(normalized.score) : null,
+    reasons: dedupeStrings(normalized.reasons || [], 6),
   };
 }
 
-function buildValidationSummary(generationSource, generationValidation) {
+function buildStructureCheckSummary(generationSource, generationStructureCheck) {
   const source = String(generationSource || '').trim();
   const isDirectMode = /direct/.test(source);
   if (!generationSource) {
@@ -590,10 +305,10 @@ function buildValidationSummary(generationSource, generationValidation) {
       reasons: [],
     };
   }
-  if (!generationValidation) {
+  if (!generationStructureCheck) {
     return {
       status: '云函数未返回',
-      details: '本次结果带有 source，但没有返回 validation，通常表示当前云函数还是旧版本',
+      details: '本次结果带有 source，但没有返回 structureCheck，通常表示当前云函数还是旧版本',
       score: isDirectMode ? '未启用' : 'AI 未提供',
       precheckScore: '未提供',
       missingCategories: [],
@@ -602,159 +317,23 @@ function buildValidationSummary(generationSource, generationValidation) {
   }
 
   const status = [
-    generationValidation.ok ? '通过' : '待修正',
-    isDirectMode
-      ? '基础检查'
-      : generationValidation.secondaryValidationUsed
-        ? 'AI 复核'
-        : (generationValidation.stage === 'rule' ? '规则校验' : generationValidation.stage || ''),
+    generationStructureCheck.ok ? '通过' : '待修正',
+    '结构检查',
   ].filter(Boolean).join(' · ');
   const details = [
-    generationValidation.hasAnchor ? '有在地锚点' : '缺少在地锚点',
-    generationValidation.genericMissionCount > 0 ? `泛化任务 ${generationValidation.genericMissionCount} 条` : '任务不泛',
-    !isDirectMode && generationValidation.aiOk === false ? 'AI 复核未通过' : '',
-    !isDirectMode && generationValidation.aiShouldRewrite ? 'AI 建议重写' : '',
-    !isDirectMode && generationValidation.secondaryValidationError ? 'AI 复核失败' : '',
+    generationStructureCheck.genericMissionCount > 0 ? `泛化任务 ${generationStructureCheck.genericMissionCount} 条` : '任务不泛',
+    generationStructureCheck.insufficientMissionCount ? '任务数量不足' : '',
+    generationStructureCheck.similarPairCount > 0 ? `相似任务 ${generationStructureCheck.similarPairCount} 组` : '',
   ].filter(Boolean).join('；') || '未提供';
 
   return {
     status,
     details,
-    score: !isDirectMode && generationValidation.aiScore !== null && generationValidation.aiScore !== undefined
-      ? generationValidation.aiScore
-      : isDirectMode
-        ? '未启用'
-        : 'AI 未提供',
-    precheckScore: generationValidation.precheckScore !== null && generationValidation.precheckScore !== undefined
-      ? generationValidation.precheckScore
-      : '未提供',
-    missingCategories: generationValidation.missingCategories || [],
-    reasons: generationValidation.aiReasons && generationValidation.aiReasons.length
-      ? generationValidation.aiReasons
-      : [],
+    score: Number.isFinite(Number(generationStructureCheck.score)) ? Number(generationStructureCheck.score) : '未提供',
+    precheckScore: '未启用',
+    missingCategories: generationStructureCheck.missingCategories || [],
+    reasons: generationStructureCheck.reasons || [],
   };
-}
-
-function normalizeSceneScoreBreakdown(value = {}) {
-  if (!value || typeof value !== 'object') {
-    return {};
-  }
-  return Object.keys(value).reduce((result, key) => {
-    const score = Number(value[key]);
-    if (Number.isFinite(score)) {
-      result[key] = score;
-    }
-    return result;
-  }, {});
-}
-
-function normalizeGenerationRagPlanMeta(ragPlan) {
-  const normalizedPlan = ragPlan && typeof ragPlan === 'object' ? ragPlan : null;
-  if (!normalizedPlan) {
-    return null;
-  }
-  return {
-    focusTheme: String(normalizedPlan.focusTheme || '').trim(),
-    focusThemes: normalizeGenerationThemeList(normalizedPlan.focusThemes || []),
-    targetThemes: normalizeGenerationThemeList(normalizedPlan.targetThemes || []),
-    plannerMode: String(normalizedPlan.plannerMode || '').trim(),
-    chosenScene: String(normalizedPlan.chosenScene || '').trim(),
-    sceneId: String(normalizedPlan.sceneId || '').trim(),
-    dominantScene: String(normalizedPlan.dominantScene || '').trim(),
-    timePhase: String(normalizedPlan.timePhase || '').trim(),
-    primaryAnchors: dedupeStrings(normalizedPlan.primaryAnchors || [], 8),
-    recommendedAngles: dedupeStrings(normalizedPlan.recommendedAngles || [], 6),
-    antiPatterns: dedupeStrings(normalizedPlan.antiPatterns || [], 8),
-    supportingScenes: dedupeStrings(normalizedPlan.supportingScenes || [], 4),
-    categoryPlans: (Array.isArray(normalizedPlan.categoryPlans) ? normalizedPlan.categoryPlans : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        return {
-          category: String(item.category || '').trim(),
-          preferredAngles: dedupeStrings(item.preferredAngles || [], 4),
-          anchors: dedupeStrings(item.anchors || [], 4),
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 3),
-    missionBlueprints: (Array.isArray(normalizedPlan.missionBlueprints) ? normalizedPlan.missionBlueprints : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        return {
-          slot: Number.isFinite(Number(item.slot)) ? Number(item.slot) : null,
-          angle: String(item.angle || '').trim(),
-          anchor: String(item.anchor || '').trim(),
-          skeleton: String(item.skeleton || '').trim(),
-          categoryFocus: String(item.categoryFocus || '').trim(),
-          categoryAngles: dedupeStrings(item.categoryAngles || [], 4),
-          examples: dedupeStrings(item.examples || [], 3),
-          cues: dedupeStrings(item.cues || [], 3),
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 4),
-    missionPlans: (Array.isArray(normalizedPlan.missionPlans) ? normalizedPlan.missionPlans : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        return {
-          slot: Number.isFinite(Number(item.slot)) ? Number(item.slot) : null,
-          theme: String(item.theme || '').trim(),
-          actionType: String(item.actionType || '').trim(),
-          actionInstruction: String(item.actionInstruction || '').trim(),
-          anchor: String(item.anchor || '').trim(),
-          scene: String(item.scene || '').trim(),
-          timePhase: String(item.timePhase || '').trim(),
-          observationAngle: String(item.observationAngle || '').trim(),
-          avoidPhrases: dedupeStrings(item.avoidPhrases || [], 6),
-          avoidRecentPatterns: dedupeStrings(item.avoidRecentPatterns || [], 4),
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 4),
-  };
-}
-
-function normalizeGenerationRagDebugMeta(ragDebug) {
-  const normalizedDebug = ragDebug && typeof ragDebug === 'object' ? ragDebug : null;
-  if (!normalizedDebug) {
-    return null;
-  }
-  return {
-    retrievalQuality: String(normalizedDebug.retrievalQuality || '').trim(),
-    plannerMode: String(normalizedDebug.plannerMode || '').trim(),
-    recentHistorySize: Number.isFinite(Number(normalizedDebug.recentHistorySize))
-      ? Number(normalizedDebug.recentHistorySize)
-      : null,
-    themeCoverage: normalizeGenerationThemeList(normalizedDebug.themeCoverage || []),
-    anchorCoverage: dedupeStrings(normalizedDebug.anchorCoverage || [], 8),
-    diversityAngles: dedupeStrings(normalizedDebug.diversityAngles || [], 6),
-    antiPatterns: dedupeStrings(normalizedDebug.antiPatterns || [], 8),
-    selectedReferenceIds: dedupeStrings(normalizedDebug.selectedReferenceIds || [], 8),
-    sceneCoverage: (Array.isArray(normalizedDebug.sceneCoverage) ? normalizedDebug.sceneCoverage : [])
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null;
-        }
-        return {
-          id: String(item.id || '').trim(),
-          label: String(item.label || '').trim(),
-          score: Number.isFinite(Number(item.score)) ? Number(item.score) : null,
-          scoreBreakdown: normalizeSceneScoreBreakdown(item.scoreBreakdown),
-        };
-      })
-      .filter(Boolean)
-      .slice(0, 4),
-  };
-}
-
-function normalizeGenerationRagModelInputMeta(ragModelInput) {
-  return ragModelInput && typeof ragModelInput === 'object' ? ragModelInput : null;
 }
 
 function normalizeGenerationModelRequestMeta(modelRequest) {
@@ -826,7 +405,7 @@ function appendThemeToRecentMissionHistory(history, theme, source = '') {
   return normalizeRecentMissionHistoryEntries([].concat(themeEntries, history || []), 10);
 }
 
-function applyGeneratedThemeMetaToContext(generationContext, theme, source = '', validation = null, runtimeVersion = '', ragPlan = null, ragDebug = null, ragModelInput = null, errorReason = '', modelRequest = null, modelResponse = null) {
+function applyGeneratedThemeMetaToContext(generationContext, theme, source = '', structureCheck = null, runtimeVersion = '', errorReason = '', modelRequest = null, modelResponse = null) {
   const baseContext = generationContext && typeof generationContext === 'object' ? generationContext : {};
   const contextPacket = baseContext.contextPacket && typeof baseContext.contextPacket === 'object'
     ? baseContext.contextPacket
@@ -838,11 +417,7 @@ function applyGeneratedThemeMetaToContext(generationContext, theme, source = '',
     ? contextPacket.generation
     : {};
   const generatedThemeMeta = buildGeneratedThemeMeta(theme);
-  const normalizedValidation = normalizeGenerationValidationMeta(validation);
-  const normalizedFinalization = normalizeGenerationFinalizationMeta(theme && theme.finalization);
-  const normalizedRagPlan = normalizeGenerationRagPlanMeta(ragPlan);
-  const normalizedRagDebug = normalizeGenerationRagDebugMeta(ragDebug);
-  const normalizedRagModelInput = normalizeGenerationRagModelInputMeta(ragModelInput);
+  const normalizedStructureCheck = normalizeGenerationStructureCheckMeta(structureCheck);
   const normalizedModelRequest = normalizeGenerationModelRequestMeta(modelRequest);
   const normalizedModelResponse = normalizeGenerationModelResponseMeta(modelResponse);
   const recentMissionHistory = appendThemeToRecentMissionHistory(generationPacket.recentMissionHistory || [], theme, source);
@@ -850,11 +425,7 @@ function applyGeneratedThemeMetaToContext(generationContext, theme, source = '',
     ...baseContext,
     ...generatedThemeMeta,
     generationSource: source || baseContext.generationSource || '',
-    generationValidation: normalizedValidation,
-    generationFinalization: normalizedFinalization,
-    generationRagPlan: normalizedRagPlan,
-    generationRagDebug: normalizedRagDebug,
-    generationRagModelInput: normalizedRagModelInput,
+    generationStructureCheck: normalizedStructureCheck,
     generationModelRequest: normalizedModelRequest,
     generationModelResponse: normalizedModelResponse,
     generationErrorReason: String(errorReason || '').trim(),
@@ -874,13 +445,7 @@ function applyGeneratedThemeMetaToContext(generationContext, theme, source = '',
         recentMissionHistory,
         errorReason: String(errorReason || '').trim(),
       },
-      validation: normalizedValidation,
-      finalization: normalizedFinalization,
-      rag: {
-        plan: normalizedRagPlan,
-        debug: normalizedRagDebug,
-        modelInput: normalizedRagModelInput,
-      },
+      structureCheck: normalizedStructureCheck,
       modelRequest: normalizedModelRequest,
       modelResponse: normalizedModelResponse,
       runtimeVersion: runtimeVersion || contextPacket.runtimeVersion || '',
@@ -1036,6 +601,8 @@ const NEARBY_QUERY_OPTIONS = {
   radius: 3500,
 };
 
+const WALKABLE_AOI_MIN_AREA = 200000;
+const WALKABLE_AOI_MAX_AREA = 6000000;
 const LOCATION_CONTEXT_CACHE_TTL_MS = 5 * 60 * 1000;
 const NEARBY_PLACES_CACHE_TTL_MS = 3 * 60 * 1000;
 
@@ -1180,21 +747,100 @@ function getAoiOfficialTypeLabel(aoi = {}) {
   return getOfficialTypeLabelFromCode(getAoiOfficialTypecode(aoi));
 }
 
+function getAoiText(aoi = {}) {
+  return [
+    aoi.name,
+    aoi.type,
+    getAoiOfficialTypeLabel(aoi),
+    aoi.address,
+  ].map((item) => String(item || '').trim()).filter(Boolean).join(' ');
+}
+
+function isContainerAoi(aoi = {}) {
+  const text = getAoiText(aoi);
+  return /校区|校园|学校|大学|学院|公园|景区|景点|风景名胜|广场|商场|购物中心|商业中心|市场|小区|社区|园区|厂区|街区|胡同|古城|博物馆|展览馆|美术馆|图书馆|医院|车站|机场|码头|体育场|湿地|湖区|园/.test(text);
+}
+
+function isLeafAoi(aoi = {}) {
+  const text = getAoiText(aoi);
+  return /食堂|饭堂|餐厅|咖啡|便利店|超市|店|铺|摊|档口|教学楼|宿舍楼|办公楼|楼|门|入口|出口|出入口|厕所|卫生间|停车场|服务中心|柜台|站台/.test(text);
+}
+
+function pickPrimaryAoiFromHierarchy(aois) {
+  const list = Array.isArray(aois) ? aois.filter(Boolean) : [];
+  if (!list.length) {
+    return null;
+  }
+  const container = list.find((item) => isContainerAoi(item) && !isLeafAoi(item));
+  if (container) {
+    return container;
+  }
+  if (list.length > 1 && isLeafAoi(list[0])) {
+    return list.find((item, index) => index > 0 && !isLeafAoi(item)) || list[1];
+  }
+  return list[0];
+}
+
+function pickLargestWalkableAoi(aois) {
+  return (Array.isArray(aois) ? aois : [])
+    .filter((item) => {
+      const area = Number(item && item.area);
+      return Number.isFinite(area)
+        && area >= WALKABLE_AOI_MIN_AREA
+        && area <= WALKABLE_AOI_MAX_AREA;
+    })
+    .sort((left, right) => Number(right.area) - Number(left.area))[0] || null;
+}
+
 function buildLocationNativeEvidence(contextResponse) {
   const nativeContext = contextResponse && contextResponse.nativeContext && typeof contextResponse.nativeContext === 'object'
     ? contextResponse.nativeContext
     : {};
-  const aois = Array.isArray(nativeContext.aois) ? nativeContext.aois.filter(Boolean).slice(0, 6) : [];
+  const allAois = Array.isArray(nativeContext.aois) ? nativeContext.aois.filter(Boolean) : [];
+  const currentAoiHierarchy = allAois
+    .filter((item) => {
+      const distance = Number(item && item.distance);
+      return !Number.isFinite(distance) || distance <= 0;
+    })
+    .sort((left, right) => {
+      const leftArea = Number(left && left.area);
+      const rightArea = Number(right && right.area);
+      if (Number.isFinite(leftArea) && Number.isFinite(rightArea) && rightArea !== leftArea) {
+        return rightArea - leftArea;
+      }
+      return 0;
+    });
   const businessAreas = Array.isArray(nativeContext.businessAreas) ? nativeContext.businessAreas.filter(Boolean).slice(0, 6) : [];
-  const primaryAoi = aois[0] || null;
+  const effectiveAoiHierarchy = currentAoiHierarchy.length ? currentAoiHierarchy : allAois;
+  const aoiHierarchyByAreaAsc = effectiveAoiHierarchy.slice().sort((left, right) => {
+    const leftArea = Number(left && left.area);
+    const rightArea = Number(right && right.area);
+    if (Number.isFinite(leftArea) && Number.isFinite(rightArea) && leftArea !== rightArea) {
+      return leftArea - rightArea;
+    }
+    return 0;
+  });
+  const primaryAoi = pickLargestWalkableAoi(effectiveAoiHierarchy)
+    || pickPrimaryAoiFromHierarchy(aoiHierarchyByAreaAsc)
+    || pickPrimaryAoiFromHierarchy(currentAoiHierarchy)
+    || allAois[0]
+    || null;
   return {
-    aois,
+    aois: aoiHierarchyByAreaAsc,
+    currentAoiHierarchy: aoiHierarchyByAreaAsc,
     businessAreas,
     primaryAoiName: primaryAoi && primaryAoi.name ? String(primaryAoi.name).trim() : '',
     primaryAoiType: primaryAoi ? getAoiOfficialTypeLabel(primaryAoi) : '',
     primaryAoiTypecode: primaryAoi ? getAoiOfficialTypecode(primaryAoi) : '',
-    aoiTypecodes: dedupeStrings(aois.map((item) => getAoiOfficialTypecode(item)), 8),
+    primaryAoiArea: Number.isFinite(Number(primaryAoi && primaryAoi.area)) ? Number(primaryAoi.area) : null,
+    aoiTypes: dedupeStrings(aoiHierarchyByAreaAsc.map((item) => getAoiOfficialTypeLabel(item)), 20),
+    aoiTypecodes: dedupeStrings(aoiHierarchyByAreaAsc.map((item) => getAoiOfficialTypecode(item)), 20),
   };
+}
+
+function pickSmallestAoiName(contextResponse) {
+  const nativeEvidence = buildLocationNativeEvidence(contextResponse);
+  return dedupeStrings((nativeEvidence.aois || []).map((item) => item && item.name), 1)[0] || '';
 }
 
 function buildNearbyNativeCategories(places, nativeEvidence) {
@@ -1296,31 +942,42 @@ function inferNativeActivityHints(places, timeContext, nativeEvidence, topCatego
 function buildNearbySummary(nearbyPlaces, contextResponse = null, timeContext = buildTimeContext()) {
   const places = Array.isArray(nearbyPlaces) ? nearbyPlaces.filter(Boolean).slice(0, 18) : [];
   const nativeEvidence = buildLocationNativeEvidence(contextResponse);
+  const allPlaces = Array.isArray(nearbyPlaces) ? nearbyPlaces.filter(Boolean) : [];
+  const representativePlaces = allPlaces;
   const poiNames = dedupeStrings(places.map((item) => item.name), 8);
   const poiTypes = dedupeStrings(places.map((item) => buildNativeCategoryLabel(item)), 8);
   const poiTypecodes = dedupeStrings(places.map((item) => item.typecode), 12);
-  const sceneCandidates = buildNearbyNativeCategories(places, nativeEvidence);
-  const topCategory = sceneCandidates[0] || null;
   return {
     poiNames,
     poiTypes,
     poiTypecodes,
-    dominantScene: topCategory && topCategory.label
-      ? topCategory.label
-      : nativeEvidence.primaryAoiType || nativeEvidence.primaryAoiName || '',
-    dominantSceneId: topCategory && topCategory.id
-      ? topCategory.id
-      : nativeEvidence.primaryAoiTypecode || '',
-    sceneCandidates,
-    aoiNames: dedupeStrings((nativeEvidence.aois || []).map((item) => item.name), 6),
+    representativePoiNames: dedupeStrings(representativePlaces.map((item) => item.name), 20),
+    representativePoiTypes: dedupeStrings(representativePlaces.map((item) => buildNativeCategoryLabel(item)), 20),
+    aoiNames: dedupeStrings((nativeEvidence.aois || []).map((item) => item.name), 20),
+    aoiTypes: nativeEvidence.aoiTypes || [],
     aoiTypecodes: nativeEvidence.aoiTypecodes || [],
     primaryAoiName: nativeEvidence.primaryAoiName,
     primaryAoiType: nativeEvidence.primaryAoiType,
     primaryAoiTypecode: nativeEvidence.primaryAoiTypecode,
+    primaryAoiArea: nativeEvidence.primaryAoiArea,
     businessAreaNames: dedupeStrings((nativeEvidence.businessAreas || []).map((item) => item.name), 6),
-    activityHints: inferNativeActivityHints(places, timeContext, nativeEvidence, topCategory),
+    activityHints: inferNativeActivityHints(places, timeContext, nativeEvidence, null),
     source: 'amap-native',
   };
+}
+
+function buildLocationRegion(contextResponse) {
+  const nativeContext = contextResponse && contextResponse.nativeContext && typeof contextResponse.nativeContext === 'object'
+    ? contextResponse.nativeContext
+    : {};
+  const addressComponent = nativeContext.addressComponent && typeof nativeContext.addressComponent === 'object'
+    ? nativeContext.addressComponent
+    : {};
+  const province = String(addressComponent.province || '').trim();
+  const city = String(addressComponent.city || '').trim();
+  const district = String(addressComponent.district || contextResponse && contextResponse.district || '').trim();
+  const regionHead = city || province;
+  return dedupeStrings([regionHead, district], 2).join('');
 }
 
 function buildGenerationContext(pageData) {
@@ -1334,23 +991,25 @@ function buildGenerationContext(pageData) {
 
   const timeContext = buildTimeContext();
   const modeScopedFields = resolveModeScopedGenerationFields(pageData, timeContext);
-  const sceneTag = pageData.locationContext || '';
   const nearbySummary = buildNearbySummary(
     pageData.nearbyPlaces,
     pageData.locationContextResponse || null,
     timeContext
   );
+  const contextLocationName = pickLocationAnchorName({
+    currentName: pageData.locationName,
+    contextResponse: pageData.locationContextResponse || null,
+    nearbyPlaces: pageData.nearbyPlaces,
+  });
+  const locationRegion = buildLocationRegion(pageData.locationContextResponse || null);
   const generatedThemeMeta = buildGeneratedThemeMeta(pageData.currentTheme);
   const contextPacket = {
     location: {
-      name: pageData.locationName || '当前位置',
+      name: contextLocationName,
+      region: locationRegion,
       address: pageData.locationAddress || '',
       latitude: Number.isFinite(Number(pageData.latitude)) ? Number(pageData.latitude) : null,
       longitude: Number.isFinite(Number(pageData.longitude)) ? Number(pageData.longitude) : null,
-      sceneTag,
-      nativeContext: pageData.locationContextResponse && pageData.locationContextResponse.nativeContext
-        ? pageData.locationContextResponse.nativeContext
-        : null,
     },
     time: timeContext,
     weather: {
@@ -1371,9 +1030,8 @@ function buildGenerationContext(pageData) {
     season: modeScopedFields.season,
     mood: modeScopedFields.mood,
     preference: modeScopedFields.preference,
-    locationContext: sceneTag,
-    sceneTag,
-    locationContextResponse: pageData.locationContextResponse || null,
+    locationName: contextLocationName,
+    locationRegion,
     timeContext,
     nearbySummary,
     ...generatedThemeMeta,
@@ -1490,160 +1148,6 @@ function extractModelCacheStats(modelResponse) {
   };
 }
 
-function formatRagSceneCoverage(sceneCoverage) {
-  return (Array.isArray(sceneCoverage) ? sceneCoverage : [])
-    .map((item) => {
-      if (!item) {
-        return '';
-      }
-      const score = item.score !== null && item.score !== undefined ? `分数:${item.score}` : '分数:未提供';
-      return [item.label || item.id || '', item.id ? `id:${item.id}` : '', score].filter(Boolean).join(' · ');
-    })
-    .filter(Boolean);
-}
-
-function formatRagMissionBlueprints(missionBlueprints) {
-  return (Array.isArray(missionBlueprints) ? missionBlueprints : [])
-    .map((item) => {
-      if (!item) {
-        return '';
-      }
-      return [
-        item.slot ? `#${item.slot}` : '',
-        item.angle ? `角度:${item.angle}` : '',
-        item.anchor ? `锚点:${item.anchor}` : '',
-        item.skeleton ? `骨架:${item.skeleton}` : '',
-        item.categoryFocus ? `主题:${item.categoryFocus}` : '',
-        item.cues && item.cues.length ? `线索:${item.cues.join('/')}` : '',
-      ].filter(Boolean).join(' · ');
-    })
-    .filter(Boolean);
-}
-
-function formatRagCategoryPlans(categoryPlans) {
-  return (Array.isArray(categoryPlans) ? categoryPlans : [])
-    .map((item) => {
-      if (!item) {
-        return '';
-      }
-      return [
-        item.category || '',
-        item.preferredAngles && item.preferredAngles.length ? `角度:${item.preferredAngles.join('/')}` : '',
-        item.anchors && item.anchors.length ? `锚点:${item.anchors.join('/')}` : '',
-      ].filter(Boolean).join(' · ');
-    })
-    .filter(Boolean);
-}
-
-function buildRagExplainRows(ragPlan, ragDebug) {
-  const plan = ragPlan || {};
-  const debug = ragDebug || {};
-  const rows = [
-    {
-      group: 'RAG 计划',
-      label: 'targetThemes',
-      value: formatDebugValue(plan.targetThemes || []),
-      help: '本次检索必须服务的主题。用户显式选择主题时，这里应和主题输入一致，例如数字漫步应显示“数字”。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'chosenScene',
-      value: formatDebugValue(plan.chosenScene),
-      help: '最终选中的主场景文案，应该优先来自附近摘要里的 dominantScene 或最高分场景候选。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'sceneId',
-      value: formatDebugValue(plan.sceneId),
-      help: '最终选中主场景的内部 ID，用来排查 chosenScene 是否和 sceneCandidates 的第一名一致。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'supportingScenes',
-      value: formatDebugValue(plan.supportingScenes || []),
-      help: '次要参考场景，只作为补充语境，不应该盖过 chosenScene。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'recommendedAngles',
-      value: formatDebugValue(plan.recommendedAngles || []),
-      help: '建议任务切入角度，来自被召回的任务模板，用来减少任务重复。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'primaryAnchors',
-      value: formatDebugValue(plan.primaryAnchors || []),
-      help: '模型应优先落到的附近锚点，通常来自 POI、场景线索和模板 cues。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'antiPatterns',
-      value: formatDebugValue(plan.antiPatterns || []),
-      help: '这次生成应避免的写法，比如空泛观察、散文腔或偏离主题。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'categoryPlans',
-      value: formatDebugValue(formatRagCategoryPlans(plan.categoryPlans)),
-      help: '组合主题专用。说明每个主题方向各自应该抓哪些角度和锚点。',
-    },
-    {
-      group: 'RAG 计划',
-      label: 'missionBlueprints',
-      value: formatDebugValue(formatRagMissionBlueprints(plan.missionBlueprints)),
-      help: '随机或组合链路的任务蓝图，描述每条任务建议使用的角度、锚点和骨架。',
-    },
-    {
-      group: 'RAG 调试',
-      label: 'retrievalQuality',
-      value: formatDebugValue(debug.retrievalQuality),
-      help: '检索质量粗略标记。high 表示有召回任务模板，low 表示参考资料不足。',
-    },
-    {
-      group: 'RAG 调试',
-      label: 'themeCoverage',
-      value: formatDebugValue(debug.themeCoverage || []),
-      help: '检索实际覆盖到的主题方向，用来检查是否漏掉用户选择。',
-    },
-    {
-      group: 'RAG 调试',
-      label: 'sceneCoverage',
-      value: formatDebugValue(formatRagSceneCoverage(debug.sceneCoverage)),
-      help: '场景候选和分数。第一项通常应该对应 plan.chosenScene / sceneId。',
-    },
-    {
-      group: 'RAG 调试',
-      label: 'anchorCoverage',
-      value: formatDebugValue(debug.anchorCoverage || []),
-      help: 'RAG 认为可用的在地锚点，应和附近 POI、活动线索或主场景有关。',
-    },
-    {
-      group: 'RAG 调试',
-      label: 'diversityAngles',
-      value: formatDebugValue(debug.diversityAngles || []),
-      help: '用于拉开任务差异的角度集合，进阶模式尤其应该有多个不同角度。',
-    },
-    {
-      group: 'RAG 调试',
-      label: 'selectedReferenceIds',
-      value: formatDebugValue(debug.selectedReferenceIds || []),
-      help: '被召回的任务模板 ID，方便回查知识库里到底用了哪些参考。',
-    },
-    {
-      group: 'RAG 入模',
-      label: 'modelInput',
-      value: formatDebugValue(ragPlan || ragDebug ? '已提供，见下方 rag.modelInput 原文' : ''),
-      help: '这是真正放进 prompt 的 RAG 参考对象。单主题通常是 ragContext；随机/组合通常是 referenceContext + generationPlan。',
-    },
-  ];
-  return rows
-    .filter((item) => item.value !== '未提供')
-    .map((item) => ({
-      ...item,
-      key: `${item.group}-${item.label}`,
-    }));
-}
-
 function buildGenerationDebugState(generationContext, includeHeavy = false) {
   const contextPacket = generationContext && generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
     ? generationContext.contextPacket
@@ -1651,31 +1155,16 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
   const generationSource = generationContext && generationContext.generationSource
     ? String(generationContext.generationSource)
     : '';
-  const generationValidation = generationContext && generationContext.generationValidation && typeof generationContext.generationValidation === 'object'
-    ? generationContext.generationValidation
-    : (contextPacket && contextPacket.validation && typeof contextPacket.validation === 'object'
-      ? contextPacket.validation
+  const generationStructureCheck = generationContext && generationContext.generationStructureCheck && typeof generationContext.generationStructureCheck === 'object'
+    ? generationContext.generationStructureCheck
+    : (contextPacket && contextPacket.structureCheck && typeof contextPacket.structureCheck === 'object'
+      ? contextPacket.structureCheck
       : null);
   const generationErrorReason = generationContext && generationContext.generationErrorReason
     ? String(generationContext.generationErrorReason)
     : (contextPacket && contextPacket.generation && contextPacket.generation.errorReason
       ? String(contextPacket.generation.errorReason)
       : '');
-  const generationRagPlan = generationContext && generationContext.generationRagPlan && typeof generationContext.generationRagPlan === 'object'
-    ? generationContext.generationRagPlan
-    : (contextPacket && contextPacket.rag && contextPacket.rag.plan && typeof contextPacket.rag.plan === 'object'
-      ? contextPacket.rag.plan
-      : null);
-  const generationRagDebug = generationContext && generationContext.generationRagDebug && typeof generationContext.generationRagDebug === 'object'
-    ? generationContext.generationRagDebug
-    : (contextPacket && contextPacket.rag && contextPacket.rag.debug && typeof contextPacket.rag.debug === 'object'
-      ? contextPacket.rag.debug
-      : null);
-  const generationRagModelInput = generationContext && generationContext.generationRagModelInput && typeof generationContext.generationRagModelInput === 'object'
-    ? generationContext.generationRagModelInput
-    : (contextPacket && contextPacket.rag && contextPacket.rag.modelInput && typeof contextPacket.rag.modelInput === 'object'
-      ? contextPacket.rag.modelInput
-      : null);
   const generationModelRequest = generationContext && generationContext.generationModelRequest && typeof generationContext.generationModelRequest === 'object'
     ? generationContext.generationModelRequest
     : (contextPacket && contextPacket.modelRequest && typeof contextPacket.modelRequest === 'object'
@@ -1696,10 +1185,6 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
       lastGenerationContext: generationContext || null,
       debugContextAvailable: false,
       debugContextRows: [],
-      debugRagRows: [],
-      debugRagPlanLines: [],
-      debugRagDebugLines: [],
-      debugRagModelInputLines: [],
       debugModelRequestLines: [],
       debugModelResponseLines: [],
     };
@@ -1710,16 +1195,12 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
       lastGenerationContext: generationContext,
       debugContextAvailable: true,
       debugContextRows: [],
-      debugRagRows: [],
-      debugRagPlanLines: [],
-      debugRagDebugLines: [],
-      debugRagModelInputLines: [],
       debugModelRequestLines: [],
       debugModelResponseLines: [],
     };
   }
 
-  const validationSummary = buildValidationSummary(generationSource, generationValidation);
+  const structureCheckSummary = buildStructureCheckSummary(generationSource, generationStructureCheck);
   const rows = [
     {
       label: '结果来源',
@@ -1742,6 +1223,31 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
       ),
     },
     {
+      label: '探索点经纬度',
+      value: formatDebugValue(
+        contextPacket
+        && contextPacket.location
+        && Number.isFinite(Number(contextPacket.location.latitude))
+        && Number.isFinite(Number(contextPacket.location.longitude))
+          ? `${Number(contextPacket.location.latitude).toFixed(6)}, ${Number(contextPacket.location.longitude).toFixed(6)}`
+          : '未提供'
+      ),
+    },
+    {
+      label: '代表性POI列表',
+      value: (
+        contextPacket
+        && contextPacket.nearby
+        && Array.isArray(contextPacket.nearby.representativePoiNames)
+          ? (
+            contextPacket.nearby.representativePoiNames.length
+              ? contextPacket.nearby.representativePoiNames.join('、')
+              : '空列表（过滤后无结果）'
+          )
+          : '未提供'
+      ),
+    },
+    {
       label: '缓存命中',
       value: formatDebugValue(
         modelCacheStats.cachedTokens === null || modelCacheStats.cachedTokens === undefined
@@ -1761,155 +1267,22 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
     },
     {
       label: isDirectMode ? '检查状态' : '验证状态',
-      value: formatDebugValue(validationSummary.status),
+      value: formatDebugValue(structureCheckSummary.status),
     },
     {
       label: isDirectMode ? '检查细节' : '验证细节',
-      value: formatDebugValue(validationSummary.details),
+      value: formatDebugValue(structureCheckSummary.details),
     },
     {
       label: isDirectMode ? '检查说明' : '复核原因',
-      value: formatDebugValue(validationSummary.reasons.length ? validationSummary.reasons : (isDirectMode ? '未提供' : 'AI 未提供')),
+      value: formatDebugValue(structureCheckSummary.reasons.length ? structureCheckSummary.reasons : (isDirectMode ? '未提供' : 'AI 未提供')),
     },
-    ...(!isDirectMode ? [
-      {
-        label: 'AI 分数',
-        value: formatDebugValue(validationSummary.score),
-      },
-      {
-        label: 'AI 失败项',
-        value: formatDebugValue(generationValidation && generationValidation.aiFailedChecks),
-      },
-      {
-        label: '失败任务序号',
-        value: formatDebugValue(generationValidation && generationValidation.aiFailedMissionIndexes),
-      },
-      {
-        label: 'AI 校验完整性',
-        value: formatDebugValue(
-          generationValidation && generationValidation.aiValidationComplete === false
-            ? '不完整'
-            : generationValidation && generationValidation.aiValidationComplete === true
-              ? '完整'
-              : '未提供'
-        ),
-      },
-      {
-        label: 'AI 缺失字段',
-        value: formatDebugValue(generationValidation && generationValidation.aiValidationMissingFields),
-      },
-      {
-        label: 'AI 补全次数',
-        value: formatDebugValue(
-          generationValidation && Number.isFinite(Number(generationValidation.aiRepairPromptCount))
-            ? generationValidation.aiRepairPromptCount
-            : '未提供'
-        ),
-      },
-      {
-        label: 'AI 循环轮次',
-        value: formatDebugValue(
-          generationValidation && Number.isFinite(Number(generationValidation.aiLoopPassCount)) && generationValidation.aiLoopPassCount
-            ? generationValidation.aiLoopPassCount
-            : '未提供'
-        ),
-      },
-      {
-        label: 'AI 改写次数',
-        value: formatDebugValue(
-          generationValidation && Number.isFinite(Number(generationValidation.aiLoopRewriteCount))
-            ? generationValidation.aiLoopRewriteCount
-            : '未提供'
-        ),
-      },
-      {
-        label: 'AI 循环停止原因',
-        value: formatDebugValue(generationValidation && generationValidation.aiLoopStopReason),
-      },
-      {
-        label: '抽象任务序号',
-        value: formatDebugValue(generationValidation && generationValidation.aiAbstractMissionIndexes),
-      },
-      {
-        label: '重复任务序号',
-        value: formatDebugValue(generationValidation && generationValidation.aiRepeatedMissionIndexes),
-      },
-      {
-        label: '改写范围',
-        value: formatDebugValue(
-          generationValidation && generationValidation.aiRewriteScope
-            ? generationValidation.aiRewriteScope
-            : '未提供'
-        ),
-      },
-      {
-        label: '实际修复策略',
-        value: formatDebugValue(
-          generationValidation && generationValidation.aiAppliedRepairStrategy
-            ? generationValidation.aiAppliedRepairStrategy
-            : '未提供'
-        ),
-      },
-      {
-        label: '实际修复序号',
-        value: formatDebugValue(generationValidation && generationValidation.aiAppliedRepairIndexes),
-      },
-      {
-        label: 'AI 评语',
-        value: formatDebugValue(
-          generationValidation && generationValidation.aiReviewComment
-            ? generationValidation.aiReviewComment
-            : 'AI 未提供'
-        ),
-      },
-      {
-        label: '改写建议',
-        value: formatDebugValue(
-          generationValidation && generationValidation.aiRewriteAdvice
-            ? generationValidation.aiRewriteAdvice
-            : 'AI 未提供'
-        ),
-      },
-      {
-        label: '建议改写内容',
-        value: formatDebugValue(generationValidation && generationValidation.aiShouldRewrite
-          ? (
-            generationValidation.aiSuggestedTheme
-              ? JSON.stringify(generationValidation.aiSuggestedTheme, null, 2)
-              : 'AI 未提供'
-          )
-          : '无需改写'),
-      },
-      {
-        label: 'AI 改写前原始结果',
-        value: formatDebugValue(generationValidation && generationValidation.aiOriginalTheme
-          ? JSON.stringify(generationValidation.aiOriginalTheme, null, 2)
-          : '未提供'),
-      },
-      {
-        label: 'AI 字段来源',
-        value: formatDebugValue(generationValidation && generationValidation.aiFieldSources
-          ? [
-              `score:${generationValidation.aiFieldSources.score || 'missing'}`,
-              `failedChecks:${generationValidation.aiFieldSources.failedChecks || 'missing'}`,
-              `reasons:${generationValidation.aiFieldSources.reasons || 'missing'}`,
-              `comment:${generationValidation.aiFieldSources.reviewComment || 'missing'}`,
-              `advice:${generationValidation.aiFieldSources.rewriteAdvice || 'missing'}`,
-              `rewrite:${generationValidation.aiFieldSources.rewrittenTheme || 'missing'}`,
-            ]
-          : '未提供'),
-      },
-    ] : []),
   ];
 
   return {
     lastGenerationContext: generationContext,
     debugContextAvailable: true,
     debugContextRows: rows,
-    debugRagRows: isDirectMode ? [] : buildRagExplainRows(generationRagPlan, generationRagDebug),
-    debugRagPlanLines: includeHeavy && !isDirectMode ? (generationRagPlan ? JSON.stringify(generationRagPlan, null, 2).split('\n') : []) : [],
-    debugRagDebugLines: includeHeavy && !isDirectMode ? (generationRagDebug ? JSON.stringify(generationRagDebug, null, 2).split('\n') : []) : [],
-    debugRagModelInputLines: includeHeavy && !isDirectMode ? (generationRagModelInput ? JSON.stringify(generationRagModelInput, null, 2).split('\n') : []) : [],
     debugModelRequestLines: includeHeavy && generationModelRequest ? buildReadableModelRequestLines(generationModelRequest) : [],
     debugModelResponseLines: includeHeavy && generationModelResponse ? buildReadableModelRequestLines(generationModelResponse) : [],
   };
@@ -1955,27 +1328,79 @@ function looksLikeStreetAddress(value) {
     return false;
   }
   const text = String(value).trim();
-  return /路|街|巷|道|号|弄|村|大道/.test(text) && /\d/.test(text);
+  return /路|街|巷|道|弄|村|大道/.test(text) && /\d/.test(text);
 }
 
-function pickBestLocationName({ location, amapSummary, contextResponse }) {
-  const candidates = [
-    amapSummary && amapSummary.pois && amapSummary.pois[0] && amapSummary.pois[0].name,
-    location && location.placeName,
-    location && location.name,
-    amapSummary && amapSummary.placeName,
-    contextResponse && contextResponse.placeName,
-    location && location.address,
-  ]
-    .map((item) => (item ? String(item).trim() : ''))
-    .filter(Boolean);
+function isGenericLocationName(value) {
+  const text = String(value || '').trim();
+  return !text
+    || text === '当前位置'
+    || text === '定位成功'
+    || text === '已设为探索点'
+    || text === '地图选点'
+    || text === '已选地点'
+    || text === '城市街道';
+}
 
-  const nonAddressLike = candidates.find((item) => !looksLikeStreetAddress(item) && item !== '地图选点');
-  return nonAddressLike || candidates[0] || '当前位置';
+function isUsableLocationName(value) {
+  const text = String(value || '').trim();
+  return !!text && !isGenericLocationName(text) && !looksLikeStreetAddress(text);
+}
+
+function pickExplicitLocationName(location = {}) {
+  return [
+    location.placeName,
+    location.name,
+    location.title,
+  ].map((item) => String(item || '').trim()).find(isUsableLocationName) || '';
+}
+
+function pickClosestPoiName(places, maxDistance = 80) {
+  const candidates = (Array.isArray(places) ? places : [])
+    .map((item) => {
+      const name = String(item && (item.name || item.title) || '').trim();
+      const distance = Number(item && item.distance);
+      return {
+        name,
+        distance: Number.isFinite(distance) ? distance : Number.MAX_SAFE_INTEGER,
+      };
+    })
+    .filter((item) => isUsableLocationName(item.name) && item.distance <= maxDistance)
+    .sort((left, right) => left.distance - right.distance);
+  return candidates[0] ? candidates[0].name : '';
+}
+
+function pickLocationAnchorName({ location, amapSummary, contextResponse, nearbyPlaces, currentName } = {}) {
+  const explicitName = pickExplicitLocationName(location) || (isUsableLocationName(currentName) ? String(currentName).trim() : '');
+  if (explicitName) {
+    return explicitName;
+  }
+  const closePoiName = pickClosestPoiName(
+    []
+      .concat(Array.isArray(nearbyPlaces) ? nearbyPlaces : [])
+      .concat(amapSummary && Array.isArray(amapSummary.pois) ? amapSummary.pois : []),
+    80
+  );
+  if (closePoiName) {
+    return closePoiName;
+  }
+  return pickSmallestAoiName(contextResponse)
+    || (amapSummary && isUsableLocationName(amapSummary.placeName) ? String(amapSummary.placeName).trim() : '')
+    || (isUsableLocationName(currentName) ? String(currentName).trim() : '')
+    || '当前位置';
+}
+
+function pickBestLocationName({ location, amapSummary, contextResponse, nearbyPlaces }) {
+  return pickLocationAnchorName({
+    location,
+    amapSummary,
+    contextResponse,
+    nearbyPlaces,
+  });
 }
 
 function buildNearbyPlaceViews(results) {
-  return (results || []).slice(0, NEARBY_QUERY_OPTIONS.limit).map((item, index) => {
+  return (results || []).map((item, index) => {
     const typeRaw = item.type ? String(item.type).trim() : '';
     const typeParts = typeRaw.split(';').map((part) => part.trim()).filter(Boolean);
     const typePrimary = typeParts[0] || '';
@@ -2006,7 +1431,17 @@ function buildNearbyPlaceViews(results) {
             ? Number(item.lng)
             : null,
     };
-  }).filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
+  })
+    .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+    .sort((left, right) => {
+      const leftDistance = Number.isFinite(Number(left.distance)) ? Number(left.distance) : Number.MAX_SAFE_INTEGER;
+      const rightDistance = Number.isFinite(Number(right.distance)) ? Number(right.distance) : Number.MAX_SAFE_INTEGER;
+      if (leftDistance !== rightDistance) {
+        return leftDistance - rightDistance;
+      }
+      return String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN');
+    })
+    .slice(0, NEARBY_QUERY_OPTIONS.limit);
 }
 
 function extractErrorMessage(error, fallback) {
@@ -2037,31 +1472,17 @@ function buildBrandedHomeShareTitle(data = {}) {
 function explainNearbyPoiError(error) {
   const message = extractErrorMessage(error, '周边地点加载失败');
 
-  if (/function not found|找不到该函数|not found/i.test(message)) {
-    return {
-      title: '周边地点功能未部署',
-      content: '云函数 fetchNearbyPois 还没有部署到当前云环境，请先上传并部署该云函数后再试。',
-    };
-  }
-
-  if (/missing_amap_web_key/i.test(message)) {
-    return {
-      title: '缺少高德服务 Key',
-      content: '云函数 fetchNearbyPois 没有配置可用的高德 Web 服务 Key。请在云函数环境变量里设置 AMAP_WEB_KEY 后，再重新部署并重试。',
-    };
-  }
-
   if (/INVALID_USER_KEY|USERKEY_PLAT_NOMATCH|SERVICE_NOT_AVAILABLE|DAILY_QUERY_OVER_LIMIT|ACCESS_TOO_FREQUENT|INVALID_IP/i.test(message)) {
     return {
       title: '高德 Key 权限异常',
-      content: `高德周边 POI 请求失败：${message}。请检查当前 Key 是否开通 Web 服务能力、配额是否超限、平台权限是否匹配。`,
+      content: `高德逆地理请求失败：${message}。请检查当前 Key 权限、配额和平台配置。`,
     };
   }
 
   if (/timeout|超时/i.test(message)) {
     return {
       title: '周边地点请求超时',
-      content: `请求高德周边 POI 超时：${message}。请检查网络状态后重试。`,
+      content: `请求高德逆地理 POI 超时：${message}。请检查网络状态后重试。`,
     };
   }
 
@@ -2235,17 +1656,18 @@ Page({
     const sourceLabelMap = {
       preset: '预设展示',
       'ai-direct': 'AI 直出',
+      'ai-direct-raw': '模型原样',
+      'ai-direct-error': '模型失败',
       'ai-direct-fallback': '直出兜底',
-      'rag+ai': 'AI 生成',
-      'rag-fallback': 'RAG 兜底',
+      'ai-direct-partial-fallback': '模型补齐',
       'random-direct': '随机直出',
       'random-direct-fallback': '随机兜底',
-      'random+ai': '随机 AI',
-      'random-fallback': '随机兜底',
+      'random-direct-partial-fallback': '随机补齐',
       'combined-direct': '组合直出',
+      'combined-direct-raw': '组合模型原样',
+      'combined-direct-error': '组合模型失败',
       'combined-direct-fallback': '组合兜底',
-      'combined+ai': '组合 AI',
-      'combined-fallback': '组合兜底',
+      'combined-direct-partial-fallback': '组合补齐',
     };
     const sourceLabel = sourceLabelMap[source] || '主题结果';
     this.setData({
@@ -2506,10 +1928,11 @@ Page({
           return cache.pendingNearbyPlaces.get(key);
         }
       }
-      const request = fetchNearbyPois(lat, lng, NEARBY_QUERY_OPTIONS)
-        .then((result) => {
+      const request = getRegeo({ latitude: lat, longitude: lng })
+        .then((regeo) => {
           cache.pendingNearbyPlaces.delete(key);
-          const nearbyPlaces = buildNearbyPlaceViews(result);
+          const amapSummary = normalizeAmapLocation(regeo, '');
+          const nearbyPlaces = buildNearbyPlaceViews(amapSummary.pois || []);
           writeTimedCacheEntry(cache.nearbyPlaces, key, nearbyPlaces, NEARBY_PLACES_CACHE_TTL_MS);
           return nearbyPlaces;
         })
@@ -2541,15 +1964,24 @@ Page({
       const token = ++this.locationResolveToken;
       const regeo = await getRegeo(location).catch(() => null);
       const amapSummary = normalizeAmapLocation(regeo, location.placeName || location.name || location.address);
-      const displayLocationName = pickBestLocationName({
+      const regeoNearbyPlaces = buildNearbyPlaceViews(amapSummary.pois || []);
+      const initialLocationName = pickBestLocationName({
         location,
         amapSummary,
         contextResponse: null,
+        nearbyPlaces: regeoNearbyPlaces,
       });
-      const { locationContextResult, nearbyPlaces } = await this.prefetchGenerationPrerequisites({
+      const { locationContextResult, nearbyPlaces: fetchedNearbyPlaces } = await this.prefetchGenerationPrerequisites({
         latitude: Number(location.latitude),
         longitude: Number(location.longitude),
-        placeName: displayLocationName,
+        placeName: initialLocationName,
+      });
+      const nearbyPlaces = regeoNearbyPlaces.length ? regeoNearbyPlaces : fetchedNearbyPlaces;
+      const displayLocationName = pickBestLocationName({
+        location,
+        amapSummary,
+        contextResponse: locationContextResult,
+        nearbyPlaces,
       });
       if (token !== this.locationResolveToken) {
         return;
@@ -2584,7 +2016,12 @@ Page({
 
       this.setData({ loadingNearbyPlaces: true });
       try {
-        const nearbyPlaces = await this.fetchNearbyPlacesWithCache(Number(latitude), Number(longitude));
+        const regeo = await getRegeo({ latitude, longitude }).catch(() => null);
+        const amapSummary = normalizeAmapLocation(regeo, this.data.locationName || this.data.locationAddress);
+        const regeoNearbyPlaces = buildNearbyPlaceViews(amapSummary.pois || []);
+        const nearbyPlaces = regeoNearbyPlaces.length
+          ? regeoNearbyPlaces
+          : await this.fetchNearbyPlacesWithCache(Number(latitude), Number(longitude), { force: true });
         this.setData({
           nearbyPlaces,
           nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
@@ -2683,14 +2120,17 @@ Page({
       this.ensureGenerationLocationContext(),
       this.ensureGenerationNearbyPlaces(),
     ]);
-    const sceneTag = locationContextResult && locationContextResult.context
-      ? String(locationContextResult.context).trim()
-      : (this.data.locationContext || '');
     const nearbySummary = buildNearbySummary(
       nearbyPlaces && nearbyPlaces.length ? nearbyPlaces : this.data.nearbyPlaces,
       locationContextResult || this.data.locationContextResponse || null,
       timeContext
     );
+    const contextLocationName = pickLocationAnchorName({
+      currentName: this.data.locationName,
+      contextResponse: locationContextResult || this.data.locationContextResponse || null,
+      nearbyPlaces: nearbyPlaces && nearbyPlaces.length ? nearbyPlaces : this.data.nearbyPlaces,
+    });
+    const locationRegion = buildLocationRegion(locationContextResult || this.data.locationContextResponse || null);
     const normalizedSelectedThemes = normalizeGenerationThemeList(
       Array.isArray(basePayload.selectedThemes)
         ? basePayload.selectedThemes
@@ -2710,16 +2150,11 @@ Page({
       : existingRecentHistory;
     const contextPacket = {
       location: {
-        name: this.data.locationName || '当前位置',
+        name: contextLocationName,
+        region: locationRegion,
         address: this.data.locationAddress || '',
         latitude: Number.isFinite(Number(this.data.latitude)) ? Number(this.data.latitude) : null,
         longitude: Number.isFinite(Number(this.data.longitude)) ? Number(this.data.longitude) : null,
-        sceneTag,
-        nativeContext: locationContextResult && locationContextResult.nativeContext
-          ? locationContextResult.nativeContext
-          : this.data.locationContextResponse && this.data.locationContextResponse.nativeContext
-            ? this.data.locationContextResponse.nativeContext
-            : null,
       },
       time: timeContext,
       weather: {
@@ -2751,9 +2186,8 @@ Page({
       weather: modeScopedFields.weather,
       season: modeScopedFields.season,
       preference: modeScopedFields.preference,
-      locationContext: sceneTag,
-      sceneTag,
-      locationContextResponse: locationContextResult || this.data.locationContextResponse || null,
+      locationName: contextLocationName,
+      locationRegion,
       timeContext,
       nearbySummary,
       generationSeed: contextPacket.generation.seed,
@@ -2762,6 +2196,8 @@ Page({
     return {
       ...basePayload,
       ...generationContext,
+      locationName: contextLocationName,
+      locationRegion,
       generationContext,
     };
   },
@@ -3022,12 +2458,9 @@ Page({
       const nextGenerationContext = applyGeneratedThemeMetaToContext(
         payload.generationContext,
         currentTheme,
-        result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback'),
-        result.validation || null,
+        result.source || (useCombinedTheme ? 'combined-direct-fallback' : 'ai-direct-fallback'),
+        result.structureCheck || null,
         result.runtimeVersion || '',
-        result.ragPlan || null,
-        result.ragDebug || null,
-        result.ragModelInput || null,
         result.reason || '',
         result.modelRequest || null,
         result.modelResponse || null
@@ -3038,7 +2471,7 @@ Page({
         ...this.finishGenerationStageFlow(),
       });
       app.globalData.currentTheme = currentTheme;
-      this.syncDisplayMeta(currentTheme, result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback'));
+      this.syncDisplayMeta(currentTheme, result.source || (useCombinedTheme ? 'combined-direct-fallback' : 'ai-direct-fallback'));
     } catch (error) {
       this.setData(this.failGenerationStageFlow());
       wx.showToast({
@@ -3086,11 +2519,8 @@ Page({
         payload.generationContext,
         currentTheme,
         displaySource,
-        result.validation || null,
+        result.structureCheck || null,
         result.runtimeVersion || '',
-        result.ragPlan || null,
-        result.ragDebug || null,
-        result.ragModelInput || null,
         result.reason || '',
         result.modelRequest || null,
         result.modelResponse || null
@@ -3118,20 +2548,26 @@ Page({
     if (!this.ensureExplorePointReadyForGeneration()) {
       return;
     }
+    const normalizedSelections = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
+    if (normalizedSelections.length !== this.data.combineSelections.length) {
+      this.setData({
+        combineSelections: normalizedSelections,
+        combineOptionViews: buildCombineOptionViews(normalizedSelections),
+      });
+    }
+    if (!normalizedSelections.length) {
+      wx.showToast({
+        title: '请先选择主题',
+        icon: 'none',
+        duration: 1800,
+      });
+      return;
+    }
     this.beginGenerationStageFlow(this.data.walkMode === 'advanced' ? 3 : 1);
     this.setData({ isCombining: true });
     try {
       this.advanceGenerationStage('gather');
-      const normalizedSelections = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
-      if (normalizedSelections.length !== this.data.combineSelections.length) {
-        this.setData({
-          combineSelections: normalizedSelections,
-          combineOptionViews: buildCombineOptionViews(normalizedSelections),
-        });
-      }
-      const selections = normalizedSelections.length
-        ? normalizedSelections
-        : [pickRandomThemeCategory(this.data.randomCategories)];
+      const selections = normalizedSelections;
       const useCombinedTheme = this.data.walkMode !== 'pure' && selections.length > 1;
       const payload = await this.buildGenerationPayload({
         mood: this.data.mood,
@@ -3160,12 +2596,9 @@ Page({
       const nextGenerationContext = applyGeneratedThemeMetaToContext(
         payload.generationContext,
         currentTheme,
-        result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback'),
-        result.validation || null,
+        result.source || (useCombinedTheme ? 'combined-direct-fallback' : 'ai-direct-fallback'),
+        result.structureCheck || null,
         result.runtimeVersion || '',
-        result.ragPlan || null,
-        result.ragDebug || null,
-        result.ragModelInput || null,
         result.reason || '',
         result.modelRequest || null,
         result.modelResponse || null
@@ -3178,7 +2611,7 @@ Page({
       app.globalData.currentTheme = currentTheme;
       this.syncDisplayMeta(
         currentTheme,
-        result.source || (useCombinedTheme ? 'combined-fallback' : 'rag-fallback')
+        result.source || (useCombinedTheme ? 'combined-direct-fallback' : 'ai-direct-fallback')
       );
     } catch (error) {
       this.setData(this.failGenerationStageFlow());
@@ -3238,7 +2671,7 @@ Page({
         themeSnapshot: this.data.currentTheme,
         themeTitle: this.data.currentTheme.title,
         locationName: this.data.locationName,
-        locationContext: this.data.locationContext || generationContext.sceneTag || '',
+        locationContext: this.data.locationContext || '',
         locationAddress: this.data.locationAddress,
         routePoints: [],
         missionsCompleted: [],
@@ -3280,7 +2713,7 @@ Page({
         trackStoppedAt: null,
         locationName: this.data.locationName,
         locationAddress: this.data.locationAddress,
-        locationContext: this.data.locationContext || generationContext.sceneTag || '',
+        locationContext: this.data.locationContext || '',
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         selectedMission: this.data.currentTheme.missions[0] || '',
@@ -3350,7 +2783,7 @@ Page({
         themeSnapshot: this.data.currentTheme,
         themeTitle: this.data.currentTheme.title,
         locationName: this.data.locationName,
-        locationContext: this.data.locationContext || generationContext.sceneTag || '',
+        locationContext: this.data.locationContext || '',
         locationAddress: this.data.locationAddress,
         latitude: this.data.latitude,
         longitude: this.data.longitude,
