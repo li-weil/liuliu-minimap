@@ -1,16 +1,29 @@
 <view class="page-shell profile-page">
-  <view class="section-card profile-card">
-    <view wx:if="{{checkingAccount && !user}}" class="profile-status-block">
-      <view class="profile-status-title">正在翻找你的足迹册...</view>
-      <view class="profile-status-desc">稍等一下，看看这次回来的是不是熟悉的你。</view>
+  <view class="profile-card">
+    <view class="profile-card-head">
+      <view>
+        <view class="profile-kicker">个人足迹册</view>
+        <view class="profile-title">{{user ? '我的身份' : (pageMode === 'login' ? '恢复登录' : '设置资料')}}</view>
+        <view class="profile-subtitle">{{user ? '头像和昵称会用于足迹保存与同行漫步。' : '登录后可以保存足迹、恢复成就和继续进行中的漫步。'}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{checkingAccount && !user}}" class="profile-skeleton-block">
+      <view class="profile-skeleton-avatar"></view>
+      <view class="profile-skeleton-copy">
+        <view class="profile-skeleton-line profile-skeleton-line-main"></view>
+        <view class="profile-skeleton-line"></view>
+      </view>
     </view>
 
     <view wx:elif="{{user && pageMode === 'view'}}" class="profile-view-block">
-      <view class="profile-summary-row">
-        <image wx:if="{{user.avatarUrl}}" src="{{user.avatarUrl}}" class="profile-avatar" />
+      <view class="profile-cover-row">
+        <image wx:if="{{user.avatarUrl}}" src="{{user.avatarUrl}}" class="profile-avatar" mode="aspectFill" />
         <view wx:else class="profile-avatar profile-avatar-fallback">66</view>
         <view class="profile-summary-copy">
+          <view class="profile-summary-label">当前用户</view>
           <view class="profile-summary-name">{{user.nickName}}</view>
+          <view class="profile-summary-desc">足迹册、成就和同行身份都会记录在这个账户下。</view>
         </view>
       </view>
 
@@ -20,28 +33,30 @@
       </view>
     </view>
 
-    <view wx:else>
-      <view wx:if="{{pageMode === 'login'}}" class="profile-status-block">
+    <view wx:else class="profile-edit-block">
+      <view wx:if="{{pageMode === 'login'}}" class="profile-status-panel">
         <view class="profile-status-title">欢迎回来</view>
-        <view class="profile-status-desc">这本足迹册认得你，轻轻一点，就能继续上次的漫步。</view>
+        <view class="profile-status-desc">这本足迹册认得你，点一次登录就能继续上次的漫步。</view>
       </view>
 
-      <view wx:if="{{pageMode !== 'login'}}" class="profile-setup-row">
+      <view wx:if="{{pageMode !== 'login'}}" class="profile-cover-row profile-setup-row">
         <button class="profile-avatar-picker" open-type="chooseAvatar" bindchooseavatar="handleChooseAvatar">
-          <image wx:if="{{draftAvatarUrl || (user && user.avatarUrl)}}" src="{{draftAvatarUrl || user.avatarUrl}}" class="profile-avatar" />
+          <image wx:if="{{draftAvatarUrl || (user && user.avatarUrl)}}" src="{{draftAvatarUrl || user.avatarUrl}}" class="profile-avatar profile-avatar-image" mode="aspectFill" />
           <view wx:else class="profile-avatar profile-avatar-fallback">{{user ? '改' : '选'}}</view>
         </button>
-        <view class="profile-form-block">
+        <view class="profile-summary-copy profile-form-block">
+          <view class="profile-summary-label">昵称</view>
           <input class="profile-nickname-input" type="nickname" placeholder="写下你的名字" value="{{draftNickName}}" bindinput="handleNickNameInput" />
-          <view class="profile-input-tip">{{pageMode === 'edit' ? '换一个此刻更喜欢的称呼。' : '让这本足迹册，从你的名字开始。'}}</view>
+          <view wx:if="{{profileInlineError}}" class="profile-inline-error">{{profileInlineError}}</view>
+          <view wx:else class="profile-input-tip">{{pageMode === 'edit' ? '换一个此刻更喜欢的称呼。' : '让这本足迹册，从你的名字开始。'}}</view>
         </view>
       </view>
 
       <view class="profile-action-row">
-        <button wx:if="{{pageMode === 'login'}}" class="primary-btn profile-action-btn" bindtap="handleQuickLogin" loading="{{syncing}}" disabled="{{syncing || checkingAccount}}">继续这次漫步</button>
-        <button wx:if="{{pageMode === 'register'}}" class="primary-btn profile-action-btn" bindtap="handleRegister" loading="{{syncing}}">开启我的足迹册</button>
-        <button wx:if="{{pageMode === 'edit'}}" class="primary-btn profile-action-btn" bindtap="handleSaveProfile" loading="{{syncing}}">保存资料</button>
-        <button wx:if="{{pageMode === 'register' || pageMode === 'edit'}}" class="ghost-btn profile-action-btn" bindtap="resetDraftProfile">取消</button>
+        <button wx:if="{{pageMode === 'login'}}" class="primary-btn profile-action-btn" bindtap="handleQuickLogin" loading="{{syncing}}" disabled="{{syncing || checkingAccount}}">恢复登录</button>
+        <button wx:if="{{pageMode === 'register'}}" class="primary-btn profile-action-btn" bindtap="handleRegister" loading="{{syncing}}" disabled="{{syncing}}">开启我的足迹册</button>
+        <button wx:if="{{pageMode === 'edit'}}" class="primary-btn profile-action-btn" bindtap="handleSaveProfile" loading="{{syncing}}" disabled="{{syncing}}">保存资料</button>
+        <button wx:if="{{pageMode === 'register' || pageMode === 'edit'}}" class="ghost-btn profile-action-btn" bindtap="resetDraftProfile" disabled="{{syncing}}">取消</button>
       </view>
     </view>
   </view>

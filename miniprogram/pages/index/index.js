@@ -89,7 +89,9 @@ function buildCombineOptionViews(selected) {
 }
 
 function buildSelectedThemeCategories(selected) {
-  return (selected || []).map((item) => (String(item).includes('漫步') ? String(item) : `${item}漫步`));
+  return (selected || [])
+    .filter((item) => String(item || '').trim() !== '随机')
+    .map((item) => (String(item).includes('漫步') ? String(item) : `${item}漫步`));
 }
 
 function normalizeCombineSelections(selected, walkMode) {
@@ -97,12 +99,56 @@ function normalizeCombineSelections(selected, walkMode) {
   return Array.isArray(selected) ? selected.filter(Boolean).slice(0, limit) : [];
 }
 
-function pickRandomThemeCategory(categoryPool) {
+function normalizeThemeLabel(value) {
+  return String(value || '').replace(/漫步/g, '').trim();
+}
+
+function pickRandomThemeCategory(categoryPool, excluded = []) {
   const categories = Array.isArray(categoryPool) ? categoryPool.filter(Boolean) : [];
-  if (!categories.length) {
+  const excludedSet = new Set((Array.isArray(excluded) ? excluded : []).map(normalizeThemeLabel).filter(Boolean));
+  const availableCategories = categories
+    .map(normalizeThemeLabel)
+    .filter((item) => item && !excludedSet.has(item));
+  if (!availableCategories.length) {
     return '形状';
   }
-  return String(categories[Math.floor(Math.random() * categories.length)]).replace(/漫步/g, '').trim() || '形状';
+  return availableCategories[Math.floor(Math.random() * availableCategories.length)] || '形状';
+}
+
+function resolveThemeSelectionsForGeneration(selected, categoryPool, walkMode) {
+  const normalizedSelections = normalizeCombineSelections(selected, walkMode);
+  if (!normalizedSelections.length) {
+    return {
+      ok: false,
+      selections: [],
+      categories: [],
+      randomResolved: false,
+    };
+  }
+
+  const fixedSelections = normalizedSelections.filter((item) => normalizeThemeLabel(item) !== '随机');
+  const hasRandom = normalizedSelections.length !== fixedSelections.length;
+  if (!hasRandom) {
+    return {
+      ok: true,
+      selections: normalizedSelections,
+      categories: buildSelectedThemeCategories(normalizedSelections),
+      randomResolved: false,
+    };
+  }
+
+  const randomCategory = pickRandomThemeCategory(categoryPool, fixedSelections);
+  const resolvedSelections = walkMode === 'pure'
+    ? [randomCategory]
+    : fixedSelections.concat(randomCategory).slice(0, 2);
+  return {
+    ok: true,
+    selections: normalizedSelections,
+    categories: buildSelectedThemeCategories(resolvedSelections),
+    randomResolved: true,
+    randomCategory,
+    resolvedSelections,
+  };
 }
 
 function normalizeGenerationThemeList(selectedThemes) {
@@ -112,42 +158,33 @@ function normalizeGenerationThemeList(selectedThemes) {
     .slice(0, 3);
 }
 
-const GENERATION_STAGE_SEQUENCE = ['confirm', 'gather', 'generate', 'finalize'];
+const GENERATION_STAGE_SEQUENCE = ['gather', 'generate', 'finalize'];
 const GENERATION_OVERTIME_COPY = '66 正在加速赶来，请耐心等待';
 const GENERATION_ERROR_COPY = '66 迷路啦，请再次尝试生成';
 const GENERATION_STAGE_META = {
-  confirm: {
-    key: 'confirm',
-    index: 1,
-    shortLabel: '确认位置',
-    title: '正在确认探索点位置',
-    progress: 14,
-    durationMs: 1000,
-    badge: '位置就绪前',
-  },
   gather: {
     key: 'gather',
-    index: 2,
-    shortLabel: '整理线索',
-    title: '正在整理附近地点和时间线索',
-    progress: 38,
+    index: 1,
+    shortLabel: '读取街区',
+    title: '正在读取探索点附近的街区信息',
+    progress: 24,
     durationMs: 1000,
-    badge: '环境整理中',
+    badge: '街区读取中',
   },
   generate: {
     key: 'generate',
-    index: 3,
-    shortLabel: '生成任务',
-    title: '正在生成漫步主题和任务',
-    progress: 78,
+    index: 2,
+    shortLabel: '整理线索',
+    title: '正在整理时间、地点和主题线索',
+    progress: 68,
     durationMs: 5000,
-    badge: 'AI 生成中',
+    badge: '线索整理中',
   },
   finalize: {
     key: 'finalize',
-    index: 4,
-    shortLabel: '整理卡片',
-    title: '正在整理任务卡片',
+    index: 3,
+    shortLabel: '生成任务',
+    title: '正在生成今天的任务票据',
     progress: 100,
     durationMs: 1000,
     badge: '马上就好',
@@ -177,7 +214,7 @@ function buildGenerationStepViews(currentStage, status = 'loading') {
 
 function buildGenerationViewState({
   status = 'idle',
-  stage = 'confirm',
+  stage = 'gather',
   overtime = false,
   missionCount = 1,
   message = '',
@@ -187,7 +224,7 @@ function buildGenerationViewState({
     return null;
   }
 
-  const stageKey = GENERATION_STAGE_META[stage] ? stage : 'confirm';
+  const stageKey = GENERATION_STAGE_META[stage] ? stage : 'gather';
   const meta = GENERATION_STAGE_META[stageKey];
 
   if (status === 'error') {
@@ -223,20 +260,6 @@ function buildGenerationViewState({
     steps: buildGenerationStepViews(stageKey, 'loading'),
     placeholderMissions: Array.from({ length: Math.max(1, Number(missionCount) || 1) }),
   };
-}
-
-function normalizeRandomSource(source) {
-  const normalized = String(source || '').trim();
-  if (normalized === 'ai-direct' || normalized === 'ai-direct-raw') {
-    return 'random-direct';
-  }
-  if (normalized === 'ai-direct-fallback' || normalized === 'ai-direct-error') {
-    return 'random-direct-fallback';
-  }
-  if (normalized === 'ai-direct-partial-fallback') {
-    return 'random-direct-partial-fallback';
-  }
-  return normalized || 'random-direct-fallback';
 }
 
 function buildGeneratedThemeMeta(theme) {
@@ -1337,7 +1360,6 @@ function isGenericLocationName(value) {
     || text === '当前位置'
     || text === '定位成功'
     || text === '已设为探索点'
-    || text === '地图选点'
     || text === '已选地点'
     || text === '城市街道';
 }
@@ -1399,6 +1421,41 @@ function pickBestLocationName({ location, amapSummary, contextResponse, nearbyPl
   });
 }
 
+function normalizeLocationDisplayText(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[，,。.\-_/\\]/g, '');
+}
+
+function isRedundantLocationAddress(name, address) {
+  const normalizedName = normalizeLocationDisplayText(name);
+  const normalizedAddress = normalizeLocationDisplayText(address);
+  if (!normalizedName || !normalizedAddress) {
+    return false;
+  }
+  if (normalizedName === normalizedAddress) {
+    return true;
+  }
+  const nameBase = normalizedName.replace(/附近$/, '');
+  const addressBase = normalizedAddress.replace(/附近$/, '');
+  return !!nameBase
+    && !!addressBase
+    && (
+      nameBase === addressBase
+      || normalizedAddress === `${normalizedName}附近`
+      || normalizedName === `${normalizedAddress}附近`
+    );
+}
+
+function buildLocationAddressDisplay(name, address) {
+  const text = String(address || '').trim();
+  if (!text || isRedundantLocationAddress(name, text)) {
+    return '';
+  }
+  return text;
+}
+
 function buildNearbyPlaceViews(results) {
   return (results || []).map((item, index) => {
     const typeRaw = item.type ? String(item.type).trim() : '';
@@ -1417,7 +1474,7 @@ function buildNearbyPlaceViews(results) {
       typeSecondary,
       typeTertiary,
       typecode: item.typecode ? String(item.typecode).trim() : '',
-      distance: Number.isFinite(Number(item.distance)) ? Number(item.distance) : null,
+      distance: Number.isFinite(Number(item.distance)) ? Math.round(Number(item.distance)) : null,
       latitude:
         item.latitude !== undefined && item.latitude !== null
           ? Number(item.latitude)
@@ -1523,6 +1580,7 @@ Page({
     locationContext: '',
     locationContextResponse: null,
     locationAddress: '',
+    locationAddressDisplay: '',
     latitude: null,
     longitude: null,
     mapCenterLatitude: null,
@@ -1531,6 +1589,7 @@ Page({
     mapMarkers: [],
     mapCircles: [],
     isMapDragging: false,
+    exploreStep: 'location',
     hasConfirmedExplorePoint: false,
     walkMode: 'pure',
     journeyMode: 'solo',
@@ -1574,7 +1633,7 @@ Page({
         width: 28,
         height: 28,
         callout: {
-          content: '等待选点',
+          content: '等待起点',
           display: 'BYCLICK',
           padding: 8,
           borderRadius: 10,
@@ -1599,8 +1658,14 @@ Page({
   },
 
   onReady() {
-    this.mapCtx = wx.createMapContext('explore-map', this);
+    this.ensureMapContext();
     this.locationResolveToken = 0;
+  },
+
+  ensureMapContext() {
+    if (typeof wx !== 'undefined' && wx.createMapContext) {
+      this.mapCtx = wx.createMapContext('explore-map', this);
+    }
   },
 
   onShareAppMessage() {
@@ -1688,6 +1753,7 @@ Page({
     const locationAddress = fallback.locationAddress !== undefined
       ? fallback.locationAddress
       : (location.address || this.data.locationAddress || '');
+    const locationAddressDisplay = buildLocationAddressDisplay(placeName, locationAddress);
 
     this.setData({
       latitude,
@@ -1696,6 +1762,7 @@ Page({
       locationContext: '',
       locationContextResponse: null,
       locationAddress,
+      locationAddressDisplay,
       searchResults: [],
       searchResultCount: 0,
       ...this.buildMapState({
@@ -1711,17 +1778,30 @@ Page({
   },
 
   markExplorePointConfirmed() {
+    this.setData({
+      hasConfirmedExplorePoint: true,
+    });
+  },
+
+  proceedToGenerateStep() {
     if (!this.data.hasConfirmedExplorePoint) {
-      this.setData({ hasConfirmedExplorePoint: true });
+      wx.showToast({
+        title: '先定一个出发点',
+        icon: 'none',
+        duration: 1800,
+      });
+      return;
     }
+    this.setData({ exploreStep: 'generate' });
   },
 
   ensureExplorePointReadyForGeneration() {
     if (this.data.hasConfirmedExplorePoint) {
       return true;
     }
+    this.setData({ exploreStep: 'location' });
     wx.showToast({
-      title: '请先定位、搜索或设为探索点，再生成漫步主题',
+      title: '先完成第 1 步，设定探索点',
       icon: 'none',
       duration: 2600,
     });
@@ -1741,7 +1821,7 @@ Page({
       return;
     }
     const stageKey = this.generationStageState.stage;
-    const meta = GENERATION_STAGE_META[stageKey] || GENERATION_STAGE_META.confirm;
+    const meta = GENERATION_STAGE_META[stageKey] || GENERATION_STAGE_META.gather;
     const timeoutMs = Number(meta.durationMs) || 1000;
     this.generationStageTimer = setTimeout(() => {
       if (!this.generationStageState || this.generationStageState.status !== 'loading') {
@@ -1763,7 +1843,7 @@ Page({
   beginGenerationStageFlow(missionCount) {
     this.generationStageState = {
       status: 'loading',
-      stage: 'confirm',
+      stage: 'gather',
       overtime: false,
       missionCount: Math.max(1, Number(missionCount) || 1),
     };
@@ -1841,6 +1921,30 @@ Page({
     this.setData(nextState);
   },
 
+  switchExploreStep(event) {
+    const step = event.currentTarget.dataset.step;
+    if (step === 'generate' && !this.data.hasConfirmedExplorePoint) {
+      wx.showToast({
+        title: '先完成第 1 步，设定探索点',
+        icon: 'none',
+        duration: 1800,
+      });
+      return;
+    }
+    const nextStep = step === 'generate' ? 'generate' : 'location';
+    this.setData({ exploreStep: nextStep }, () => {
+      if (nextStep === 'location') {
+        this.ensureMapContext();
+      }
+    });
+  },
+
+  changeExplorePoint() {
+    this.setData({ exploreStep: 'location' }, () => {
+      this.ensureMapContext();
+    });
+  },
+
   toggleGenerationDebug() {
       const nextShow = !this.data.showGenerationDebug;
       this.setData({
@@ -1859,7 +1963,9 @@ Page({
     } else if (isPureMode) {
       combineSelections = [value];
     } else {
-      combineSelections = current.concat(value).slice(0, 2);
+      combineSelections = current.length >= 2
+        ? current.slice(1).concat(value)
+        : current.concat(value);
       }
       this.setData({ combineSelections, combineOptionViews: buildCombineOptionViews(combineSelections) });
     },
@@ -1983,6 +2089,8 @@ Page({
         contextResponse: locationContextResult,
         nearbyPlaces,
       });
+      const nextLocationAddress = amapSummary.address || location.address || '';
+      const locationAddressDisplay = buildLocationAddressDisplay(displayLocationName, nextLocationAddress);
       if (token !== this.locationResolveToken) {
         return;
       }
@@ -1994,7 +2102,8 @@ Page({
         ? String(locationContextResult.context).trim()
         : (displayLocationName && displayLocationName !== '当前位置' ? displayLocationName : ''),
       locationContextResponse: locationContextResult || null,
-      locationAddress: amapSummary.address || location.address || '',
+      locationAddress: nextLocationAddress,
+      locationAddressDisplay,
       searchResults: [],
       searchResultCount: 0,
         ...this.buildMapState({
@@ -2003,7 +2112,7 @@ Page({
           placeName: displayLocationName || location.name || '已选地点',
         }),
         nearbyPlaces: nearbyPlaces || [],
-        nearbyExpanded: !!(nearbyPlaces && nearbyPlaces.length),
+        nearbyExpanded: false,
         lastGenerationContext: null,
       });
     },
@@ -2226,6 +2335,39 @@ Page({
     });
   },
 
+  handleMapRegionChange(event) {
+    if (event.type === 'begin') {
+      this.setData({ isMapDragging: true });
+      return;
+    }
+    if (event.type !== 'end') {
+      return;
+    }
+    if (!this.mapCtx || !this.mapCtx.getCenterLocation) {
+      this.setData({ isMapDragging: false });
+      return;
+    }
+
+    this.mapCtx.getCenterLocation({
+      success: (result) => {
+        const latitude = Number(result.latitude);
+        const longitude = Number(result.longitude);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          this.setData({ isMapDragging: false });
+          return;
+        }
+        this.setData({
+          mapCenterLatitude: latitude,
+          mapCenterLongitude: longitude,
+          isMapDragging: false,
+        });
+      },
+      fail: () => {
+        this.setData({ isMapDragging: false });
+      },
+    });
+  },
+
   async useCurrentLocation() {
     try {
       await ensurePrivacyAuthorization(this, {
@@ -2256,81 +2398,6 @@ Page({
     }
   },
 
-  async handleChooseLocation() {
-    wx.showToast({ title: '拖动下方地图后，点“设为探索点”', icon: 'none', duration: 2200 });
-  },
-
-  handleMapRegionChange(event) {
-    const { type } = event;
-    if (type === 'begin') {
-      this.setData({ isMapDragging: true });
-      return;
-    }
-
-    if (type !== 'end' || !this.mapCtx || !this.mapCtx.getCenterLocation) {
-      return;
-    }
-
-    this.mapCtx.getCenterLocation({
-      success: (res) => {
-        this.setData({
-          mapCenterLatitude: res.latitude,
-          mapCenterLongitude: res.longitude,
-          isMapDragging: false,
-        });
-      },
-      fail: () => {
-        this.setData({ isMapDragging: false });
-      },
-    });
-  },
-
-  async confirmMapCenterLocation() {
-    wx.showLoading({ title: '读取位置' });
-    try {
-      const center = await new Promise((resolve, reject) => {
-        if (!this.mapCtx || !this.mapCtx.getCenterLocation) {
-          reject(new Error('map_center_unavailable'));
-          return;
-        }
-        this.mapCtx.getCenterLocation({
-          success: resolve,
-          fail: reject,
-        });
-      });
-      const latitude = Number(center.latitude);
-      const longitude = Number(center.longitude);
-      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-        throw new Error('map_center_invalid');
-      }
-      this.setData({
-        mapCenterLatitude: latitude,
-        mapCenterLongitude: longitude,
-      });
-      const nextLocation = {
-        latitude,
-        longitude,
-        name: '地图选点',
-        address: '',
-      };
-      const applied = this.applyLocationBaseState(nextLocation, {
-        placeName: '已设为探索点',
-        locationAddress: '',
-      });
-      wx.hideLoading();
-      if (!applied) {
-        throw new Error('map_center_invalid');
-      }
-      this.markExplorePointConfirmed();
-      wx.showToast({ title: '已设为探索点，正在补充地点推荐', icon: 'none', duration: 1800 });
-      this.enrichLocation(nextLocation).catch(() => {});
-    } catch (error) {
-      wx.showToast({ title: explainLocationError(error, '选点'), icon: 'none', duration: 2500 });
-    } finally {
-      wx.hideLoading();
-    }
-  },
-
   handleSearchInput(event) {
     this.setData({ searchKeyword: event.detail.value });
   },
@@ -2353,7 +2420,7 @@ Page({
       this.setData({ searchResults, searchResultCount: Array.isArray(searchResults) ? searchResults.length : 0 });
 
       if (!searchResults.length) {
-        wx.showToast({ title: '暂无搜索建议，可直接手动选点', icon: 'none' });
+        wx.showToast({ title: '暂无搜索建议，可以换个关键词', icon: 'none' });
       }
     } catch (error) {
       const message = String((error && error.errMsg) || (error && error.message) || '搜索失败');
@@ -2372,7 +2439,7 @@ Page({
     const index = Number(event.currentTarget.dataset.index);
     const item = this.data.searchResults[index];
     if (!item || !Number.isFinite(item.latitude) || !Number.isFinite(item.longitude)) {
-      wx.showToast({ title: '该地点需要手动选点确认', icon: 'none' });
+      wx.showToast({ title: '这个结果缺少位置信息', icon: 'none' });
       return;
     }
     try {
@@ -2381,7 +2448,7 @@ Page({
         locationAddress: item.address || '',
       });
       if (!applied) {
-        wx.showToast({ title: '该地点需要手动选点确认', icon: 'none' });
+        wx.showToast({ title: '这个结果缺少位置信息', icon: 'none' });
         return;
       }
       this.markExplorePointConfirmed();
@@ -2420,130 +2487,6 @@ Page({
     }
   },
 
-  async handleGenerateTheme() {
-    if (!this.ensureExplorePointReadyForGeneration()) {
-      return;
-    }
-    this.beginGenerationStageFlow(this.data.walkMode === 'advanced' ? 3 : 1);
-    this.setData({ isGenerating: true });
-    try {
-      this.advanceGenerationStage('gather');
-      const normalizedSelections = normalizeCombineSelections(this.data.combineSelections, this.data.walkMode);
-      const selectedThemes = buildSelectedThemeCategories(normalizedSelections);
-      const effectiveThemes = selectedThemes.length
-        ? selectedThemes
-        : buildSelectedThemeCategories([pickRandomThemeCategory(this.data.randomCategories)]);
-      const useCombinedTheme = this.data.walkMode === 'advanced' && normalizedSelections.length > 1;
-      const payload = await this.buildGenerationPayload({
-        mood: this.data.mood,
-        weather: this.data.weather,
-        season: this.data.season,
-        preference: this.data.preference,
-        locationName: this.data.locationName,
-        latitude: this.data.latitude,
-        longitude: this.data.longitude,
-        walkMode: this.data.walkMode,
-        selectedThemes: useCombinedTheme ? normalizedSelections : effectiveThemes,
-      });
-      this.setData(buildGenerationDebugState(payload.generationContext, this.data.showGenerationDebug));
-      this.advanceGenerationStage('generate');
-      const result = useCombinedTheme
-        ? await generateCombinedTheme({
-          ...payload,
-          categories: normalizedSelections,
-        })
-        : await generateTheme(payload);
-      this.advanceGenerationStage('finalize');
-      const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
-      const nextGenerationContext = applyGeneratedThemeMetaToContext(
-        payload.generationContext,
-        currentTheme,
-        result.source || (useCombinedTheme ? 'combined-direct-fallback' : 'ai-direct-fallback'),
-        result.structureCheck || null,
-        result.runtimeVersion || '',
-        result.reason || '',
-        result.modelRequest || null,
-        result.modelResponse || null
-      );
-      this.setData({
-        currentTheme,
-        ...buildGenerationDebugState(nextGenerationContext, this.data.showGenerationDebug),
-        ...this.finishGenerationStageFlow(),
-      });
-      app.globalData.currentTheme = currentTheme;
-      this.syncDisplayMeta(currentTheme, result.source || (useCombinedTheme ? 'combined-direct-fallback' : 'ai-direct-fallback'));
-    } catch (error) {
-      this.setData(this.failGenerationStageFlow());
-      wx.showToast({
-        title: GENERATION_ERROR_COPY,
-        icon: 'none',
-        duration: 2200,
-      });
-    } finally {
-      this.setData({ isGenerating: false });
-    }
-  },
-
-  async handleRandomTheme() {
-    if (!this.ensureExplorePointReadyForGeneration()) {
-      return;
-    }
-    this.beginGenerationStageFlow(this.data.walkMode === 'advanced' ? 3 : 1);
-    this.setData({ isGenerating: true });
-    try {
-      this.advanceGenerationStage('gather');
-      const categoryPool = this.data.randomCategories;
-      const category = categoryPool[Math.floor(Math.random() * categoryPool.length)];
-      const selectedThemes = buildSelectedThemeCategories([category]);
-      const payload = await this.buildGenerationPayload({
-        mood: this.data.mood,
-        weather: this.data.weather,
-        season: this.data.season,
-        preference: this.data.preference,
-        locationName: this.data.locationName,
-        latitude: this.data.latitude,
-        longitude: this.data.longitude,
-        walkMode: this.data.walkMode,
-        selectedThemes,
-      });
-      this.setData(buildGenerationDebugState(payload.generationContext, this.data.showGenerationDebug));
-      this.advanceGenerationStage('generate');
-      const result = await generateTheme({
-        ...payload,
-        selectedThemes,
-      });
-      const displaySource = normalizeRandomSource(result.source);
-      this.advanceGenerationStage('finalize');
-      const currentTheme = trimTheme({ ...result.theme, allMissions: result.theme.missions, locationName: this.data.locationName }, this.data.walkMode);
-      const nextGenerationContext = applyGeneratedThemeMetaToContext(
-        payload.generationContext,
-        currentTheme,
-        displaySource,
-        result.structureCheck || null,
-        result.runtimeVersion || '',
-        result.reason || '',
-        result.modelRequest || null,
-        result.modelResponse || null
-      );
-      this.setData({
-        currentTheme,
-        ...buildGenerationDebugState(nextGenerationContext, this.data.showGenerationDebug),
-        ...this.finishGenerationStageFlow(),
-      });
-      app.globalData.currentTheme = currentTheme;
-      this.syncDisplayMeta(currentTheme, displaySource);
-    } catch (error) {
-      this.setData(this.failGenerationStageFlow());
-      wx.showToast({
-        title: GENERATION_ERROR_COPY,
-        icon: 'none',
-        duration: 2200,
-      });
-    } finally {
-      this.setData({ isGenerating: false });
-    }
-  },
-
   async handleSelectedThemeGenerate() {
     if (!this.ensureExplorePointReadyForGeneration()) {
       return;
@@ -2555,9 +2498,14 @@ Page({
         combineOptionViews: buildCombineOptionViews(normalizedSelections),
       });
     }
-    if (!normalizedSelections.length) {
+    const resolvedThemeSelection = resolveThemeSelectionsForGeneration(
+      normalizedSelections,
+      this.data.randomCategories,
+      this.data.walkMode
+    );
+    if (!resolvedThemeSelection.ok) {
       wx.showToast({
-        title: '请先选择主题',
+        title: '请先选择主题方向',
         icon: 'none',
         duration: 1800,
       });
@@ -2567,7 +2515,8 @@ Page({
     this.setData({ isCombining: true });
     try {
       this.advanceGenerationStage('gather');
-      const selections = normalizedSelections;
+      const selections = resolvedThemeSelection.resolvedSelections || normalizedSelections;
+      const selectedThemes = resolvedThemeSelection.categories;
       const useCombinedTheme = this.data.walkMode !== 'pure' && selections.length > 1;
       const payload = await this.buildGenerationPayload({
         mood: this.data.mood,
@@ -2578,14 +2527,14 @@ Page({
         latitude: this.data.latitude,
         longitude: this.data.longitude,
         walkMode: this.data.walkMode,
-        selectedThemes: useCombinedTheme ? selections : buildSelectedThemeCategories(selections),
+        selectedThemes: useCombinedTheme ? selections : selectedThemes,
       });
       this.setData(buildGenerationDebugState(payload.generationContext, this.data.showGenerationDebug));
       this.advanceGenerationStage('generate');
       const result = !useCombinedTheme
         ? await generateTheme({
           ...payload,
-          selectedThemes: buildSelectedThemeCategories(selections),
+          selectedThemes,
         })
         : await generateCombinedTheme({
           ...payload,

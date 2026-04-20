@@ -36,6 +36,7 @@ Page({
     checkingAccount: false,
     draftNickName: '',
     draftAvatarUrl: '',
+    profileInlineError: '',
     pageMode: 'login',
     detectedUser: null,
     privacyPopup: createDefaultPrivacyPopup(),
@@ -88,6 +89,7 @@ Page({
         user,
         draftNickName: user.nickName || '',
         draftAvatarUrl: user.avatarUrl || '',
+        profileInlineError: '',
         pageMode: 'view',
         detectedUser: user,
       });
@@ -98,6 +100,7 @@ Page({
       user: null,
       draftNickName: '',
       draftAvatarUrl: '',
+      profileInlineError: '',
       pageMode: 'login',
       detectedUser: null,
     });
@@ -139,7 +142,10 @@ Page({
   },
 
   handleNickNameInput(event) {
-    this.setData({ draftNickName: event.detail.value || '' });
+    this.setData({
+      draftNickName: event.detail.value || '',
+      profileInlineError: '',
+    });
   },
 
   async ensurePersistedAvatar(avatarUrl) {
@@ -197,6 +203,7 @@ Page({
       const nickName = (this.data.draftNickName || '').trim();
       const avatarUrl = await this.ensurePersistedAvatar(this.data.draftAvatarUrl || '');
       if (!nickName) {
+        this.setData({ profileInlineError: '先填写昵称，再保存足迹册身份。' });
         throw new Error('nickname_required');
       }
       const result = await syncUser({
@@ -211,6 +218,7 @@ Page({
         user: mergedUser,
         draftNickName: mergedUser ? mergedUser.nickName : nickName,
         draftAvatarUrl: mergedUser ? mergedUser.avatarUrl : avatarUrl,
+        profileInlineError: '',
         pageMode: 'view',
         detectedUser: mergedUser,
       });
@@ -235,6 +243,7 @@ Page({
       pageMode: 'edit',
       draftNickName: user ? user.nickName || '' : '',
       draftAvatarUrl: user ? user.avatarUrl || '' : '',
+      profileInlineError: '',
     });
   },
 
@@ -243,6 +252,7 @@ Page({
       pageMode: 'register',
       draftNickName: '',
       draftAvatarUrl: '',
+      profileInlineError: '',
       detectedUser: null,
     });
   },
@@ -257,6 +267,7 @@ Page({
       const nickName = (this.data.draftNickName || '').trim();
       const avatarUrl = await this.ensurePersistedAvatar(this.data.draftAvatarUrl || '');
       if (!nickName) {
+        this.setData({ profileInlineError: '昵称不能为空。' });
         throw new Error('nickname_required');
       }
       const result = await syncUser({ nickName, avatarUrl });
@@ -268,6 +279,7 @@ Page({
         user: mergedUser,
         draftNickName: mergedUser ? mergedUser.nickName : nickName,
         draftAvatarUrl: mergedUser ? mergedUser.avatarUrl : avatarUrl,
+        profileInlineError: '',
         pageMode: 'view',
         detectedUser: mergedUser,
       });
@@ -300,7 +312,7 @@ Page({
         }
 
         app.clearCurrentUser();
-        this.setData({ user: null, draftNickName: '', draftAvatarUrl: '', pageMode: 'login', detectedUser: null });
+        this.setData({ user: null, draftNickName: '', draftAvatarUrl: '', profileInlineError: '', pageMode: 'login', detectedUser: null });
         this.detectExistingAccount();
         wx.showToast({ title: '已退出登录', icon: 'success' });
       },
@@ -312,6 +324,7 @@ Page({
       this.setData({
         draftNickName: this.data.user.nickName || '',
         draftAvatarUrl: this.data.user.avatarUrl || '',
+        profileInlineError: '',
         pageMode: 'view',
       });
       return;
@@ -320,6 +333,7 @@ Page({
     this.setData({
       draftNickName: '',
       draftAvatarUrl: '',
+      profileInlineError: '',
       pageMode: this.data.detectedUser ? 'login' : 'register',
     });
   },

@@ -229,6 +229,58 @@ function createEmptyMissionAssets() {
   };
 }
 
+function countList(list) {
+  return Array.isArray(list) ? list.filter(Boolean).length : 0;
+}
+
+function countMissionEvidence(assets) {
+  const safeAssets = assets || {};
+  const noteText = String(safeAssets.noteText || '').trim();
+  const companionNote = String(safeAssets.companionNote || '').trim();
+  return countList(safeAssets.photoList)
+    + countList(safeAssets.videoList)
+    + countList(safeAssets.audioList)
+    + (noteText ? 1 : 0)
+    + (companionNote ? 1 : 0);
+}
+
+function normalizeMissionKey(item) {
+  if (typeof item === 'string') {
+    return item;
+  }
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  return item.mission || item.key || item.label || '';
+}
+
+function getCompletedMissionList(walk) {
+  const source = Array.isArray(walk && walk.completedMissions)
+    ? walk.completedMissions
+    : Array.isArray(walk && walk.missionsCompleted)
+      ? walk.missionsCompleted
+      : [];
+  return source.map(normalizeMissionKey).filter(Boolean);
+}
+
+function hasMissionCheckIn(walk, mission) {
+  if (!mission) {
+    return false;
+  }
+  const review = walk && walk.missionReviews ? walk.missionReviews[mission] : null;
+  if (review && review.status === 'needs_recheck') {
+    return false;
+  }
+  const completedSet = new Set(getCompletedMissionList(walk));
+  if (completedSet.has(mission)) {
+    return true;
+  }
+  if (!review) {
+    return false;
+  }
+  return review.status === 'checked_in' || !!review.checkedInAt || review.passed === true;
+}
+
 function buildMissionItems(walk) {
   const missionAssetMap = walk.missionAssetMap || {};
   const themeMissions = Array.isArray(walk.themeSnapshot && walk.themeSnapshot.missions)
@@ -246,16 +298,30 @@ function buildMissionItems(walk) {
       isSupplemental: true,
     },
   ];
-  return missionNames.map((item) => ({
-    mission: item.key,
-    label: item.label,
-    isSupplemental: item.isSupplemental,
-    review: walk.missionReviews && walk.missionReviews[item.key] ? walk.missionReviews[item.key] : null,
-    assets: {
+  return missionNames.map((item) => {
+    const assets = {
       ...createEmptyMissionAssets(),
       ...(missionAssetMap[item.key] || {}),
-    },
-  }));
+    };
+    const evidenceCount = countMissionEvidence(assets);
+    const isCompleted = hasMissionCheckIn(walk, item.key);
+    return {
+      mission: item.key,
+      label: item.label,
+      isSupplemental: item.isSupplemental,
+      isCompleted,
+      statusLabel: isCompleted ? '已完成' : (evidenceCount ? '已记录' : '待回看'),
+      photoCount: countList(assets.photoList),
+      videoCount: countList(assets.videoList),
+      audioCount: countList(assets.audioList),
+      evidenceCount,
+      hasNote: !!String(assets.noteText || '').trim(),
+      hasCompanionNote: !!String(assets.companionNote || '').trim(),
+      hasCard: !!assets.cardImagePath,
+      review: walk.missionReviews && walk.missionReviews[item.key] ? walk.missionReviews[item.key] : null,
+      assets,
+    };
+  });
 }
 
 async function downloadAudioToLocal(src) {
@@ -334,6 +400,39 @@ function hasCardGenerationMaterial(assets) {
   const noteText = String((assets && assets.noteText) || '').trim();
   const photoList = Array.isArray(assets && assets.photoList) ? assets.photoList.filter(Boolean) : [];
   return !!noteText || photoList.length > 0;
+}
+
+function buildDetailMetrics(walk, missionItems) {
+  const safeWalk = walk || {};
+  const items = Array.isArray(missionItems) ? missionItems : [];
+  const taskItems = items.filter((item) => item && !item.isSupplemental);
+  const completedCount = taskItems.filter((item) => item && item.isCompleted).length;
+  const missionTotalCount = taskItems.length;
+  const evidenceCount = items.reduce((total, item) => total + Number((item && item.evidenceCount) || 0), 0);
+  const photoCount = items.reduce((total, item) => total + Number((item && item.photoCount) || 0), 0);
+  const videoCount = items.reduce((total, item) => total + Number((item && item.videoCount) || 0), 0);
+  const audioCount = items.reduce((total, item) => total + Number((item && item.audioCount) || 0), 0);
+  const noteCount = items.filter((item) => item && (item.hasNote || item.hasCompanionNote)).length;
+  const missionProgressPercent = missionTotalCount
+    ? Math.round((completedCount / missionTotalCount) * 100)
+    : 0;
+  return {
+    sourceLabel: safeWalk.sourceLabel || '',
+    statusLabel: safeWalk.status === 'active' ? '进行中' : '已结束',
+    visibilityLabel: safeWalk.isPublic ? '可分享给好友' : '仅自己可见',
+    modeLabel: safeWalk.walkMode === 'advanced' ? '进阶模式' : '纯粹模式',
+    completedCount,
+    missionTotalCount,
+    missionProgressPercent,
+    evidenceCount,
+    photoCount,
+    videoCount,
+    audioCount,
+    noteCount,
+    routePointCount: countList(safeWalk.routePoints),
+    hasRoute: countList(safeWalk.routePoints) > 0,
+    hasSticker: !!safeWalk.sticker,
+  };
 }
 
 Page({
@@ -425,6 +524,7 @@ Page({
             sticker: decorateSticker(result.walk.sticker),
             createdAtLabel: formatDate(result.walk.createdAt),
             missionItems,
+            detailMetrics: buildDetailMetrics(result.walk, missionItems),
             canDelete: queryCanDelete(result.walk, this.data.source),
             canShare: queryCanShare(result.walk, this.data.source),
           }
@@ -591,12 +691,14 @@ Page({
       status: walk.status || 'finished',
     });
     const persistedWalk = result && result.walk ? result.walk : { ...walk, missionAssetMap };
+    const persistedMissionItems = buildMissionItems(persistedWalk);
     this.setData({
       walk: {
         ...persistedWalk,
         sticker: decorateSticker(persistedWalk.sticker),
         createdAtLabel: formatDate(persistedWalk.createdAt),
-        missionItems: buildMissionItems(persistedWalk),
+        missionItems: persistedMissionItems,
+        detailMetrics: buildDetailMetrics(persistedWalk, persistedMissionItems),
         canDelete: queryCanDelete(persistedWalk, this.data.source),
         canShare: queryCanShare(persistedWalk, this.data.source),
       },
@@ -795,12 +897,20 @@ Page({
     publishWalkShare({ id: this.data.walk.id || this.data.walk._id })
       .then((result) => {
         if (result && result.walk) {
+          const nextWalk = {
+            ...this.data.walk,
+            ...result.walk,
+            sticker: decorateSticker(result.walk.sticker),
+            canShare: queryCanShare(result.walk, this.data.source),
+          };
+          const missionItems = Array.isArray(nextWalk.missionItems) && nextWalk.missionItems.length
+            ? nextWalk.missionItems
+            : buildMissionItems(nextWalk);
           this.setData({
             walk: {
-              ...this.data.walk,
-              ...result.walk,
-              sticker: decorateSticker(result.walk.sticker),
-              canShare: queryCanShare(result.walk, this.data.source),
+              ...nextWalk,
+              missionItems,
+              detailMetrics: buildDetailMetrics(nextWalk, missionItems),
             },
           });
         }

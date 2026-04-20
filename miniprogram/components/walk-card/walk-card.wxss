@@ -1,50 +1,129 @@
-.walk-card {
-  padding: 28rpx;
-  border-radius: 30rpx;
-  background:
-    radial-gradient(circle at top right, rgba(255, 241, 220, 0.88), transparent 34%),
-    linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(246, 239, 229, 0.98));
-  box-shadow: 0 18rpx 42rpx rgba(90, 77, 47, 0.08);
-  border: 1rpx solid rgba(222, 206, 181, 0.72);
-}
-
-.walk-card-header {
+.walk-ticket {
   display: flex;
-  justify-content: space-between;
-  gap: 20rpx;
-  margin-bottom: 16rpx;
+  overflow: hidden;
+  margin-bottom: 22rpx;
+  border-radius: 30rpx;
+  background: #fffdf8;
+  border: 1rpx solid rgba(126, 111, 89, 0.16);
+  box-shadow: 0 16rpx 34rpx rgba(77, 62, 38, 0.08);
+  transition-property: transform, opacity;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.walk-card-title {
+.walk-ticket:active {
+  transform: scale(0.985);
+  opacity: 0.9;
+}
+
+.walk-ticket-side {
+  width: 58rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #626247;
+}
+
+.walk-ticket-side-text {
+  color: #fffdf8;
+  font-size: 20rpx;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: center;
+}
+
+.walk-ticket-main {
   flex: 1;
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #2f2a22;
+  min-width: 0;
+  padding: 26rpx 24rpx 24rpx;
 }
 
-.walk-card-meta {
-  margin-bottom: 16rpx;
+.walk-ticket-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.walk-ticket-title {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+  color: #241f19;
+  font-size: 32rpx;
+  line-height: 1.35;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.walk-status-tag {
+  flex-shrink: 0;
+  padding: 10rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(98, 98, 71, 0.1);
+  color: #626247;
+  font-size: 21rpx;
+  line-height: 1.2;
+}
+
+.walk-info-grid {
+  display: flex;
+  padding: 18rpx 0;
+  border-top: 1rpx solid rgba(126, 111, 89, 0.14);
+  border-bottom: 1rpx solid rgba(126, 111, 89, 0.14);
+}
+
+.walk-info-item {
+  flex: 1;
+  min-width: 0;
+  padding-right: 14rpx;
+}
+
+.walk-info-label {
+  color: #9a9082;
+  font-size: 20rpx;
+  line-height: 1.25;
+  margin-bottom: 7rpx;
+}
+
+.walk-info-value {
+  color: #3a332b;
+  font-size: 23rpx;
+  line-height: 1.4;
+  font-weight: 650;
+  word-break: break-word;
 }
 
 .walk-card-note {
-  color: #6f6a5f;
-  line-height: 1.6;
-  margin-bottom: 18rpx;
+  margin-top: 18rpx;
+  color: #746b5f;
+  font-size: 24rpx;
+  line-height: 1.62;
+  word-break: break-word;
 }
 
 .walk-card-footer {
   display: flex;
   justify-content: space-between;
-  gap: 16rpx;
   align-items: center;
+  margin-top: 20rpx;
 }
 
 .walk-card-date {
-  font-size: 22rpx;
-  color: #8f897e;
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+  color: #9a9082;
+  font-size: 21rpx;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
 .walk-card-link {
+  flex-shrink: 0;
+  color: #626247;
   font-size: 22rpx;
-  color: #5a5a40;
+  line-height: 1.35;
+  font-weight: 700;
 }

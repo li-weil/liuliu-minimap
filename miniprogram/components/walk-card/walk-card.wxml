@@ -1,20 +1,34 @@
-<view wx:if="{{walk}}" class="walk-card" bindtap="openDetail">
-  <view class="walk-card-header">
-    <view class="walk-card-title">{{walk.themeTitle}}</view>
-    <view class="meta-row">
-      <view class="meta-pill">{{walk.recordType === 'team' ? '同行' : (walk.isPublic ? '公开' : '私密')}}</view>
-      <view class="meta-pill">{{walk.albumStatusLabel || (walk.recordType === 'team' ? (walk.status === 'finished' ? '已完成' : (walk.status === 'active' ? '进行中' : '待出发')) : (walk.status === 'active' ? '进行中' : '已完成'))}}</view>
+<view wx:if="{{walk}}" class="walk-ticket" bindtap="openDetail">
+  <view class="walk-ticket-side">
+    <view class="walk-ticket-side-text">{{walk.recordType === 'team' ? '同行' : '单人'}}</view>
+  </view>
+  <view class="walk-ticket-main">
+    <view class="walk-ticket-head">
+      <view class="walk-ticket-title">{{walk.themeTitle}}</view>
+      <view class="walk-status-tag">{{walk.albumStatusLabel || (walk.recordType === 'team' ? (walk.status === 'finished' ? '已完成' : (walk.status === 'active' ? '进行中' : '待出发')) : (walk.status === 'active' ? '进行中' : '已完成'))}}</view>
     </view>
-  </view>
-  <view class="meta-row walk-card-meta">
-    <view class="meta-pill">{{walk.locationName || '未知地点'}}</view>
-    <view wx:if="{{walk.recordType === 'team'}}" class="meta-pill">{{walk.teamStats.memberCount || 0}} 人同行</view>
-    <view wx:else class="meta-pill">{{walk.routeStats.distanceLabel || '0 m'}}</view>
-    <view class="meta-pill">{{walk.routeStats.durationLabel || '0秒'}}</view>
-  </view>
-  <view wx:if="{{walk.noteText}}" class="walk-card-note">{{walk.noteText}}</view>
-  <view class="walk-card-footer">
-    <view class="walk-card-date">{{walk.createdAtLabel || walk.createdAt}}</view>
-    <view class="walk-card-link">{{walk.albumStatusKey === 'active' ? '查看详情并继续' : (walk.albumStatusKey === 'pending' ? '查看详情并准备' : '查看详情')}}</view>
+
+    <view class="walk-info-grid">
+      <view class="walk-info-item">
+        <view class="walk-info-label">地点</view>
+        <view class="walk-info-value">{{walk.locationName || '未知地点'}}</view>
+      </view>
+      <view class="walk-info-item">
+        <view class="walk-info-label">{{walk.recordType === 'team' ? '人数' : '距离'}}</view>
+        <view wx:if="{{walk.recordType === 'team'}}" class="walk-info-value">{{walk.teamStats.memberCount || 0}} 人</view>
+        <view wx:else class="walk-info-value">{{walk.routeStats.distanceLabel || '0 m'}}</view>
+      </view>
+      <view class="walk-info-item">
+        <view class="walk-info-label">时长</view>
+        <view class="walk-info-value">{{walk.routeStats.durationLabel || '0秒'}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{walk.noteText}}" class="walk-card-note">{{walk.noteText}}</view>
+
+    <view class="walk-card-footer">
+      <view class="walk-card-date">{{walk.createdAtLabel || walk.createdAt}}</view>
+      <view class="walk-card-link">{{walk.albumStatusKey === 'active' ? '继续记录' : (walk.albumStatusKey === 'pending' ? '准备出发' : '查看详情')}}</view>
+    </view>
   </view>
 </view>

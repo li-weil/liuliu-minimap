@@ -1,148 +1,188 @@
 <view class="page-shell history-page">
-  <view class="hero-card history-hero">
-    <view class="hero-topline">
-      <view>
-        <view class="section-title">足迹</view>
-        <view class="section-subtitle">{{user ? '走过的街角、收下的纪念、点亮的成就，都会留在这本属于你的足迹册里' : (loginState === 'paused' ? '你的足迹册暂时合上了，回来之后，那些走过的街角和收下的纪念还会在这里等你' : '等你第一次留下名字，这本足迹册就会开始记住你此后的每一次漫步')}}</view>
-      </view>
-      <view wx:if="{{featuredAchievement}}" class="featured-chip">
-        <view class="featured-chip-label">当前佩戴</view>
-        <view class="featured-chip-body">
-          <image
-            wx:if="{{featuredAchievement.asset}}"
-            class="featured-chip-image"
-            src="{{featuredAchievement.asset}}"
-            mode="aspectFit"
-            lazy-load="true"
-            binderror="handleFeaturedAchievementImageError"
-          />
-          <view wx:else class="featured-chip-image featured-chip-image-placeholder">
-            <view class="featured-chip-glyph">{{featuredAchievement.progressLabel}}</view>
-          </view>
-          <view class="featured-chip-copy">
-            <view class="featured-chip-title">{{featuredAchievement.title}}</view>
-            <view class="featured-chip-subtitle">{{featuredAchievement.unlocked ? '已点亮' : featuredAchievement.progressText}}</view>
-          </view>
+  <view class="history-hero">
+    <view class="history-hero-main">
+      <view class="history-kicker">城市纪念卡册</view>
+      <view class="history-title">足迹册</view>
+      <view wx:if="{{user}}" class="history-subtitle">已保存 {{allWalks.length}} 次漫步 / 已点亮 {{achievementSummary.unlockedCount}} 枚成就</view>
+      <view wx:elif="{{loginState === 'paused'}}" class="history-subtitle">登录后可以恢复你的足迹与成就。</view>
+      <view wx:else class="history-subtitle">完善资料后，这里会开始收住每一次漫步。</view>
+    </view>
+
+    <view wx:if="{{featuredAchievement}}" class="featured-achievement">
+      <view class="featured-label">当前佩戴</view>
+      <view class="featured-body">
+        <image
+          wx:if="{{featuredAchievement.asset}}"
+          class="featured-image"
+          src="{{featuredAchievement.asset}}"
+          mode="aspectFit"
+          lazy-load="true"
+          binderror="handleFeaturedAchievementImageError"
+        />
+        <view wx:else class="featured-image featured-placeholder">
+          <view class="featured-glyph">{{featuredAchievement.progressLabel}}</view>
         </view>
       </view>
     </view>
   </view>
 
-  <view wx:if="{{!user}}" class="section-card history-placeholder">
-    <view class="section-title">{{loginState === 'paused' ? '已暂停自动登录' : '还没有个人资料'}}</view>
-    <view class="section-subtitle">{{loginState === 'paused' ? '去个人页点一次登录，就会重新恢复当前微信账户。' : '去个人页完成一次头像和昵称设置，之后就能自动查看这位用户自己的纪念卡册和成就。'}}</view>
-    <button class="primary-btn" bindtap="goToProfile">{{loginState === 'paused' ? '去恢复登录' : '去完善资料'}}</button>
+  <view wx:if="{{!user}}" class="history-placeholder">
+    <view class="placeholder-title">{{loginState === 'paused' ? '足迹册暂时合上了' : '还没有个人资料'}}</view>
+    <view class="placeholder-copy">{{loginState === 'paused' ? '去个人页点一次登录，就能继续查看走过的街角和点亮的成就。' : '先设置头像和昵称，之后每次漫步都会自动收进你的纪念卡册。'}}</view>
+    <button class="primary-btn placeholder-btn" bindtap="goToProfile">{{loginState === 'paused' ? '去恢复登录' : '去完善资料'}}</button>
   </view>
 
-  <view wx:else class="section-card history-tabs">
-    <view class="mode-switch">
-      <view class="mode-chip {{activeTab === 'album' ? 'mode-chip-active' : ''}}" bindtap="switchTab" data-tab="album">纪念卡册</view>
-      <view class="mode-chip {{activeTab === 'achievement' ? 'mode-chip-active' : ''}}" bindtap="switchTab" data-tab="achievement">成就</view>
+  <view wx:else>
+    <view class="history-tabs">
+      <view class="history-tab {{activeTab === 'album' ? 'history-tab-active' : ''}}" bindtap="switchTab" data-tab="album">纪念卡册</view>
+      <view class="history-tab {{activeTab === 'achievement' ? 'history-tab-active' : ''}}" bindtap="switchTab" data-tab="achievement">成就墙</view>
     </view>
-  </view>
 
-  <view wx:if="{{user && activeTab === 'album'}}">
-    <view class="section-card album-filter-panel">
-      <view class="album-filter-panel-head">
-        <view>
-          <view class="section-title">筛选记录</view>
+    <view wx:if="{{activeTab === 'album'}}" class="album-section">
+      <view class="filter-summary-bar">
+        <view class="filter-summary-main">
+          <view class="filter-summary-title">{{albumFilterSummary}}</view>
+          <view class="filter-summary-copy">{{albumResultCountLabel}}</view>
         </view>
-        <view
-          wx:if="{{albumStatusFilter !== 'all' || albumTypeFilter !== 'all'}}"
-          class="album-filter-reset"
-          bindtap="resetAlbumFilters"
-        >
-          清除筛选
-        </view>
-      </view>
-
-      <view class="album-filter-group">
-        <view class="album-filter-group-label">状态</view>
-        <view class="album-filter-row">
+        <view class="filter-actions">
           <view
-            wx:for="{{albumStatusChips}}"
-            wx:key="key"
-            class="album-filter-chip {{albumStatusFilter === item.key ? 'album-filter-chip-active' : ''}}"
-            bindtap="switchAlbumStatus"
-            data-status="{{item.key}}"
+            wx:if="{{albumStatusFilter !== 'all' || albumTypeFilter !== 'all'}}"
+            class="filter-text-action"
+            bindtap="resetAlbumFilters"
           >
-            <text>{{item.label}}</text>
-            <text class="album-filter-count">{{item.count}}</text>
+            清除
+          </view>
+          <view class="filter-toggle" bindtap="toggleAlbumFilter">{{albumFilterExpanded ? '收起' : '筛选'}}</view>
+        </view>
+      </view>
+
+      <view class="album-filter-shell {{albumFilterExpanded ? 'album-filter-shell-open' : ''}}">
+        <view class="album-filter-panel">
+          <view class="album-filter-group">
+            <view class="album-filter-group-label">状态</view>
+            <view class="album-filter-row">
+              <view
+                wx:for="{{albumStatusChips}}"
+                wx:key="key"
+                class="album-filter-chip {{albumStatusFilter === item.key ? 'album-filter-chip-active' : ''}}"
+                bindtap="switchAlbumStatus"
+                data-status="{{item.key}}"
+              >
+                <text>{{item.label}}</text>
+                <text class="album-filter-count">{{item.count}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="album-filter-group">
+            <view class="album-filter-group-label">记录类型</view>
+            <view class="album-filter-row">
+              <view
+                wx:for="{{albumTypeChips}}"
+                wx:key="key"
+                class="album-filter-chip {{albumTypeFilter === item.key ? 'album-filter-chip-active' : ''}}"
+                bindtap="switchAlbumType"
+                data-type="{{item.key}}"
+              >
+                <text>{{item.label}}</text>
+                <text class="album-filter-count">{{item.count}}</text>
+              </view>
+            </view>
           </view>
         </view>
       </view>
 
-      <view class="album-filter-group">
-        <view class="album-filter-group-label">记录类型</view>
-        <view class="album-filter-row album-filter-row-secondary">
-          <view
-            wx:for="{{albumTypeChips}}"
-            wx:key="key"
-            class="album-filter-chip {{albumTypeFilter === item.key ? 'album-filter-chip-active' : ''}}"
-            bindtap="switchAlbumType"
-            data-type="{{item.key}}"
-          >
-            <text>{{item.label}}</text>
-            <text class="album-filter-count">{{item.count}}</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="album-filter-meta">
-        <view class="album-filter-result-count">{{albumResultCountLabel}}</view>
-      </view>
-    </view>
-
-    <view wx:if="{{!loading && walks.length}}">
-      <view class="album-list">
+      <view wx:if="{{!loading && walks.length}}" class="album-list">
         <walk-card wx:for="{{walks}}" wx:key="_id" walk="{{item}}" bind:open="openDetail" />
       </view>
-    </view>
-    <view wx:elif="{{loading}}" class="empty-copy">正在整理你的纪念卡册...</view>
-    <view wx:else class="section-card history-placeholder">
-      <view class="section-title">{{albumEmptyTitle}}</view>
-      <view class="section-subtitle">{{albumEmptySubtitle}}</view>
-    </view>
-  </view>
-
-  <view wx:elif="{{user}}" class="achievement-board">
-    <view class="achievement-summary-row">
-      <view>
-        <view class="achievement-summary-title">最近获得的成就</view>
-        <view class="achievement-summary-subtitle">点击勋章查看详情、进度和分享入口</view>
+      <view wx:elif="{{loading}}" class="history-loading">
+        <view class="history-skeleton history-skeleton-lg"></view>
+        <view class="history-skeleton"></view>
+        <view class="history-skeleton history-skeleton-short"></view>
       </view>
-      <view class="achievement-summary-meta">
-        <view class="achievement-summary-count">{{achievementSummary.unlockedCount}}</view>
-        <view class="achievement-summary-label">总成就 {{achievementSummary.totalCount || achievements.length || 12}} 枚</view>
+      <view wx:else class="history-placeholder">
+        <view class="placeholder-title">{{albumEmptyTitle}}</view>
+        <view class="placeholder-copy">{{albumEmptySubtitle}}</view>
+        <button class="ghost-btn placeholder-btn" bindtap="goToProfile">去个人页看看</button>
       </view>
     </view>
 
-    <view wx:if="{{loading}}" class="empty-copy">正在整理你的成就进度...</view>
+    <view wx:else class="achievement-board">
+      <view class="achievement-summary-row">
+        <view>
+          <view class="achievement-summary-title">成就墙</view>
+          <view class="achievement-summary-subtitle">已点亮 {{achievementSummary.unlockedCount}} / {{achievementSummary.totalCount || achievements.length || 12}} 枚</view>
+        </view>
+        <view class="achievement-summary-meter">
+          <view class="achievement-summary-count">{{achievementSummary.completionRate || 0}}%</view>
+          <view class="achievement-summary-label">完成度</view>
+        </view>
+      </view>
 
-    <view wx:else class="achievement-grid-compact">
-      <view
-        wx:for="{{achievements}}"
-        wx:key="id"
-        class="achievement-badge-item"
-        bindtap="openAchievementDetail"
-        data-id="{{item.id}}"
-      >
-        <view class="achievement-badge-shell {{item.unlocked ? 'achievement-badge-shell-on' : 'achievement-badge-shell-off'}}">
-          <image
-            wx:if="{{item.asset}}"
-            class="achievement-badge-image"
-            src="{{item.asset}}"
-            mode="aspectFit"
-            lazy-load="true"
-            binderror="handleAchievementImageError"
+      <view wx:if="{{loading}}" class="history-loading">
+        <view class="history-skeleton history-skeleton-lg"></view>
+        <view class="history-skeleton"></view>
+      </view>
+
+      <view wx:else>
+        <view wx:if="{{recentAchievements.length}}" class="recent-achievements">
+          <view class="recent-head">
+            <view class="recent-title">最近获得</view>
+            <view class="recent-copy">点开勋章查看详情和分享入口</view>
+          </view>
+          <scroll-view scroll-x class="recent-scroll">
+            <view class="recent-strip">
+              <view
+                wx:for="{{recentAchievements}}"
+                wx:key="id"
+                class="recent-achievement-card"
+                bindtap="openAchievementDetail"
+                data-id="{{item.id}}"
+              >
+                <image
+                  wx:if="{{item.asset}}"
+                  class="recent-achievement-image"
+                  src="{{item.asset}}"
+                  mode="aspectFit"
+                  lazy-load="true"
+                  binderror="handleAchievementImageError"
+                  data-id="{{item.id}}"
+                />
+                <view wx:else class="recent-achievement-image achievement-placeholder">
+                  <view class="achievement-placeholder-glyph">{{item.progressLabel}}</view>
+                </view>
+                <view class="recent-achievement-title">{{item.title}}</view>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
+        <view class="achievement-grid-compact">
+          <view
+            wx:for="{{achievements}}"
+            wx:key="id"
+            class="achievement-badge-item"
+            bindtap="openAchievementDetail"
             data-id="{{item.id}}"
-          />
-          <view wx:else class="achievement-badge-image achievement-badge-placeholder">
-            <view class="achievement-badge-placeholder-glyph">{{item.progressLabel}}</view>
+          >
+            <view class="achievement-badge-shell {{item.unlocked ? 'achievement-badge-shell-on' : 'achievement-badge-shell-off'}}">
+              <image
+                wx:if="{{item.asset}}"
+                class="achievement-badge-image"
+                src="{{item.asset}}"
+                mode="aspectFit"
+                lazy-load="true"
+                binderror="handleAchievementImageError"
+                data-id="{{item.id}}"
+              />
+              <view wx:else class="achievement-badge-image achievement-placeholder">
+                <view class="achievement-placeholder-glyph">{{item.progressLabel}}</view>
+              </view>
+            </view>
+            <view class="achievement-badge-title">{{item.title}}</view>
+            <view class="achievement-badge-progress">{{item.progressText}}</view>
           </view>
         </view>
-        <view class="achievement-badge-title">{{item.title}}</view>
-        <view class="achievement-badge-progress">{{item.progressText}}</view>
       </view>
     </view>
   </view>

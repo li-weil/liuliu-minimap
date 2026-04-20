@@ -1,356 +1,903 @@
-.mission-list-block {
-  margin-top: 20rpx;
+.detail-page {
+  min-height: 100vh;
+  padding: 32rpx 32rpx 48rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: #f4efe6;
+  color: #241f19;
 }
 
-.walk-resume-btn {
-  margin-top: 22rpx;
+.detail-content {
+  animation: detailFadeUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.share-action-btn {
-  width: calc(100% - 64rpx);
-  margin: 8rpx 32rpx 16rpx;
-  min-height: 92rpx;
-  border-radius: 999rpx;
+.detail-loading {
+  padding-top: 8rpx;
+}
+
+.loading-ticket,
+.loading-map {
+  border-radius: 32rpx;
+  background: #fffdf8;
+  box-shadow: 0 14rpx 34rpx rgba(77, 62, 38, 0.08);
+}
+
+.loading-ticket {
+  padding: 32rpx;
+}
+
+.loading-line,
+.loading-cell,
+.loading-map {
+  background: #ebe1d2;
+  opacity: 0.72;
+}
+
+.loading-line {
+  height: 24rpx;
+  border-radius: 12rpx;
+  margin-top: 18rpx;
+}
+
+.loading-line-title {
+  width: 72%;
+  height: 42rpx;
+  margin-top: 0;
+}
+
+.loading-line-short {
+  width: 48%;
+}
+
+.loading-grid {
+  display: flex;
+  margin-top: 30rpx;
+}
+
+.loading-cell {
+  flex: 1;
+  height: 92rpx;
+  border-radius: 22rpx;
+}
+
+.loading-cell + .loading-cell {
+  margin-left: 14rpx;
+}
+
+.loading-map {
+  height: 360rpx;
+  margin-top: 24rpx;
+}
+
+.detail-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 34rpx;
+  background: #fffdf8;
+  box-shadow: 0 18rpx 42rpx rgba(77, 62, 38, 0.1);
+}
+
+.detail-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12rpx;
+  background: #626247;
+}
+
+.detail-hero-ribbon {
+  display: flex;
+  padding: 34rpx 30rpx 0;
+  color: #746b5f;
+  font-size: 22rpx;
+  line-height: 1.4;
+}
+
+.detail-hero-ribbon view + view {
+  margin-left: 20rpx;
+  padding-left: 20rpx;
+  border-left: 1rpx solid rgba(126, 111, 89, 0.2);
+}
+
+.detail-hero-body {
+  padding: 22rpx 30rpx 32rpx;
+}
+
+.detail-hero-kicker,
+.panel-kicker,
+.progress-label {
+  color: #626247;
+  font-size: 22rpx;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.detail-title {
+  margin-top: 10rpx;
+  color: #241f19;
+  font-size: 44rpx;
+  line-height: 1.22;
+  font-weight: 700;
+}
+
+.detail-desc {
+  margin-top: 18rpx;
+  color: #3a332b;
+  font-size: 28rpx;
+  line-height: 1.72;
+}
+
+.detail-place-line {
+  display: flex;
+  align-items: flex-end;
+  margin-top: 28rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid rgba(126, 111, 89, 0.16);
+}
+
+.detail-place-main {
+  flex: 1;
+  min-width: 0;
+  color: #241f19;
+  font-size: 30rpx;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.detail-place-sub {
+  flex-shrink: 0;
+  margin-left: 18rpx;
+  color: #746b5f;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.progress-panel {
+  margin-top: 26rpx;
+  padding: 22rpx;
+  border-radius: 26rpx;
+  background: #f6efe4;
+  box-shadow: inset 0 0 0 1rpx rgba(126, 111, 89, 0.12);
+}
+
+.progress-panel-head {
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  box-sizing: border-box;
 }
 
-.mission-group {
-  margin-bottom: 12rpx;
+.progress-value {
+  margin-left: auto;
+  color: #3f402f;
+  font-size: 26rpx;
+  line-height: 1.4;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  height: 12rpx;
+  margin-top: 16rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+  background: rgba(126, 111, 89, 0.14);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 8rpx;
+  background: #626247;
+  transition-property: transform, opacity;
+  transition-duration: 220ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.detail-resume-btn {
+  margin-top: 24rpx;
+  width: 100%;
+}
+
+.detail-stats {
+  display: flex;
+  margin-top: 18rpx;
+}
+
+.detail-stat {
+  flex: 1;
+  padding: 22rpx 14rpx;
+  border-radius: 24rpx;
+  background: #efe7da;
+  text-align: center;
+}
+
+.detail-stat + .detail-stat {
+  margin-left: 12rpx;
+}
+
+.detail-stat-value {
+  color: #241f19;
+  font-size: 30rpx;
+  line-height: 1.3;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-stat-label {
+  margin-top: 8rpx;
+  color: #746b5f;
+  font-size: 21rpx;
+  line-height: 1.45;
+}
+
+.route-panel,
+.sticker-section,
+.mission-archive {
+  margin-top: 24rpx;
+  border-radius: 32rpx;
+  background: #fffdf8;
+  box-shadow: 0 14rpx 34rpx rgba(77, 62, 38, 0.08);
+  padding: 28rpx;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+}
+
+.panel-head > view:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-title {
+  margin-top: 6rpx;
+  color: #241f19;
+  font-size: 34rpx;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.panel-side-label {
+  flex-shrink: 0;
+  margin-left: 18rpx;
+  padding: 8rpx 14rpx;
+  border-radius: 16rpx;
+  background: rgba(98, 98, 71, 0.1);
+  color: #626247;
+  font-size: 20rpx;
+  line-height: 1.4;
+}
+
+.route-map-wrap {
+  margin-top: 22rpx;
+  border-radius: 28rpx;
+  overflow: hidden;
+  background: #efe7da;
+}
+
+.route-map {
+  display: block;
+  width: 100%;
+  height: 372rpx;
+}
+
+.route-timeline {
+  display: flex;
+  margin-top: 20rpx;
+  border-top: 1rpx solid rgba(126, 111, 89, 0.16);
+}
+
+.route-time-item {
+  flex: 1;
+  padding-top: 18rpx;
+}
+
+.route-time-item + .route-time-item {
+  margin-left: 18rpx;
+}
+
+.route-time-label {
+  color: #9a9082;
+  font-size: 21rpx;
+  line-height: 1.4;
+}
+
+.route-time-value {
+  margin-top: 8rpx;
+  color: #3a332b;
+  font-size: 24rpx;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.text-action {
+  flex-shrink: 0;
+  padding: 10rpx 0 10rpx 24rpx;
+  color: #626247;
+  font-size: 24rpx;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.text-action:active,
+.mission-row:active,
+.sticker-preview:active,
+.action-main:active,
+.action-delete:active {
+  transform: translateY(1rpx) scale(0.985);
+  opacity: 0.92;
+}
+
+.sticker-preview {
+  position: relative;
+  height: 390rpx;
+  margin-top: 22rpx;
+  border-radius: 28rpx;
+  overflow: hidden;
+  background: #efe7da;
+  transition-property: transform, opacity;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sticker-preview-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sticker-preview-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 26rpx;
+  background: linear-gradient(180deg, rgba(36, 31, 25, 0.02), rgba(36, 31, 25, 0.46));
+}
+
+.sticker-preview-title {
+  color: #fffdf8;
+  font-size: 30rpx;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.sticker-preview-poem {
+  margin-top: 8rpx;
+  color: rgba(255, 253, 248, 0.9);
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.mission-archive-head {
+  padding-bottom: 18rpx;
+  border-bottom: 1rpx solid rgba(126, 111, 89, 0.16);
+}
+
+.mission-stack {
+  margin-top: 4rpx;
+}
+
+.mission-item {
+  border-bottom: 1rpx solid rgba(126, 111, 89, 0.14);
+}
+
+.mission-item:last-child {
+  border-bottom: none;
 }
 
 .mission-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #ede4d7;
+  transition-property: transform, opacity, background-color;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.mission-row-active .mission-copy {
-  color: #2f2b24;
-  font-weight: 600;
+.mission-row-active {
+  background: rgba(98, 98, 71, 0.04);
 }
 
-.mission-anchor {
-  width: 18rpx;
-  height: 18rpx;
-  border-radius: 50%;
-  background: #d8ccbb;
-  flex-shrink: 0;
-}
-
-.mission-anchor-active {
-  background: #6c6a49;
-  box-shadow: 0 0 0 10rpx rgba(108, 106, 73, 0.12);
-}
-
-.mission-tag {
-  flex-shrink: 0;
-  padding: 8rpx 16rpx;
-  border-radius: 999rpx;
-  background: #efe6d8;
-  color: #6f675c;
-  font-size: 22rpx;
-  line-height: 1.2;
-}
-
-.mission-copy {
-  flex: 1;
-  font-size: 28rpx;
-  line-height: 1.7;
-  color: #6f675c;
-}
-
-.mission-detail-block {
-  margin-top: 10rpx;
-  margin-left: 34rpx;
-  border: 1rpx solid #eadfce;
-  border-radius: 36rpx;
-  padding: 22rpx 18rpx 18rpx;
-  background: #fffdf9;
-  box-sizing: border-box;
-}
-
-.mission-detail-meta {
-  margin-top: 0;
-}
-
-.mission-detail-note {
-  margin-top: 18rpx;
-  padding: 22rpx 24rpx;
-  border-radius: 28rpx;
-  background: #f7f1e8;
-  color: #6f6a5f;
-  line-height: 1.8;
-}
-
-.mission-card-preview {
-  margin-top: 20rpx;
-}
-
-.mission-card-preview-loading {
-  min-height: 280rpx;
-  margin-top: 12rpx;
-  border-radius: 24rpx;
+.mission-marker {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 16rpx;
+  background: #efe7da;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1rpx rgba(126, 111, 89, 0.14);
+}
+
+.mission-marker-done {
+  background: rgba(98, 98, 71, 0.14);
+}
+
+.mission-marker-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 8rpx;
+  background: #626247;
+}
+
+.mission-marker-plus {
+  color: #626247;
+  font-size: 28rpx;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.mission-row-copy {
+  flex: 1;
+  min-width: 0;
+  margin-left: 18rpx;
+}
+
+.mission-row-title {
+  color: #241f19;
+  font-size: 28rpx;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+.mission-row-meta {
+  margin-top: 6rpx;
+  color: #746b5f;
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
+.mission-row-action {
+  flex-shrink: 0;
+  margin-left: 18rpx;
+  color: #626247;
+  font-size: 23rpx;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.mission-detail-shell {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-14rpx);
+  transition-property: max-height, opacity, transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: max-height, opacity, transform;
+}
+
+.mission-detail-shell-open {
+  max-height: 5200rpx;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.mission-detail {
+  margin: 0 0 24rpx 62rpx;
+  padding: 24rpx;
+  border-radius: 28rpx;
+  background: #faf4ea;
+  box-shadow: inset 0 0 0 1rpx rgba(126, 111, 89, 0.12);
+  transform: scale(0.985);
+  transition-property: transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mission-detail-shell-open .mission-detail {
+  transform: scale(1);
+}
+
+.mission-detail-stats {
+  display: flex;
+}
+
+.mission-detail-stat {
+  flex: 1;
+  padding: 18rpx 10rpx;
+  border-radius: 22rpx;
+  background: #fffdf8;
   text-align: center;
-  background: #f7f1e8;
-  color: #8a8173;
+}
+
+.mission-detail-stat + .mission-detail-stat {
+  margin-left: 12rpx;
+}
+
+.mission-detail-number {
+  color: #3f402f;
+  font-size: 30rpx;
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mission-detail-label {
+  margin-top: 8rpx;
+  color: #746b5f;
+  font-size: 20rpx;
+  line-height: 1.4;
+}
+
+.note-paper {
+  margin-top: 18rpx;
+  padding: 22rpx;
+  border-radius: 24rpx;
+  background: #fffdf8;
+}
+
+.note-title,
+.media-title {
+  color: #241f19;
+  font-size: 25rpx;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.note-copy {
+  margin-top: 10rpx;
+  color: #3a332b;
   font-size: 26rpx;
-  line-height: 1.7;
+  line-height: 1.75;
+}
+
+.companion-note {
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid rgba(126, 111, 89, 0.14);
+}
+
+.media-section {
+  margin-top: 24rpx;
+}
+
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 10rpx -6rpx 0;
+}
+
+.photo-tile {
+  width: 184rpx;
+  height: 184rpx;
+  margin: 6rpx;
+  border-radius: 20rpx;
+  background: #efe7da;
+}
+
+.video-list {
+  margin-top: 12rpx;
+}
+
+.video-tile {
+  display: block;
+  width: 100%;
+  height: 330rpx;
+  margin-top: 14rpx;
+  border-radius: 22rpx;
+  overflow: hidden;
+  background: #efe7da;
+}
+
+.audio-list {
+  margin-top: 12rpx;
+}
+
+.audio-tile {
+  padding: 18rpx;
+  border-radius: 22rpx;
+  background: #fffdf8;
+}
+
+.audio-tile + .audio-tile {
+  margin-top: 14rpx;
+}
+
+.audio-title {
+  margin-bottom: 12rpx;
+  color: #3a332b;
+  font-size: 24rpx;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.detail-empty-inline {
+  margin-top: 12rpx;
+  padding: 20rpx 22rpx;
+  border-radius: 20rpx;
+  background: #fffdf8;
+  color: #746b5f;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.mission-card-preview {
+  margin-top: 26rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid rgba(126, 111, 89, 0.16);
+}
+
+.mission-card-preview-head {
+  display: flex;
+  align-items: center;
+}
+
+.mission-card-preview-head > view:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.mission-card-hint {
+  margin-top: 6rpx;
+  color: #746b5f;
+  font-size: 22rpx;
+  line-height: 1.45;
+}
+
+.mission-card-generate {
+  width: 128rpx;
+  min-height: 68rpx;
+  margin-left: 16rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 22rpx;
+  font-size: 24rpx;
+}
+
+.card-rendering {
+  min-height: 220rpx;
+  margin-top: 14rpx;
+  border-radius: 24rpx;
+  background: #fffdf8;
+  color: #746b5f;
+  font-size: 25rpx;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-rendering-line {
+  width: 190rpx;
+  height: 10rpx;
+  margin-bottom: 18rpx;
+  border-radius: 8rpx;
+  background: #626247;
+  animation: cardPulse 1.4s ease-in-out infinite;
 }
 
 .mission-card-preview-image {
   width: 100%;
   display: block;
-  margin-top: 12rpx;
+  margin-top: 14rpx;
   border-radius: 24rpx;
-  box-shadow: 0 10rpx 24rpx rgba(79, 68, 50, 0.08);
+  box-shadow: 0 10rpx 24rpx rgba(77, 62, 38, 0.1);
 }
 
-.mission-media-group {
+.detail-empty-card {
+  min-height: 120rpx;
+  display: flex;
+  align-items: center;
+}
+
+.detail-empty-panel {
+  padding: 54rpx 34rpx;
+  border-radius: 32rpx;
+  background: #fffdf8;
+  text-align: center;
+  box-shadow: 0 14rpx 34rpx rgba(77, 62, 38, 0.08);
+}
+
+.detail-empty-page {
+  margin-top: 120rpx;
+}
+
+.detail-empty-title {
+  color: #241f19;
+  font-size: 32rpx;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.detail-empty-copy {
+  margin-top: 14rpx;
+  color: #746b5f;
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.detail-action-bar {
+  display: flex;
   margin-top: 24rpx;
+  padding: 4rpx 0 0;
+  background: transparent;
 }
 
-.audio-card {
-  padding: 18rpx 20rpx;
-  margin-bottom: 14rpx;
-}
-
-.danger-action-btn {
-  width: calc(100% - 64rpx);
-  margin: 8rpx 32rpx 0;
-  min-height: 92rpx;
-  border-radius: 999rpx;
+.action-main,
+.action-delete {
+  flex: 1;
+  min-height: 84rpx;
+  border-radius: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: #f7e7e1;
-  color: #b04933;
-  border: 1rpx solid #efc9bf;
+  transition-property: transform, opacity;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.action-main + .action-delete {
+  margin-left: 24rpx;
+}
+
+.danger-action-btn {
+  background: #f5e2dc;
+  color: #a55449;
+  box-shadow: inset 0 0 0 1rpx rgba(165, 84, 73, 0.22);
   font-size: 28rpx;
   font-weight: 600;
-  line-height: 1.4;
-  box-sizing: border-box;
+  line-height: 1.2;
+  padding: 22rpx 24rpx;
 }
 
-.sticker-detail-card {
-  position: relative;
-  border-radius: 32rpx;
-  overflow: hidden;
-  min-height: 760rpx;
-  background: #f4ecdf;
-}
-
-.sticker-detail-image {
-  width: 100%;
-  height: 760rpx;
-  display: block;
-}
-
-.sticker-detail-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 36rpx 32rpx;
-  box-sizing: border-box;
-  background: linear-gradient(180deg, rgba(32, 26, 17, 0.04), rgba(32, 26, 17, 0.3));
-}
-
-.sticker-detail-poem {
-  align-self: flex-end;
-  max-width: 58%;
-  display: flex;
-  flex-direction: row-reverse;
-  gap: 16rpx;
-  color: #fffaf2;
-  font-weight: 600;
-  text-shadow: 0 8rpx 18rpx rgba(0, 0, 0, 0.24);
-  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
-  padding: 16rpx 18rpx;
-  border-radius: 24rpx;
-  background: linear-gradient(180deg, rgba(34, 29, 22, 0.16), rgba(34, 29, 22, 0.08));
-  backdrop-filter: blur(8rpx);
-}
-
-.sticker-detail-poem-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8rpx;
-}
-
-.sticker-detail-poem-char {
-  font-size: 50rpx;
-  line-height: 1;
-  font-style: italic;
-}
-
-.sticker-detail-title {
-  align-self: flex-start;
-  padding: 12rpx 18rpx;
-  border-radius: 999rpx;
-  font-size: 24rpx;
-  color: rgba(255, 250, 242, 0.92);
-  background: rgba(34, 29, 22, 0.28);
-}
-
-.sticker-modal-mask {
+.sticker-modal-mask,
+.mission-card-modal-mask {
   position: fixed;
-  inset: 0;
-  background: rgba(20, 17, 12, 0.56);
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40rpx;
+  padding: 36rpx;
   box-sizing: border-box;
-  z-index: 30;
+  background: rgba(36, 31, 25, 0.58);
 }
 
-.sticker-modal-sheet {
+.sticker-modal-sheet,
+.mission-card-modal-sheet {
   width: 100%;
   max-width: 680rpx;
 }
 
 .sticker-modal-card {
   position: relative;
-  border-radius: 40rpx;
+  height: 920rpx;
+  border-radius: 34rpx;
   overflow: hidden;
-  min-height: 960rpx;
-  background: #f4ecdf;
-  box-shadow: 0 20rpx 60rpx rgba(0, 0, 0, 0.18);
+  background: #efe7da;
+  box-shadow: 0 22rpx 62rpx rgba(36, 31, 25, 0.24);
 }
 
 .sticker-modal-image {
   width: 100%;
-  height: 960rpx;
+  height: 100%;
   display: block;
 }
 
 .sticker-modal-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 40rpx 36rpx;
+  padding: 38rpx 34rpx;
   box-sizing: border-box;
-  background: linear-gradient(180deg, rgba(39, 32, 20, 0.04), rgba(39, 32, 20, 0.34));
+  background: linear-gradient(180deg, rgba(36, 31, 25, 0.05), rgba(36, 31, 25, 0.36));
+}
+
+.sticker-modal-theme {
+  align-self: flex-start;
+  padding: 12rpx 18rpx;
+  border-radius: 18rpx;
+  background: rgba(36, 31, 25, 0.32);
+  color: #fffdf8;
+  font-size: 24rpx;
+  line-height: 1.4;
+  font-weight: 600;
 }
 
 .sticker-modal-poem {
   align-self: flex-end;
-  max-width: 62%;
   display: flex;
   flex-direction: row-reverse;
-  gap: 18rpx;
-  color: #fffaf2;
-  font-weight: 600;
-  text-shadow: 0 8rpx 18rpx rgba(0, 0, 0, 0.22);
-  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
+  max-width: 60%;
   padding: 18rpx 20rpx;
-  border-radius: 28rpx;
-  background: linear-gradient(180deg, rgba(34, 29, 22, 0.18), rgba(34, 29, 22, 0.08));
-  backdrop-filter: blur(10rpx);
+  border-radius: 24rpx;
+  background: rgba(36, 31, 25, 0.28);
+  color: #fffdf8;
+  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
+  font-weight: 600;
 }
 
 .sticker-modal-poem-column {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10rpx;
+}
+
+.sticker-modal-poem-column + .sticker-modal-poem-column {
+  margin-right: 18rpx;
 }
 
 .sticker-modal-poem-char {
-  font-size: 58rpx;
-  line-height: 1;
-  font-style: italic;
+  font-size: 54rpx;
+  line-height: 1.08;
 }
 
-.sticker-modal-theme {
-  align-self: flex-start;
-  font-size: 28rpx;
-  color: rgba(255, 250, 242, 0.94);
-  padding: 14rpx 22rpx;
-  border-radius: 999rpx;
-  background: rgba(34, 29, 22, 0.28);
-}
-
-.sticker-modal-actions {
+.modal-actions {
   display: flex;
-  gap: 16rpx;
-  margin-top: 22rpx;
+  margin-top: 18rpx;
 }
 
-.sticker-modal-action {
+.modal-action {
   flex: 1;
 }
 
-.mission-card-modal-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(20, 17, 12, 0.58);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 36rpx;
-  box-sizing: border-box;
-  z-index: 40;
-}
-
-.mission-card-modal-sheet {
-  width: 100%;
-  max-width: 680rpx;
-  max-height: calc(100vh - 72rpx);
-  display: flex;
-  flex-direction: column;
+.modal-action + .modal-action {
+  margin-left: 14rpx;
 }
 
 .mission-card-modal-panel {
-  border-radius: 36rpx;
-  background: linear-gradient(180deg, #f7f1e8 0%, #efe5d5 100%);
+  max-height: 980rpx;
+  border-radius: 34rpx;
+  background: #fffdf8;
   padding: 24rpx;
-  box-shadow: 0 24rpx 72rpx rgba(0, 0, 0, 0.22);
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+  box-shadow: 0 22rpx 62rpx rgba(36, 31, 25, 0.24);
+  box-sizing: border-box;
 }
 
 .mission-card-modal-title {
+  color: #241f19;
   font-size: 28rpx;
-  font-weight: 600;
-  color: #2f2b24;
+  line-height: 1.4;
+  font-weight: 700;
   margin-bottom: 18rpx;
-  flex-shrink: 0;
 }
 
 .mission-card-modal-scroll {
-  max-height: calc(100vh - 280rpx);
+  max-height: 820rpx;
   min-height: 360rpx;
 }
 
 .mission-card-modal-image {
   width: 100%;
   display: block;
-  border-radius: 28rpx;
+  border-radius: 26rpx;
   overflow: hidden;
 }
 
-.mission-card-modal-actions {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 20rpx;
+@keyframes detailFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.mission-card-modal-action {
-  flex: 1;
+@keyframes cardPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scaleX(0.72);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
 }

@@ -29,7 +29,11 @@ function normalizeWalkRecord(item) {
   }
 
   const recordId = item._id || item.id || '';
-  const completedMissions = Array.isArray(item.completedMissions) ? item.completedMissions : [];
+  const completedMissions = Array.isArray(item.completedMissions)
+    ? item.completedMissions
+    : Array.isArray(item.missionsCompleted)
+      ? item.missionsCompleted
+      : [];
   const missionList = completedMissions
     .map((mission) => {
       if (typeof mission === 'string') {

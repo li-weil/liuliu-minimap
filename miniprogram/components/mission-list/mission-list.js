@@ -1,3 +1,36 @@
+function normalizeMissionKey(item) {
+  if (typeof item === 'string') {
+    return item;
+  }
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  return item.mission || item.key || item.label || '';
+}
+
+function hasMissionCheckIn(completedMissions, missionReviews, mission) {
+  if (!mission) {
+    return false;
+  }
+  const review = missionReviews && missionReviews[mission] ? missionReviews[mission] : null;
+  if (review && review.status === 'needs_recheck') {
+    return false;
+  }
+  const completedSet = new Set((completedMissions || []).map(normalizeMissionKey).filter(Boolean));
+  if (completedSet.has(mission)) {
+    return true;
+  }
+  if (!review) {
+    return false;
+  }
+  return review.status === 'checked_in' || !!review.checkedInAt || review.passed === true;
+}
+
+function hasMissionRecheckRequired(missionReviews, mission) {
+  const review = missionReviews && missionReviews[mission] ? missionReviews[mission] : null;
+  return !!(review && review.status === 'needs_recheck');
+}
+
 Component({
   data: {
     missionCards: [],
@@ -90,7 +123,6 @@ Component({
       supplementalMissionKey,
       supplementalMissionLabel
     ) {
-      const completedSet = new Set(completedMissions || []);
       const missionItems = [...(missions || [])];
       if (supplementalMissionKey && supplementalMissionLabel) {
         missionItems.push({
@@ -110,7 +142,8 @@ Component({
           isSupplemental,
           active: activeMission === mission,
           expanded: expandedMission === mission,
-          completed: completedSet.has(mission),
+          completed: hasMissionCheckIn(completedMissions, missionReviews, mission),
+          needsRecheck: hasMissionRecheckRequired(missionReviews, mission),
           review: missionReviews && missionReviews[mission] ? missionReviews[mission] : null,
           assets: missionAssetMap && missionAssetMap[mission] ? missionAssetMap[mission] : null,
           cardVersion: generatedMissionCardMap && generatedMissionCardMap[mission] ? generatedMissionCardMap[mission] : 0,

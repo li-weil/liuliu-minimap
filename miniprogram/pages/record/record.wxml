@@ -1,53 +1,85 @@
-<view class="page-shell" wx:if="{{theme && draft}}">
-  <view class="theme-card record-hero">
+<view class="page-shell record-page" wx:if="{{theme && draft}}">
+  <view class="record-hero">
     <view wx:if="{{isTracking}}" class="record-map-stage">
       <map
         longitude="{{draft.longitude || 116.39747}}"
         latitude="{{draft.latitude || 39.908823}}"
         scale="15"
         show-location
-        style="width: 100%; height: 360rpx;"
+        class="record-map"
       />
     </view>
-    <view wx:else class="record-stage" style="background: linear-gradient(135deg, {{theme.vibeColor || '#5a5a40'}} 0%, #f1eadf 100%);">
-      <view class="record-stage-glyph">{{theme.displayGlyph || '遛'}}</view>
-      <view class="record-stage-copy">
+
+    <view wx:else class="record-theme-stage">
+      <view class="record-theme-copy">
+        <view class="record-kicker">正在漫步</view>
         <view class="record-stage-title">{{theme.title}}</view>
         <view class="record-stage-desc">{{theme.description}}</view>
       </view>
+      <view class="record-stage-stamp">
+        <view class="record-stage-glyph">{{theme.displayGlyph || '遛'}}</view>
+        <view class="record-stage-stamp-text">{{draft.walkMode === 'advanced' ? '进阶' : '纯粹'}}</view>
+      </view>
     </view>
-    <view class="record-body">
-      <view class="meta-row">
-        <view class="meta-pill">{{draft.locationName}}</view>
-        <view class="meta-pill">{{draft.walkMode === 'advanced' ? '进阶模式' : '纯粹模式'}}</view>
-        <view class="meta-pill">{{draft.completedMissions.length}} / {{theme.missions.length}} 已完成</view>
+
+    <view class="record-hero-footer">
+      <view class="record-meta-grid">
+        <view class="record-meta-item">
+          <view class="record-meta-label">地点</view>
+          <view class="record-meta-value">{{draft.locationName}}</view>
+        </view>
+        <view class="record-meta-item">
+          <view class="record-meta-label">模式</view>
+          <view class="record-meta-value">{{draft.walkMode === 'advanced' ? '进阶模式' : '纯粹模式'}}</view>
+        </view>
+      </view>
+      <view class="hero-progress-head">
+        <view>已完成 {{missionCompletedCount}} / {{missionTotalCount}}</view>
+        <view>{{missionProgressPercent}}%</view>
+      </view>
+      <view class="hero-progress-track">
+        <view class="hero-progress-fill" style="width: {{missionProgressPercent}}%;"></view>
       </view>
     </view>
   </view>
 
-  <button class="map-switch-btn" bindtap="toggleTracking">{{isTracking ? '停止位置显示' : '开启位置显示'}}</button>
-  <view class="track-mode-tip">{{isTracking ? '使用前台定位显示当前位置，请尽量保持小程序停留在前台' : '开启后将仅在当前页面显示当前位置'}}</view>
-
-  <view class="section-card section-block track-stats-block">
-    <view class="section-title">定位信息</view>
-    <view class="track-stats-grid">
-      <view class="track-stat-card">
-        <view class="track-stat-value">{{routeStats.durationLabel}}</view>
-        <view class="track-stat-label">显示时长</view>
-      </view>
-      <view class="track-stat-card">
-        <view class="track-stat-value">{{isTracking ? '前台定位中' : '未开启'}}</view>
-        <view class="track-stat-label">当前位置状态</view>
+  <view class="location-status-bar">
+    <view class="location-status-copy-cell">
+      <view class="location-status-dot {{isTracking ? 'location-status-dot-active' : ''}}"></view>
+      <view class="location-status-main">
+        <view class="location-status-title">{{isTracking ? '前台定位中' : '位置显示未开启'}}</view>
+        <view class="location-status-copy">{{isTracking ? '当前位置会显示在顶部地图。' : '仅在当前页显示位置。'}}</view>
       </view>
     </view>
-    <view class="track-time-row">
-      <view class="track-time-item">开始显示：{{routeStats.startedLabel}}</view>
-      <view class="track-time-item">结束显示：{{routeStats.stoppedLabel}}</view>
+    <view class="location-status-duration">
+      <view class="location-status-number">{{routeStats.durationLabel}}</view>
+      <view class="location-status-label">显示时长</view>
+    </view>
+    <view class="location-toggle-cell">
+      <button class="ghost-btn location-toggle-btn" bindtap="toggleTracking">{{isTracking ? '停止' : '开启'}}</button>
     </view>
   </view>
 
-  <view class="section-card section-block">
-    <view class="section-title">任务打卡</view>
+  <view class="track-time-strip">
+    <view class="track-time-item">
+      <view class="track-time-label">开始显示</view>
+      <view class="track-time-value">{{routeStats.startedLabel}}</view>
+    </view>
+    <view class="track-time-divider"></view>
+    <view class="track-time-item">
+      <view class="track-time-label">结束显示</view>
+      <view class="track-time-value">{{routeStats.stoppedLabel}}</view>
+    </view>
+  </view>
+
+  <view class="mission-workbench">
+    <view class="mission-workbench-head">
+      <view>
+        <view class="section-title">任务打卡</view>
+        <view class="section-subtitle">展开当前任务，添加素材和文字，再完成这一站的打卡。</view>
+      </view>
+      <view class="mission-count-badge">{{missionCompletedCount}} / {{missionTotalCount}}</view>
+    </view>
     <mission-list
       missions="{{theme.missions}}"
       supplementalMissionKey="{{summaryMissionKey}}"
@@ -65,7 +97,7 @@
       locationName="{{draft.locationName}}"
       themeTitle="{{theme.title}}"
       dateLabel="{{routeStats.startedLabel}}"
-      accentColor="{{theme.vibeColor || '#c96f4a'}}"
+      accentColor="{{theme.vibeColor || '#626247'}}"
       checkingInMission="{{checkingInMission}}"
       bind:select="selectMission"
       bind:verify="handleMissionVerify"
@@ -77,17 +109,24 @@
     />
   </view>
 
-  <view wx:if="{{isSaving}}" class="section-card save-progress-card">
-    <view class="save-progress-title">{{saveStatusText || '正在保存这次漫步...'}}</view>
-    <view wx:if="{{uploadProgressTotal}}" class="save-progress-meta">已处理 {{uploadProgressCurrent}} / {{uploadProgressTotal}} 项素材</view>
-    <view class="save-progress-track">
-      <view class="save-progress-fill" style="width: {{uploadProgressPercent}}%;"></view>
+  <view class="record-save-spacer"></view>
+
+  <view class="save-action-bar">
+    <view wx:if="{{isSaving}}" class="save-progress-card">
+      <view class="save-progress-head">
+        <view class="save-progress-title">{{saveStatusText || '正在保存这次漫步'}}</view>
+        <view class="save-progress-percent">{{uploadProgressPercent}}%</view>
+      </view>
+      <view wx:if="{{uploadProgressTotal}}" class="save-progress-meta">已处理 {{uploadProgressCurrent}} / {{uploadProgressTotal}} 项素材</view>
+      <view class="save-progress-track">
+        <view class="save-progress-fill" style="width: {{uploadProgressPercent}}%;"></view>
+      </view>
     </view>
-    <view class="save-progress-percent">{{uploadProgressPercent}}%</view>
+
+    <button class="primary-btn save-btn" bindtap="handleSave" loading="{{isSaving}}" disabled="{{isSaving}}">
+      {{isSaving ? '正在保存' : '完成本次漫步并保存'}}
+    </button>
   </view>
-
-  <button class="primary-btn save-btn" bindtap="handleSave" loading="{{isSaving}}">完成本次漫步并保存</button>
-
 </view>
 
 <view wx:else class="page-shell empty-copy">还没有属于今天的漫步主题，先去探索页挑一段想走的城市情绪吧</view>

@@ -180,6 +180,11 @@ function buildAlbumResultCountLabel(count) {
   return `当前 ${Number(count || 0)} 条记录`;
 }
 
+function buildRecentAchievements(achievements = []) {
+  const unlocked = (Array.isArray(achievements) ? achievements : []).filter((item) => item && item.unlocked);
+  return unlocked.slice(0, 3);
+}
+
 function buildHistoryShareTitle(data = {}) {
   const user = data.user || null;
   if (user && user.nickName) {
@@ -202,6 +207,7 @@ Page({
     albumEmptyTitle: buildAlbumEmptyState('all', 'all').title,
     albumEmptySubtitle: buildAlbumEmptyState('all', 'all').subtitle,
     albumFilterSummary: buildAlbumFilterSummary('all', 'all'),
+    albumFilterExpanded: false,
     albumResultCountLabel: buildAlbumResultCountLabel(0),
     albumStatusCounts: {
       all: 0,
@@ -215,6 +221,7 @@ Page({
       team: 0,
     },
     achievements: [],
+    recentAchievements: [],
     achievementSummary: {
       unlockedCount: 0,
       totalCount: 0,
@@ -246,6 +253,7 @@ Page({
         albumStatusCounts: buildAlbumStatusCounts([], this.data.albumTypeFilter || 'all'),
         albumTypeCounts: buildAlbumTypeCounts([], this.data.albumStatusFilter || 'all'),
         achievements: [],
+        recentAchievements: [],
         achievementSummary: {
           unlockedCount: 0,
           totalCount: 0,
@@ -296,8 +304,10 @@ Page({
       const albumTypeCounts = buildAlbumTypeCounts(walks, this.data.albumStatusFilter || 'all');
       const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
       const featuredAchievement = this.resolveFeaturedAchievement(achievements);
+      const recentAchievements = buildRecentAchievements(achievements);
       app.globalData.achievementSnapshot = {
         achievements,
+        recentAchievements,
         summary: achievementResult.summary || {
           unlockedCount: 0,
           totalCount: achievements.length,
@@ -416,6 +426,10 @@ Page({
     }, () => {
       this.applyWalkFilter();
     });
+  },
+
+  toggleAlbumFilter() {
+    this.setData({ albumFilterExpanded: !this.data.albumFilterExpanded });
   },
 
   applyWalkFilter() {

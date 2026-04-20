@@ -56,8 +56,14 @@
 
 .privacy-btn {
   flex: 1;
+  min-height: 88rpx;
   border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 28rpx;
+  line-height: 1.2;
+  text-align: center;
 }
 
 .privacy-btn-ghost {

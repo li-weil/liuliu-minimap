@@ -49,6 +49,77 @@ function hasMissionContent(assets) {
   return !!noteText || photoCount > 0 || videoCount > 0 || audioCount > 0;
 }
 
+function normalizeMissionKey(item) {
+  if (typeof item === 'string') {
+    return item;
+  }
+  if (!item || typeof item !== 'object') {
+    return '';
+  }
+  return item.mission || item.key || item.label || '';
+}
+
+function getCompletedMissionList(source) {
+  const completedSource = Array.isArray(source && source.completedMissions)
+    ? source.completedMissions
+    : Array.isArray(source && source.missionsCompleted)
+      ? source.missionsCompleted
+      : [];
+  return completedSource.map(normalizeMissionKey).filter(Boolean);
+}
+
+function hasMissionCheckIn(source, mission) {
+  if (!mission) {
+    return false;
+  }
+  const review = source && source.missionReviews ? source.missionReviews[mission] : null;
+  if (review && review.status === 'needs_recheck') {
+    return false;
+  }
+  const completedSet = new Set(getCompletedMissionList(source));
+  if (completedSet.has(mission)) {
+    return true;
+  }
+  if (!review) {
+    return false;
+  }
+  return review.status === 'checked_in' || !!review.checkedInAt || review.passed === true;
+}
+
+function hasMissionRecheckRequired(source, mission) {
+  const review = source && source.missionReviews ? source.missionReviews[mission] : null;
+  return !!(review && review.status === 'needs_recheck');
+}
+
+function deriveCompletedMissions(missions, draft) {
+  const completedSet = new Set(getCompletedMissionList(draft));
+  (missions || []).forEach((mission) => {
+    if (hasMissionCheckIn(draft, mission)) {
+      completedSet.add(mission);
+    }
+  });
+  return Array.from(completedSet).filter(Boolean);
+}
+
+function markMissionNeedsRecheck(draft, mission) {
+  const missionKey = mission || SUMMARY_MISSION_KEY;
+  const completedMissions = getCompletedMissionList(draft).filter((item) => item !== missionKey);
+  const currentReview = draft && draft.missionReviews ? draft.missionReviews[missionKey] : null;
+  return {
+    ...draft,
+    completedMissions,
+    missionReviews: {
+      ...((draft && draft.missionReviews) || {}),
+      [missionKey]: {
+        ...(currentReview || {}),
+        status: 'needs_recheck',
+        invalidatedAt: Date.now(),
+        previousCheckedInAt: currentReview && currentReview.checkedInAt ? currentReview.checkedInAt : null,
+      },
+    },
+  };
+}
+
 function toRadians(value) {
   return (value * Math.PI) / 180;
 }
@@ -244,7 +315,7 @@ function buildDraftFromWalk(walk) {
     latitude: walk.latitude || null,
     longitude: walk.longitude || null,
     routePoints: Array.isArray(walk.routePoints) ? walk.routePoints : [],
-    completedMissions: Array.isArray(walk.completedMissions) ? walk.completedMissions : [],
+    completedMissions: getCompletedMissionList(walk),
     missionReviews: walk.missionReviews || {},
     missionAssetMap: walk.missionAssetMap || {},
     selectedMission: (walk.themeSnapshot && walk.themeSnapshot.missions && walk.themeSnapshot.missions[0]) || '',
@@ -503,6 +574,17 @@ function buildRecordShareTitle(data = {}) {
   return '遛遛 | 邀你一起 citywalk';
 }
 
+function buildMissionProgress(theme, draft) {
+  const missions = Array.isArray(theme && theme.missions) ? theme.missions : [];
+  const completedCount = missions.filter((mission) => hasMissionCheckIn(draft, mission)).length;
+  const totalCount = missions.length;
+  return {
+    completedCount,
+    totalCount,
+    percent: totalCount ? Math.round((completedCount / totalCount) * 100) : 0,
+  };
+}
+
 Page({
   data: {
     activeMission: '',
@@ -541,6 +623,9 @@ Page({
       startedLabel: '未开始',
       stoppedLabel: '未开始',
     },
+    missionCompletedCount: 0,
+    missionTotalCount: 0,
+    missionProgressPercent: 0,
     saveStatusText: '',
     uploadProgressPercent: 0,
     uploadProgressCurrent: 0,
@@ -730,6 +815,7 @@ Page({
       };
       this.setDraft(nextDraft);
     }
+    const missionProgress = buildMissionProgress(theme, nextDraft);
     this.setData({
       activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || SUMMARY_MISSION_KEY),
       theme,
@@ -739,6 +825,9 @@ Page({
         sticker: decorateSticker(nextDraft.sticker),
       },
       routeStats,
+      missionCompletedCount: missionProgress.completedCount,
+      missionTotalCount: missionProgress.totalCount,
+      missionProgressPercent: missionProgress.percent,
     });
   },
 
@@ -786,7 +875,13 @@ Page({
     missionAssets.companionNote = '';
     missionAssets.cardImagePath = '';
     missionAssetMap[missionKey] = missionAssets;
-    const completedMissions = Array.isArray(draft.completedMissions) ? [...draft.completedMissions] : [];
+    if (hasMissionCheckIn(draft, missionKey)) {
+      return {
+        ...markMissionNeedsRecheck(draft, missionKey),
+        missionAssetMap,
+      };
+    }
+    const completedMissions = getCompletedMissionList(draft);
     const missionReviews = { ...(draft.missionReviews || {}) };
     return {
       ...draft,
@@ -805,19 +900,27 @@ Page({
       ...(missionAssetMap[missionKey] || {}),
       ...patch,
     };
+    const patchKeys = Object.keys(patch || {});
+    const touchesGeneratedAssets = patchKeys.includes('companionNote') || patchKeys.includes('cardImagePath');
     const preserveCheckIn = !!options.preserveCheckIn;
-    if (!preserveCheckIn) {
+    const shouldRequireRecheck = !preserveCheckIn && hasMissionCheckIn(draft, missionKey);
+    const preserveGeneratedAssets = !!options.preserveGeneratedAssets || !!options.preserveCheckIn || touchesGeneratedAssets;
+    if (!preserveGeneratedAssets) {
       nextMissionAssets.companionNote = '';
       nextMissionAssets.cardImagePath = '';
     }
     missionAssetMap[missionKey] = nextMissionAssets;
     const missionReviews = { ...(draft.missionReviews || {}) };
-    const completedMissions = Array.isArray(draft.completedMissions) ? [...draft.completedMissions] : [];
+    const completedMissions = getCompletedMissionList(draft);
     const nextDraft = {
       ...draft,
       missionAssetMap,
     };
-    if (!preserveCheckIn) {
+    if (shouldRequireRecheck) {
+      const recheckDraft = markMissionNeedsRecheck(nextDraft, missionKey);
+      nextDraft.completedMissions = recheckDraft.completedMissions;
+      nextDraft.missionReviews = recheckDraft.missionReviews;
+    } else if (!preserveCheckIn && !hasMissionRecheckRequired(draft, missionKey)) {
       delete missionReviews[missionKey];
       nextDraft.missionReviews = missionReviews;
       nextDraft.completedMissions = completedMissions.filter((item) => item !== missionKey);
@@ -901,8 +1004,7 @@ Page({
     if (!mission) {
       return;
     }
-    const completedSet = new Set(this.data.draft && this.data.draft.completedMissions ? this.data.draft.completedMissions : []);
-    if (completedSet.has(mission)) {
+    if (hasMissionCheckIn(this.data.draft, mission)) {
       return;
     }
 
@@ -1098,7 +1200,7 @@ Page({
   },
 
   markMissionPassed(mission, review) {
-    const completed = new Set(this.data.draft.completedMissions || []);
+    const completed = new Set(getCompletedMissionList(this.data.draft));
     completed.add(mission);
     const missionReviews = {
       ...(this.data.draft.missionReviews || {}),
@@ -1146,9 +1248,8 @@ Page({
   },
 
   isMissionCheckInCurrent(mission, checkedInAt) {
-    const completedSet = new Set(this.data.draft && this.data.draft.completedMissions ? this.data.draft.completedMissions : []);
     const review = this.data.draft && this.data.draft.missionReviews ? this.data.draft.missionReviews[mission] : null;
-    return completedSet.has(mission) && review && Number(review.checkedInAt || 0) === Number(checkedInAt || 0);
+    return hasMissionCheckIn(this.data.draft, mission) && review && Number(review.checkedInAt || 0) === Number(checkedInAt || 0);
   },
 
   generateMissionCompanionNoteInBackground(mission, checkedInAt, snapshotAssets) {
@@ -1647,18 +1748,11 @@ Page({
       ...(Array.isArray(this.data.theme.missions) ? this.data.theme.missions : []),
       SUMMARY_MISSION_KEY,
     ];
-    const completedSet = new Set(this.data.draft && this.data.draft.completedMissions ? this.data.draft.completedMissions : []);
-    const pendingMissions = checkableMissions.filter((mission) => {
-      if (completedSet.has(mission)) {
-        return false;
-      }
-      const missionAssets = this.getMissionAssets(mission, this.data.draft);
-      return hasMissionContent(missionAssets);
-    });
-    if (pendingMissions.length) {
+    const recheckMissions = checkableMissions.filter((mission) => hasMissionRecheckRequired(this.data.draft, mission));
+    if (recheckMissions.length) {
       wx.showModal({
-        title: '还有任务未打卡',
-        content: `有 ${pendingMissions.length} 个已经填写内容的任务还没打卡，请先完成这些任务的打卡后再保存。`,
+        title: '需要重新打卡',
+        content: `有 ${recheckMissions.length} 个已打卡任务的内容发生了变动。请重新打卡后再结束漫步。`,
         showCancel: false,
         confirmText: '知道了',
       });
@@ -1693,7 +1787,20 @@ Page({
         this.stopTracking();
       }
       await this.waitForPendingCompanionNotes();
-      const saveDraft = syncDraftAggregates(app.globalData.walkDraft);
+      const saveDraft = {
+        ...syncDraftAggregates(app.globalData.walkDraft),
+      };
+      saveDraft.completedMissions = deriveCompletedMissions(checkableMissions, saveDraft);
+      const recheckBeforeUpload = checkableMissions.filter((mission) => hasMissionRecheckRequired(saveDraft, mission));
+      if (recheckBeforeUpload.length) {
+        wx.showModal({
+          title: '需要重新打卡',
+          content: `有 ${recheckBeforeUpload.length} 个已打卡任务的内容发生了变动。请重新打卡后再结束漫步。`,
+          showCancel: false,
+          confirmText: '知道了',
+        });
+        return null;
+      }
       this.setDraft(saveDraft);
       const summaryAssets = this.getMissionAssets(SUMMARY_MISSION_KEY, saveDraft);
       const uploadJobs = await this.collectUploadJobs(saveDraft);

@@ -1,66 +1,43 @@
 <view class="page-shell explore-page">
-  <view class="hero-card explore-hero">
-    <view class="hero-topline">
-      <view>
-        <view class="hero-title">探索页</view>
-        <view class="hero-subtitle">为今天的城市留下一条独特线索，让漫步从此刻的灵感开始</view>
-      </view>
-      <view class="mode-switch">
-        <view class="mode-chip {{walkMode === 'pure' ? 'mode-chip-active' : ''}}" bindtap="setOption" data-field="walkMode" data-value="pure">纯粹</view>
-        <view class="mode-chip {{walkMode === 'advanced' ? 'mode-chip-active' : ''}}" bindtap="setOption" data-field="walkMode" data-value="advanced">进阶</view>
-      </view>
+  <view class="guide-hero">
+    <view class="guide-label">城市线索</view>
+    <view class="guide-title">{{exploreStep === 'location' ? '先定一个出发点' : '再生成一张任务票据'}}</view>
+    <view class="guide-quote">
+      {{exploreStep === 'location' ? '街角不赶时间，线索总在你慢下来时悄然出现' : '带着心意出发，城市会为你铺开余下的风景'}}
     </view>
 
-    <view class="field-label section-label">出发方式</view>
-    <view class="pill-row selection-row">
-      <view class="{{journeyMode === 'solo' ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="journeyMode" data-value="solo">单人</view>
-      <view class="{{journeyMode === 'team' ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="journeyMode" data-value="team">同行</view>
-    </view>
-    <view class="helper-copy">{{journeyMode === 'team' ? '同行模式会创建一个房间，邀请伙伴一起出发。' : '单人模式会直接进入记录页，围绕今天的主题开始漫步。'}}</view>
-
-    <view class="search-panel">
-      <input class="search-input" placeholder="搜索地点或街区" value="{{searchKeyword}}" bindinput="handleSearchInput" confirm-type="search" bindconfirm="searchLocation" />
-      <button class="ghost-btn search-btn" bindtap="searchLocation" loading="{{loadingSearch}}">搜索</button>
-    </view>
-
-    <view class="meta-row hero-meta">
-      <view class="meta-pill">{{locationName}}</view>
-      <view class="meta-pill">{{walkMode === 'advanced' ? '3 个任务' : '1 个任务'}}</view>
-      <view class="meta-pill">{{journeyMode === 'team' ? '同行模式' : '单人模式'}}</view>
-    </view>
-
-    <view class="hero-actions">
-      <button class="ghost-btn" bindtap="useCurrentLocation">当前定位</button>
-      <button class="ghost-btn" bindtap="handleChooseLocation">地图选点</button>
-    </view>
-
-    <view wx:if="{{searchResults.length}}" class="search-result-list">
-      <view class="search-result-head">
-        <view class="search-result-title">地点候选</view>
-        <view class="search-result-count">可下滑查看更多 · {{searchResultCount}} 条</view>
-      </view>
-      <scroll-view scroll-y class="search-result-scroll">
-        <view wx:for="{{searchResults}}" wx:key="id" class="search-result-item" bindtap="chooseSearchResult" data-index="{{index}}">
-          <view class="search-result-topline">
-            <view class="search-result-name">{{item.name}}</view>
-          </view>
-          <view wx:if="{{item.district || item.typeLabels.length}}" class="search-result-badges">
-            <view wx:if="{{item.district}}" class="search-result-badge">{{item.district}}</view>
-            <view wx:for="{{item.typeLabels}}" wx:key="index" class="search-result-badge search-result-badge-light">{{item}}</view>
-          </view>
+    <view class="guide-card">
+      <view class="guide-card-index">{{exploreStep === 'location' ? '1' : '2'}}</view>
+      <view class="guide-card-main">
+        <view class="guide-card-label">{{exploreStep === 'location' ? '今日起点' : '任务票据'}}</view>
+        <view class="guide-card-title">{{exploreStep === 'location' ? '定位或搜索地点' : '选择方式并生成'}}</view>
+        <view class="guide-card-note">
+          {{exploreStep === 'location' ? '确认起点后进入下一步。' : (hasConfirmedExplorePoint ? locationName : '还没有探索点')}}
         </view>
-      </scroll-view>
+      </view>
+    </view>
+
+    <view class="guide-steps">
+      <view
+        class="guide-step {{exploreStep === 'location' ? 'guide-step-active' : ''}} {{hasConfirmedExplorePoint ? 'guide-step-done' : ''}}"
+        bindtap="switchExploreStep"
+        data-step="location"
+      >
+        <view class="guide-step-number">1</view>
+        <view class="guide-step-text">设定起点</view>
+      </view>
+      <view
+        class="guide-step {{exploreStep === 'generate' ? 'guide-step-active' : ''}} {{!hasConfirmedExplorePoint ? 'guide-step-disabled' : ''}}"
+        bindtap="switchExploreStep"
+        data-step="generate"
+      >
+        <view class="guide-step-number">2</view>
+        <view class="guide-step-text">生成任务</view>
+      </view>
     </view>
   </view>
 
-  <view class="section-card explore-map-card">
-    <view class="section-heading">
-      <view>
-        <view class="section-title">探索地图</view>
-        <view class="section-subtitle">把视线落在一片街区上，让这次漫步从你此刻想靠近的地方展开</view>
-      </view>
-      <view class="meta-pill">{{locationName}}</view>
-    </view>
+  <view wx:if="{{exploreStep === 'location'}}" class="location-flow">
     <view class="explore-map-shell">
       <map
         id="explore-map"
@@ -70,131 +47,200 @@
         show-location
         markers="{{mapMarkers}}"
         circles="{{mapCircles}}"
+        enable-scroll="{{true}}"
+        enable-zoom="{{true}}"
+        enable-rotate="{{true}}"
         bindregionchange="handleMapRegionChange"
         class="explore-map"
       />
-      <view class="map-center-pin">
-        <view class="map-center-pin-dot"></view>
-      </view>
-    </view>
-    <view class="map-helper-row">
-      <view class="map-helper-copy">{{isMapDragging ? '慢慢移动，寻找最想走进去的那一片街景' : '把定位针停在此刻最想出发的地方'}}</view>
-      <button class="primary-btn map-confirm-btn" bindtap="confirmMapCenterLocation">设为探索点</button>
-    </view>
-    <view class="helper-copy">{{hasConfirmedExplorePoint ? '探索点已设定，现在可以生成主题并开始这次漫步。' : '当前默认点仅用于展示，请先定位、搜索地点，或拖图后点“设为探索点”'}}</view>
-
-    <view wx:if="{{supportsNearbyPois}}" class="nearby-panel">
-      <view class="nearby-panel-head">
-        <view>
-          <view class="nearby-panel-title">周边地点推荐</view>
-          <view class="nearby-panel-subtitle">沿着这个点位往外看一圈，挑一个更想走近的地方</view>
-        </view>
-        <view class="nearby-panel-actions">
-          <view wx:if="{{loadingNearbyPlaces}}" class="meta-pill">加载中</view>
-          <view wx:else class="nearby-toggle" bindtap="toggleNearbyPanel">{{nearbyExpanded ? '收起' : '展开'}}</view>
-        </view>
-      </view>
-      <view wx:if="{{nearbyPlaces.length && !nearbyExpanded}}" class="nearby-collapsed-copy">先看看这一带有哪些值得拐进去的地方，点“展开”就能切换新的探索点</view>
-      <scroll-view wx:elif="{{nearbyPlaces.length}}" scroll-y class="nearby-list">
-        <view wx:for="{{nearbyPlaces}}" wx:key="id" class="nearby-item" bindtap="chooseNearbyPlace" data-index="{{index}}">
-          <view class="nearby-item-name">{{item.name}}</view>
-          <view wx:if="{{item.district || item.type}}" class="nearby-item-meta">
-            <text wx:if="{{item.district}}">{{item.district}}</text>
-            <text wx:if="{{item.type}}">{{item.district ? ' · ' : ''}}{{item.type}}</text>
-          </view>
-          <view wx:if="{{item.address}}" class="nearby-item-address">{{item.address}}</view>
-        </view>
-      </scroll-view>
-      <view wx:elif="{{loadingNearbyPlaces}}" class="nearby-empty">正在把这片街区里值得停下来的地点整理出来</view>
-    </view>
-  </view>
-
-  <view wx:if="{{walkMode === 'pure'}}" class="mode-board">
-    <view class="section-card mode-card">
-      <view class="section-title">漫步主题</view>
-
-      <view class="field-label section-label">主题选择</view>
-      <view class="pill-row selection-row">
-        <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
-      </view>
-      <view class="helper-copy">先选定一个主题方向，再从街道、光影和情绪里抽出今天的漫步线索</view>
-      <view class="action-grid">
-        <button
-          class="ghost-btn action-tall-btn {{(!hasConfirmedExplorePoint || generationBusy) ? 'action-btn-disabled' : ''}}"
-          bindtap="handleRandomTheme"
-          loading="{{isGenerating}}"
-          disabled="{{!hasConfirmedExplorePoint || generationBusy}}"
-        >
-          {{generationBusy ? '正在生成...' : '随机生成'}}
-        </button>
-        <button
-          class="primary-btn action-tall-btn {{(!hasConfirmedExplorePoint || generationBusy) ? 'action-btn-disabled' : ''}}"
-          bindtap="handleSelectedThemeGenerate"
-          loading="{{isCombining}}"
-          disabled="{{!hasConfirmedExplorePoint || generationBusy}}"
-        >
-          {{generationBusy ? '正在生成...' : '选择生成'}}
-        </button>
-      </view>
     </view>
 
-    <view class="display-card-shell">
-      <theme-card
-        theme="{{currentTheme}}"
-        generationViewState="{{generationViewState}}"
-        modeLabel="纯粹模式"
-        displaySummary="{{displaySummary}}"
-        startDisabled="{{!hasConfirmedExplorePoint}}"
-        startMain="{{journeyMode === 'team' ? '发起同行漫步' : '开始这次漫步'}}"
-        startSub="{{hasConfirmedExplorePoint ? (journeyMode === 'team' ? '把这份主题分享给队友，一起出发' : '带着这份线索，走进今天的城市片刻') : '先设定探索点，再开始这次漫步'}}"
-        bind:start="handleStartWalk"
+    <view class="location-info-row">
+      <view class="location-info-main">
+        <view class="location-info-label">探索点</view>
+        <view class="location-info-name">{{hasConfirmedExplorePoint ? locationName : '还没有选择出发点'}}</view>
+        <view wx:if="{{hasConfirmedExplorePoint && locationAddressDisplay}}" class="location-info-address">{{locationAddressDisplay}}</view>
+        <view wx:elif="{{!hasConfirmedExplorePoint}}" class="location-info-address">定位或搜索后，城市线索会从这里展开。</view>
+      </view>
+      <button class="ghost-btn locate-btn" bindtap="useCurrentLocation">当前定位</button>
+    </view>
+
+    <view class="search-panel origin-search-panel">
+      <input
+        class="search-input"
+        placeholder="搜索地点"
+        value="{{searchKeyword}}"
+        bindinput="handleSearchInput"
+        confirm-type="search"
+        bindconfirm="searchLocation"
       />
+      <view class="search-gap"></view>
+      <button class="primary-btn search-btn" bindtap="searchLocation" loading="{{loadingSearch}}">搜索</button>
     </view>
-  </view>
 
-  <view wx:else class="mode-board">
-    <view class="section-card mode-card">
-      <view class="field-label">天气</view>
-      <view class="pill-row selection-row">
-        <view wx:for="{{weatherOptions}}" wx:key="item" class="{{weather === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="weather" data-value="{{item}}">{{item}}</view>
+    <view class="search-candidate-shell {{searchResults.length ? 'search-candidate-shell-open' : ''}}">
+      <view class="search-candidate-panel">
+        <view class="search-result-head">
+          <view class="search-result-title">搜索结果</view>
+          <view class="search-result-count">{{searchResultCount}} 个地点</view>
+        </view>
+        <scroll-view scroll-y class="search-result-scroll">
+          <view wx:for="{{searchResults}}" wx:key="id" class="search-result-item" bindtap="chooseSearchResult" data-index="{{index}}">
+            <view class="search-result-name">{{item.name}}</view>
+            <view wx:if="{{item.district || item.typeLabels.length}}" class="search-result-badges">
+              <view wx:if="{{item.district}}" class="search-result-badge">{{item.district}}</view>
+              <view wx:for="{{item.typeLabels}}" wx:key="index" class="search-result-badge search-result-badge-light">{{item}}</view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+
+    <view wx:if="{{hasConfirmedExplorePoint || nearbyPlaces.length || loadingNearbyPlaces}}" class="nearby-panel">
+      <view class="nearby-head" bindtap="toggleNearbyPanel">
+        <view class="nearby-head-main">
+          <view class="nearby-title">附近地点</view>
+          <view wx:if="{{loadingNearbyPlaces}}" class="nearby-status">正在整理</view>
+          <view wx:elif="{{nearbyPlaces.length}}" class="nearby-status">{{nearbyPlaces.length}} 个可选地点</view>
+          <view wx:else class="nearby-status">定位或搜索后出现</view>
+        </view>
+        <view class="nearby-action">{{nearbyExpanded ? '收起' : '展开'}}</view>
       </view>
 
-      <view class="field-label">季节</view>
-      <view class="pill-row selection-row">
-        <view wx:for="{{seasonOptions}}" wx:key="item" class="{{season === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="season" data-value="{{item}}">{{item}}</view>
+      <view class="nearby-list-shell {{nearbyExpanded && nearbyPlaces.length ? 'nearby-list-shell-open' : ''}}">
+        <scroll-view scroll-y class="nearby-list">
+          <view wx:for="{{nearbyPlaces}}" wx:key="id" class="nearby-item" bindtap="chooseNearbyPlace" data-index="{{index}}">
+            <view class="nearby-name">{{item.name}}</view>
+            <view class="nearby-meta">
+              <view wx:if="{{item.type}}" class="nearby-meta-text">{{item.type}}</view>
+              <view wx:if="{{item.distance}}" class="nearby-meta-text">{{item.distance}}m</view>
+              <view wx:if="{{item.address}}" class="nearby-meta-text nearby-meta-address">{{item.address}}</view>
+            </view>
+          </view>
+        </scroll-view>
       </view>
+    </view>
 
-      <view class="field-label">状态</view>
-      <view class="pill-row selection-row">
-        <view wx:for="{{moodOptions}}" wx:key="item" class="{{mood === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="mood" data-value="{{item}}">{{item}}</view>
-      </view>
-
-      <view class="field-label">偏好</view>
-      <view class="pill-row selection-row">
-        <view wx:for="{{preferenceOptions}}" wx:key="item" class="{{preference === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="preference" data-value="{{item}}">{{item}}</view>
-      </view>
-
-      <view class="field-label">漫步主题（1 个或 2 个）</view>
-      <view class="pill-row selection-row">
-        <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
-      </view>
-      <view class="helper-copy">先设定探索点，再让 AI 综合天气、季节、状态、偏好和主题方向生成任务内容</view>
-
+    <view class="location-next-panel">
       <button
-        class="primary-btn full-width-btn advanced-generate-btn {{(!hasConfirmedExplorePoint || generationBusy) ? 'action-btn-disabled' : ''}}"
-        bindtap="handleGenerateTheme"
-        loading="{{isGenerating}}"
-        disabled="{{!hasConfirmedExplorePoint || generationBusy}}"
+        class="primary-btn location-next-btn {{!hasConfirmedExplorePoint ? 'location-next-btn-disabled' : ''}}"
+        bindtap="proceedToGenerateStep"
       >
-        {{generationBusy ? '正在生成...' : 'AI 生成'}}
+        下一步
       </button>
     </view>
+  </view>
+
+  <view wx:else class="guide-panel generate-panel">
+    <view class="point-summary">
+      <view class="point-summary-main">
+        <view class="point-summary-label">探索点</view>
+        <view class="point-summary-name">{{hasConfirmedExplorePoint ? locationName : '还没有探索点'}}</view>
+        <view wx:if="{{locationAddressDisplay}}" class="point-summary-copy">{{locationAddressDisplay}}</view>
+        <view wx:elif="{{!hasConfirmedExplorePoint}}" class="point-summary-copy">请先回到第 1 步设置探索点。</view>
+      </view>
+      <view class="point-summary-action" bindtap="changeExplorePoint">更换</view>
+    </view>
+
+    <view class="simple-controls">
+      <view class="guide-section-head">
+        <view class="point-summary-label">个性化选项</view>
+      </view>
+
+      <view class="choice-block">
+        <view class="choice-label">出发方式</view>
+        <view class="segmented-control">
+          <view class="segment-item {{journeyMode === 'solo' ? 'segment-item-active' : ''}}" bindtap="setOption" data-field="journeyMode" data-value="solo">单人</view>
+          <view class="segment-item {{journeyMode === 'team' ? 'segment-item-active' : ''}}" bindtap="setOption" data-field="journeyMode" data-value="team">同行</view>
+        </view>
+      </view>
+
+      <view class="choice-block">
+        <view class="choice-label">任务复杂度</view>
+        <view class="mode-switch-panel">
+          <view class="mode-choice {{walkMode === 'pure' ? 'mode-choice-active' : ''}}" bindtap="setOption" data-field="walkMode" data-value="pure">
+            <view class="mode-choice-title">纯粹</view>
+            <view class="mode-choice-note">1 个任务，轻装走</view>
+          </view>
+          <view class="mode-choice {{walkMode === 'advanced' ? 'mode-choice-active' : ''}}" bindtap="setOption" data-field="walkMode" data-value="advanced">
+            <view class="mode-choice-title">进阶</view>
+            <view class="mode-choice-note">3 个任务，线索更细</view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{walkMode === 'pure'}}" class="theme-choice-panel">
+        <view class="choice-label">主题方向</view>
+        <view class="theme-choice-help">“随机”会从前五个方向里抽取一个。</view>
+        <view class="pill-row selection-row">
+          <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
+        </view>
+
+        <view class="action-grid">
+          <button
+            class="primary-btn action-tall-btn {{(!hasConfirmedExplorePoint || generationBusy) ? 'action-btn-disabled' : ''}}"
+            bindtap="handleSelectedThemeGenerate"
+            loading="{{isCombining}}"
+            disabled="{{!hasConfirmedExplorePoint || generationBusy}}"
+          >
+            {{!hasConfirmedExplorePoint ? '先设置探索点' : (generationBusy ? '正在整理街区线索' : '生成漫步主题')}}
+          </button>
+        </view>
+      </view>
+
+      <view wx:else class="theme-choice-panel">
+        <view class="advanced-option-group">
+          <view class="field-label">天气</view>
+          <view class="pill-row selection-row">
+            <view wx:for="{{weatherOptions}}" wx:key="item" class="{{weather === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="weather" data-value="{{item}}">{{item}}</view>
+          </view>
+        </view>
+
+        <view class="advanced-option-group">
+          <view class="field-label">季节</view>
+          <view class="pill-row selection-row">
+            <view wx:for="{{seasonOptions}}" wx:key="item" class="{{season === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="season" data-value="{{item}}">{{item}}</view>
+          </view>
+        </view>
+
+        <view class="advanced-option-group">
+          <view class="field-label">状态</view>
+          <view class="pill-row selection-row">
+            <view wx:for="{{moodOptions}}" wx:key="item" class="{{mood === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="mood" data-value="{{item}}">{{item}}</view>
+          </view>
+        </view>
+
+        <view class="advanced-option-group">
+          <view class="field-label">偏好</view>
+          <view class="pill-row selection-row">
+            <view wx:for="{{preferenceOptions}}" wx:key="item" class="{{preference === item ? 'pill-active' : 'pill'}}" bindtap="setOption" data-field="preference" data-value="{{item}}">{{item}}</view>
+          </view>
+        </view>
+
+        <view class="choice-label advanced-theme-label">主题方向（1 个或 2 个）</view>
+        <view class="theme-choice-help">随机可单选，也可搭配一个固定方向。</view>
+        <view class="pill-row selection-row">
+          <view wx:for="{{combineOptionViews}}" wx:key="label" class="{{item.active ? 'pill-active' : 'pill'}}" bindtap="toggleCombineSelection" data-value="{{item.label}}">{{item.label}}</view>
+        </view>
+
+        <view class="action-grid">
+          <button
+            class="primary-btn action-tall-btn {{(!hasConfirmedExplorePoint || generationBusy) ? 'action-btn-disabled' : ''}}"
+            bindtap="handleSelectedThemeGenerate"
+            loading="{{isCombining}}"
+            disabled="{{!hasConfirmedExplorePoint || generationBusy}}"
+          >
+            {{!hasConfirmedExplorePoint ? '先设置探索点' : (generationBusy ? '正在整理街区线索' : '生成漫步主题')}}
+          </button>
+        </view>
+      </view>
+    </view>
 
     <view class="display-card-shell">
       <theme-card
         theme="{{currentTheme}}"
         generationViewState="{{generationViewState}}"
-        modeLabel="进阶模式"
+        modeLabel="{{walkMode === 'advanced' ? '进阶模式' : '纯粹模式'}}"
         displaySummary="{{displaySummary}}"
         startDisabled="{{!hasConfirmedExplorePoint}}"
         startMain="{{journeyMode === 'team' ? '发起同行漫步' : '开始这次漫步'}}"
@@ -208,7 +254,7 @@
     <view class="debug-card-head">
       <view>
         <view class="section-title">生成调试</view>
-        <view class="section-subtitle">只看最近一次真正传给模型的输入和原始返回，方便判断问题出在 prompt 还是模型输出</view>
+        <view class="section-subtitle">查看最近一次提交给模型的输入与原始返回。</view>
       </view>
       <view class="debug-toggle {{showGenerationDebug ? 'debug-toggle-active' : ''}}" bindtap="toggleGenerationDebug">
         {{showGenerationDebug ? '隐藏' : '显示'}}
@@ -220,7 +266,7 @@
         <view class="debug-panel">
           <view class="debug-panel-hero">
             <view class="debug-panel-title">这次真正传给模型的输入与返回</view>
-            <view class="debug-panel-note">先看摘要，再对照模型完整输入和模型原始返回，判断是 prompt 问题还是模型输出问题</view>
+            <view class="debug-panel-note">先看摘要，再对照模型完整输入和模型原始返回。</view>
           </view>
 
           <view class="debug-summary-grid">
@@ -234,7 +280,7 @@
             <view class="debug-json-head">
               <view>
                 <view class="debug-json-title">模型完整输入</view>
-                <view class="debug-json-hint">这里展示本次真正提交给模型接口的完整请求对象，包括模型名、system prompt、user prompt 和约束性提示</view>
+                <view class="debug-json-hint">包含模型名、system prompt、user prompt 和约束性提示。</view>
               </view>
               <view class="debug-json-pill">Model</view>
             </view>
@@ -249,7 +295,7 @@
             <view class="debug-json-head">
               <view>
                 <view class="debug-json-title">模型原始返回</view>
-                <view class="debug-json-hint">这里展示模型接口返回的原始文本、去代码块后的文本，以及当前程序解析出的 JSON，方便判断问题出在模型还是后处理</view>
+                <view class="debug-json-hint">展示原始文本、去代码块后的文本，以及程序解析出的 JSON。</view>
               </view>
               <view class="debug-json-pill">Raw</view>
             </view>
@@ -261,7 +307,7 @@
           </view>
         </view>
       </view>
-      <view wx:else class="debug-empty">还没有生成过主题。先点一次“AI 生成 / 随机生成 / 选择生成”，这里就会显示本次传给模型的上下文。</view>
+      <view wx:else class="debug-empty">还没有生成过主题。先生成一次，这里会显示本次模型上下文。</view>
     </view>
   </view>
 

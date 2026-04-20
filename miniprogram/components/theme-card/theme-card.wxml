@@ -1,63 +1,82 @@
-<view wx:if="{{generationViewState && generationViewState.visible}}" class="theme-card theme-display theme-display-loading">
-  <view class="display-stage generation-stage" style="background: linear-gradient(135deg, {{generationViewState.vibeColor || '#5a5a40'}} 0%, rgba(255,255,255,0.18) 100%);">
-    <view class="display-glyph-wrap">
-      <view class="display-glyph">{{generationViewState.glyph || '66'}}</view>
-      <view class="display-stage-title">{{generationViewState.title}}</view>
-      <view wx:if="{{generationViewState.badge}}" class="generation-stage-badge">{{generationViewState.badge}}</view>
+<view wx:if="{{generationViewState && generationViewState.visible}}" class="task-ticket {{generationViewState.status === 'error' ? 'task-ticket-error' : ''}}">
+  <view class="ticket-perforation"></view>
+
+  <view class="ticket-head">
+    <view class="ticket-head-copy">
+      <view class="ticket-kicker">{{generationViewState.kicker || modeLabel}}</view>
+      <view class="ticket-title">{{generationViewState.title}}</view>
+      <view wx:if="{{generationViewState.hint}}" class="ticket-subtitle">{{generationViewState.hint}}</view>
+    </view>
+    <view class="ticket-stamp">
+      <view class="ticket-stamp-main">{{generationViewState.glyph || '66'}}</view>
+      <view class="ticket-stamp-sub">{{generationViewState.badge || '生成中'}}</view>
     </view>
   </view>
-  <view class="theme-content">
-    <view class="theme-kicker">{{generationViewState.kicker || modeLabel}}</view>
-    <view class="theme-title">{{generationViewState.hint || ''}}</view>
 
+  <view class="ticket-section">
     <view class="generation-progress-panel">
+      <view class="generation-progress-head">
+        <view class="generation-progress-title">{{generationViewState.progressLabel}}</view>
+        <view class="generation-progress-number">{{generationViewState.progress || 0}}%</view>
+      </view>
       <view class="generation-progress-track">
         <view
           class="generation-progress-fill {{generationViewState.status === 'error' ? 'generation-progress-fill-error' : ''}}"
           style="width: {{generationViewState.progress || 0}}%; transition-duration: {{generationViewState.progressTransitionMs || 600}}ms;"
         ></view>
       </view>
-      <view class="generation-progress-copy">{{generationViewState.progressLabel}}</view>
     </view>
 
     <view class="generation-steps">
-      <view
-        wx:for="{{generationViewState.steps}}"
-        wx:key="key"
-        class="generation-step generation-step-{{item.state}}"
-      >
+      <view wx:for="{{generationViewState.steps}}" wx:key="key" class="generation-step generation-step-{{item.state}}">
         <view class="generation-step-dot">{{item.index}}</view>
         <view class="generation-step-text">{{item.label}}</view>
       </view>
     </view>
+  </view>
 
-    <view class="mission-label">{{generationViewState.status === 'error' ? '重新试试' : '正在组织任务'}}</view>
-    <view wx:for="{{generationViewState.placeholderMissions}}" wx:key="index" class="mission-card mission-item mission-item-placeholder">
-      <view class="mission-order">{{index + 1}}</view>
-      <view class="mission-skeleton">
-        <view class="mission-skeleton-line mission-skeleton-line-main"></view>
-        <view class="mission-skeleton-line mission-skeleton-line-sub"></view>
+  <view class="ticket-section ticket-section-last">
+    <view class="mission-label">{{generationViewState.status === 'error' ? '重新试试' : '任务票据预览'}}</view>
+    <view class="ticket-mission-list">
+      <view wx:for="{{generationViewState.placeholderMissions}}" wx:key="index" class="ticket-mission ticket-mission-placeholder">
+        <view class="ticket-mission-order">{{index + 1}}</view>
+        <view class="mission-skeleton">
+          <view class="mission-skeleton-line mission-skeleton-line-main"></view>
+          <view class="mission-skeleton-line mission-skeleton-line-sub"></view>
+        </view>
       </view>
     </view>
   </view>
 </view>
 
-<view wx:elif="{{theme}}" class="theme-card theme-display">
-  <view class="display-stage" style="background: linear-gradient(135deg, {{theme.vibeColor || '#5a5a40'}} 0%, rgba(255,255,255,0.18) 100%);">
-    <view class="display-glyph-wrap">
-      <view class="display-glyph">{{theme.displayGlyph || '遛'}}</view>
-      <view class="display-stage-title">{{theme.title}}</view>
+<view wx:elif="{{theme}}" class="task-ticket">
+  <view class="ticket-perforation"></view>
+
+  <view class="ticket-head">
+    <view class="ticket-head-copy">
+      <view class="ticket-kicker">{{modeLabel}} · {{theme.category || '城市线索'}}</view>
+      <view class="ticket-title">{{theme.title}}</view>
+      <view class="ticket-subtitle">{{displaySummary}}</view>
+    </view>
+    <view class="ticket-stamp">
+      <view class="ticket-stamp-main">{{theme.displayGlyph || '遛'}}</view>
+      <view class="ticket-stamp-sub">任务票</view>
     </view>
   </view>
-  <view class="theme-content">
-    <view class="theme-kicker">{{theme.category || modeLabel}}</view>
-    <view class="theme-title">{{theme.description || ''}}</view>
+
+  <view class="ticket-section">
+    <view class="theme-description">{{theme.description || ''}}</view>
+  </view>
+
+  <view class="ticket-section ticket-section-last">
     <view class="mission-label">今日任务</view>
-    <view wx:for="{{theme.missions}}" wx:key="index" class="mission-card mission-item">
-      <view class="mission-order">{{index + 1}}</view>
-      <view class="mission-text">{{item}}</view>
+    <view class="ticket-mission-list">
+      <view wx:for="{{theme.missions}}" wx:key="index" class="ticket-mission">
+        <view class="ticket-mission-order">{{index + 1}}</view>
+        <view class="ticket-mission-text">{{item}}</view>
+      </view>
     </view>
-    <button class="primary-btn theme-start-btn {{startDisabled ? 'theme-start-btn-disabled' : ''}}" bindtap="handleStart">
+    <button class="primary-btn theme-start-btn {{startDisabled ? 'theme-start-btn-disabled' : ''}}" bindtap="handleStart" disabled="{{startDisabled}}">
       <view class="theme-start-main">{{startMain}}</view>
       <view class="theme-start-sub">{{startSub}}</view>
     </button>
