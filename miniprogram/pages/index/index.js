@@ -1,7 +1,6 @@
 ﻿const app = getApp();
 const {
   COMBINE_THEME_OPTIONS,
-  PRESET_THEMES,
   RANDOM_THEME_CATEGORIES,
   MOODS,
   WEATHERS,
@@ -16,6 +15,7 @@ const { generateCombinedTheme, generateTheme } = require('../../services/theme')
 const { createWalk } = require('../../services/walk');
 const { getBackendProvider } = require('../../services/api');
 const { isManualLogoutSuppressed } = require('../../services/user');
+const { debugGenerationPanel } = require('../../utils/config');
 const {
   createDefaultPrivacyPopup,
   ensurePrivacyAuthorization,
@@ -1583,12 +1583,9 @@ Page({
     locationAddressDisplay: '',
     latitude: null,
     longitude: null,
-    mapCenterLatitude: null,
-    mapCenterLongitude: null,
     mapScale: 14,
     mapMarkers: [],
     mapCircles: [],
-    isMapDragging: false,
     exploreStep: 'location',
     hasConfirmedExplorePoint: false,
     walkMode: 'pure',
@@ -1605,7 +1602,7 @@ Page({
     debugContextAvailable: false,
     debugContextRows: [],
     showGenerationDebug: false,
-    supportsNearbyPois: false,
+    debugGenerationPanel: !!debugGenerationPanel,
     privacyPopup: createDefaultPrivacyPopup(),
   },
 
@@ -1618,14 +1615,9 @@ Page({
         pendingLocationContext: new Map(),
         pendingNearbyPlaces: new Map(),
       };
-      const randomTheme = PRESET_THEMES[Math.floor(Math.random() * PRESET_THEMES.length)];
-      const currentTheme = trimTheme({ ...randomTheme, locationName: '当前位置', allMissions: randomTheme.missions }, 'pure');
     this.setData({
-      currentTheme,
       latitude: 39.908823,
       longitude: 116.39747,
-      mapCenterLatitude: 39.908823,
-      mapCenterLongitude: 116.39747,
       mapMarkers: [{
         id: 0,
         latitude: 39.908823,
@@ -1642,15 +1634,7 @@ Page({
           fontSize: 12,
         },
       }],
-        supportsNearbyPois: true,
       });
-      this.prefetchGenerationPrerequisites({
-        latitude: 39.908823,
-        longitude: 116.39747,
-        placeName: '天安门-城楼',
-      });
-      app.globalData.currentTheme = currentTheme;
-      this.syncDisplayMeta(currentTheme, 'preset', 'pure');
     },
 
   onUnload() {
@@ -1686,8 +1670,6 @@ Page({
     return {
       latitude,
       longitude,
-      mapCenterLatitude: latitude,
-      mapCenterLongitude: longitude,
       mapMarkers: [{
         id: 0,
         latitude,
@@ -2335,39 +2317,6 @@ Page({
     });
   },
 
-  handleMapRegionChange(event) {
-    if (event.type === 'begin') {
-      this.setData({ isMapDragging: true });
-      return;
-    }
-    if (event.type !== 'end') {
-      return;
-    }
-    if (!this.mapCtx || !this.mapCtx.getCenterLocation) {
-      this.setData({ isMapDragging: false });
-      return;
-    }
-
-    this.mapCtx.getCenterLocation({
-      success: (result) => {
-        const latitude = Number(result.latitude);
-        const longitude = Number(result.longitude);
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          this.setData({ isMapDragging: false });
-          return;
-        }
-        this.setData({
-          mapCenterLatitude: latitude,
-          mapCenterLongitude: longitude,
-          isMapDragging: false,
-        });
-      },
-      fail: () => {
-        this.setData({ isMapDragging: false });
-      },
-    });
-  },
-
   async useCurrentLocation() {
     try {
       await ensurePrivacyAuthorization(this, {
@@ -2643,7 +2592,6 @@ Page({
           pointCount: 0,
           distanceMeters: 0,
         },
-        sticker: null,
         status: 'active',
       });
       const walkId = result && result.id ? result.id : (result && result.walk && (result.walk.id || result.walk._id)) || '';
@@ -2676,7 +2624,6 @@ Page({
           pointCount: 0,
           distanceMeters: 0,
         },
-        sticker: null,
         walkMode: this.data.walkMode,
         generationSource: this.data.currentThemeSource,
         season: generationContext.season || '',

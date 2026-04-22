@@ -50,7 +50,6 @@
         enable-scroll="{{true}}"
         enable-zoom="{{true}}"
         enable-rotate="{{true}}"
-        bindregionchange="handleMapRegionChange"
         class="explore-map"
       />
     </view>
@@ -250,7 +249,7 @@
     </view>
   </view>
 
-  <view class="section-card debug-card">
+  <view wx:if="{{debugGenerationPanel}}" class="section-card debug-card">
     <view class="debug-card-head">
       <view>
         <view class="section-title">生成调试</view>

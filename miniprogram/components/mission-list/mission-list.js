@@ -159,10 +159,10 @@ Component({
       this.triggerEvent('select', { mission });
     },
 
-    verifyMission(event) {
+    captureMissionMedia(event) {
       const mission = event.currentTarget.dataset.mission;
       const mode = event.currentTarget.dataset.mode || '';
-      this.triggerEvent('verify', { mission, mode });
+      this.triggerEvent('capturemedia', { mission, mode });
     },
 
     checkIn(event) {

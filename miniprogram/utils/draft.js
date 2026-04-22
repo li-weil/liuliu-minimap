@@ -26,7 +26,6 @@ function getDefaultDraft() {
       pointCount: 0,
       distanceMeters: 0,
     },
-    sticker: null,
     walkMode: 'pure',
     generationSource: 'preset',
     status: 'active',

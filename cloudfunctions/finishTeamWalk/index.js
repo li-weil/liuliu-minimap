@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk');
 const { recalculateUserAchievements } = require('./achievement');
+const { recalculateUsersAlbumStats } = require('./album-stats');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -102,12 +103,13 @@ exports.main = async (event) => {
     },
   });
 
-  await Promise.all(
-    members
-      .map((item) => item && item.userId)
-      .filter(Boolean)
-      .map((userId) => recalculateUserAchievements({ db, _, openid: userId }))
-  );
+  const memberUserIds = members
+    .map((item) => item && item.userId)
+    .filter(Boolean);
+  await Promise.all([
+    Promise.all(memberUserIds.map((userId) => recalculateUserAchievements({ db, _, openid: userId }))),
+    recalculateUsersAlbumStats({ db, _, userIds: memberUserIds }),
+  ]);
 
   return {
     ok: true,

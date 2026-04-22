@@ -6,6 +6,7 @@ module.exports = {
   amapKey: '54680548c8f450cb7f025ea73d6a4b75',
   brandFontBaseUrl: 'https://cloud1-2gdui7md5af99e5c-1418723303.tcloudbaseapp.com/fonts',
   privacyBypassForDev: true,
+  debugGenerationPanel: false,
   useCloudWalkStorage: true,
   useCloudMediaStorage: true,
 };

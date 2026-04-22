@@ -3,3 +3,4 @@ miniprogram_npm/
 dist/
 .DS_Store
 *.log
+private/

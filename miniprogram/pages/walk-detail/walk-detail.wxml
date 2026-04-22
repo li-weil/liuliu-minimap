@@ -97,31 +97,6 @@
         </view>
       </view>
 
-      <view wx:if="{{walk.sticker}}" class="sticker-section">
-        <view class="panel-head">
-          <view>
-            <view class="panel-kicker">纪念贴纸</view>
-            <view class="panel-title">这次漫步的封存卡</view>
-          </view>
-          <view class="text-action" bindtap="openStickerModal">查看</view>
-        </view>
-
-        <view class="sticker-preview" bindtap="openStickerModal">
-          <image
-            wx:if="{{walk.sticker.imageUrl || walk.sticker.backgroundUrl}}"
-            class="sticker-preview-image"
-            src="{{walk.sticker.imageUrl || walk.sticker.backgroundUrl}}"
-            mode="aspectFill"
-          />
-          <view class="sticker-preview-overlay">
-            <view class="sticker-preview-title">{{walk.themeTitle || '城市漫步'}}</view>
-            <view wx:if="{{walk.sticker.poemLines && walk.sticker.poemLines.length}}" class="sticker-preview-poem">
-              {{walk.sticker.poemLines[0]}}
-            </view>
-          </view>
-        </view>
-      </view>
-
       <view class="mission-archive">
         <view class="panel-head mission-archive-head">
           <view>
@@ -305,43 +280,6 @@
     autoRender="{{true}}"
     bind:generated="handleMissionCardGenerated"
   />
-
-  <view wx:if="{{showStickerModal}}" class="sticker-modal-mask" catchtap="closeStickerModal">
-    <view class="sticker-modal-sheet" catchtap="noop">
-      <view class="sticker-modal-card">
-        <image
-          wx:if="{{walk.sticker.imageUrl || walk.sticker.backgroundUrl}}"
-          class="sticker-modal-image"
-          src="{{walk.sticker.imageUrl || walk.sticker.backgroundUrl}}"
-          mode="aspectFill"
-        />
-        <view class="sticker-modal-overlay">
-          <view class="sticker-modal-theme">{{walk.themeTitle || '城市漫步'}}</view>
-          <view wx:if="{{walk.sticker.poemColumns && walk.sticker.poemColumns.length}}" class="sticker-modal-poem">
-            <view
-              wx:for="{{walk.sticker.poemColumns}}"
-              wx:key="index"
-              wx:for-item="poemColumn"
-              class="sticker-modal-poem-column"
-            >
-              <view
-                wx:for="{{poemColumn}}"
-                wx:key="index"
-                wx:for-item="poemChar"
-                class="sticker-modal-poem-char"
-              >
-                {{poemChar}}
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
-      <view class="modal-actions">
-        <button class="ghost-btn modal-action" bindtap="closeStickerModal">关闭</button>
-        <button class="primary-btn modal-action" bindtap="handleSaveStickerToAlbum">保存贴纸</button>
-      </view>
-    </view>
-  </view>
 
   <view wx:if="{{showMissionCardModal}}" class="mission-card-modal-mask" catchtap="closeMissionCardModal">
     <view class="mission-card-modal-sheet" catchtap="noop">

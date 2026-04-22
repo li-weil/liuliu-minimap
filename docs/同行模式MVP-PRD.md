@@ -19,7 +19,7 @@
 - 探索页生成主题与任务
 - 记录页任务打卡与轨迹记录
 - 足迹页历史回看
-- 贴纸 / 打卡卡片 / 分享能力
+- 打卡卡片 / 分享能力
 
 ## 2. 背景与目标
 
@@ -704,7 +704,6 @@ MVP 只做 `共享任务`，不做分工任务和协作任务。
 - `leaveTeamRoom`
 - `startTeamWalk`
 - `submitTeamContribution`
-- `listTeamActivities`
 - `finishTeamWalk`
 - `getTeamWalkDetail`
 - `listMyTeamWalks`

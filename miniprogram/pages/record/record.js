@@ -4,8 +4,7 @@ const { requestUpload } = require('../../services/api');
 const { explainLocationError, getCurrentLocation } = require('../../utils/location');
 const { normalizeRecordedDuration } = require('../../utils/audio');
 const { chooseImage, chooseVideo } = require('../../utils/media');
-const { verifyMission } = require('../../services/theme');
-const { generateCompanionNote, generateStickerPlan, generateStickerImage } = require('../../services/sticker');
+const { generateCompanionNote } = require('../../services/companion');
 const { isManualLogoutSuppressed } = require('../../services/user');
 const {
   createDefaultPrivacyPopup,
@@ -230,39 +229,6 @@ function mergeRouteStatsWithDraft(draft, isTracking) {
   };
 }
 
-function splitPoemLines(poem) {
-  const normalized = String(poem || '').replace(/[。！？]+$/g, '');
-  const lines = normalized
-    .split(/[，、；]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (lines.length) {
-    return lines;
-  }
-  const compact = normalized.replace(/\s+/g, '');
-  const result = [];
-  for (let index = 0; index < compact.length; index += 6) {
-    result.push(compact.slice(index, index + 6));
-  }
-  return result.filter(Boolean);
-}
-
-function splitPoemColumns(poemLines) {
-  return (poemLines || []).map((line) => String(line || '').split('').filter(Boolean));
-}
-
-function buildThemeKey(theme, draft) {
-  if (!theme) {
-    return '';
-  }
-  return [
-    theme.title || '',
-    theme.category || '',
-    draft && draft.locationName ? draft.locationName : '',
-    draft && draft.walkMode ? draft.walkMode : '',
-  ].join('::');
-}
-
 function ensureMissionAssetMap(missionAssetMap = {}) {
   const nextMap = {};
   Object.keys(missionAssetMap || {}).forEach((mission) => {
@@ -284,22 +250,6 @@ function syncDraftAggregates(draft) {
     photoList: [...(summaryAssets.photoList || [])],
     videoList: [...(summaryAssets.videoList || [])],
     audioList: [...(summaryAssets.audioList || [])],
-  };
-}
-
-function decorateSticker(sticker) {
-  if (!sticker) {
-    return null;
-  }
-  const poemLines = Array.isArray(sticker.poemLines) && sticker.poemLines.length
-    ? sticker.poemLines
-    : splitPoemLines(sticker.poem);
-  return {
-    ...sticker,
-    poemLines,
-    poemColumns: Array.isArray(sticker.poemColumns) && sticker.poemColumns.length
-      ? sticker.poemColumns
-      : splitPoemColumns(poemLines),
   };
 }
 
@@ -333,7 +283,6 @@ function buildDraftFromWalk(walk) {
       pointCount: 0,
       distanceMeters: 0,
     },
-    sticker: walk.sticker || null,
     walkMode: walk.walkMode || 'pure',
     generationSource: walk.generationSource || 'preset',
     season: walk.season || '',
@@ -589,13 +538,10 @@ Page({
   data: {
     activeMission: '',
     summaryMissionKey: SUMMARY_MISSION_KEY,
-    isVerifyingMission: false,
     theme: null,
     draft: null,
     isTracking: false,
     isSaving: false,
-    isGeneratingSticker: false,
-    showStickerModal: false,
     isMapOpen: false,
     isRecordingAudio: false,
     recordingMission: '',
@@ -806,15 +752,7 @@ Page({
     const draft = syncDraftAggregates(app.globalData.walkDraft);
     this.currentWalkId = draft.walkId || this.currentWalkId || '';
     const routeStats = mergeRouteStatsWithDraft(draft, this.data.isTracking);
-    const themeKey = buildThemeKey(theme, draft);
-    let nextDraft = draft;
-    if (draft.sticker && draft.sticker.themeKey && draft.sticker.themeKey !== themeKey) {
-      nextDraft = {
-        ...draft,
-        sticker: null,
-      };
-      this.setDraft(nextDraft);
-    }
+    const nextDraft = draft;
     const missionProgress = buildMissionProgress(theme, nextDraft);
     this.setData({
       activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || SUMMARY_MISSION_KEY),
@@ -822,7 +760,6 @@ Page({
       generatedMissionCardMap: this.generatedMissionCardMap || {},
       draft: {
         ...nextDraft,
-        sticker: decorateSticker(nextDraft.sticker),
       },
       routeStats,
       missionCompletedCount: missionProgress.completedCount,
@@ -848,20 +785,6 @@ Page({
     const missionKey = mission || SUMMARY_MISSION_KEY;
     const missionAssetMap = ensureMissionAssetMap((draft && draft.missionAssetMap) || {});
     return missionAssetMap[missionKey] || createEmptyMissionAssets();
-  },
-
-  getMissionAssetsForVerify(mission) {
-    const missionAssets = this.getMissionAssets(mission);
-    const hasMissionMedia =
-      (missionAssets.photoList && missionAssets.photoList.length) ||
-      (missionAssets.videoList && missionAssets.videoList.length) ||
-      (missionAssets.audioList && missionAssets.audioList.length);
-    const hasMissionNote = missionAssets.noteText && missionAssets.noteText.trim();
-
-    if (hasMissionMedia || hasMissionNote) {
-      return missionAssets;
-    }
-    return createEmptyMissionAssets();
   },
 
   attachMissionAsset(draft, mission, field, asset) {
@@ -940,7 +863,7 @@ Page({
     });
   },
 
-  async handleMissionVerify(event) {
+  async handleMissionMediaCapture(event) {
     const mission = event.detail.mission || this.data.activeMission;
     const mode = event.detail.mode || '';
     if (mission) {
@@ -958,10 +881,6 @@ Page({
     }
     if (mode === 'audio') {
       this.toggleAudioRecording(mission);
-      return;
-    }
-    if (mode === 'verify') {
-      await this.verifyMissionForTask(mission);
       return;
     }
   },
@@ -987,11 +906,11 @@ Page({
       return missionAssets.companionNote;
     }
 
-      const result = await generateCompanionNote({
-        themeTitle: this.data.theme && this.data.theme.title ? this.data.theme.title : '',
-        locationName: this.data.draft && this.data.draft.locationName ? this.data.draft.locationName : '',
-        mission,
-        userNoteText,
+    const result = await generateCompanionNote({
+      themeTitle: this.data.theme && this.data.theme.title ? this.data.theme.title : '',
+      locationName: this.data.draft && this.data.draft.locationName ? this.data.draft.locationName : '',
+      mission,
+      userNoteText,
       photoList,
       previousCompanionNote: missionAssets && missionAssets.companionNote ? missionAssets.companionNote : '',
       regenerationHint: forceRefresh ? `${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : '',
@@ -1436,110 +1355,6 @@ Page({
     }
   },
 
-  async verifyActiveMission() {
-    const mission = this.data.activeMission;
-    if (!mission) {
-      wx.showToast({ title: '先选择一个任务', icon: 'none' });
-      return;
-    }
-
-    const missionAssets = this.getMissionAssets(mission);
-    if (!(missionAssets.photoList || []).length) {
-      wx.showToast({ title: '请先上传图片再核验', icon: 'none' });
-      return;
-    }
-
-    this.setData({ isVerifyingMission: true });
-    try {
-      const uploadedPhotos = await Promise.all((missionAssets.photoList || []).map((path) => this.uploadAsset(path, 'image')));
-      const review = await verifyMission({
-        mission,
-        noteText: missionAssets.noteText || '',
-        fileIDs: uploadedPhotos,
-      });
-      const nextReview = {
-        passed: !!review.passed,
-        comment: review.comment,
-        confidence: review.confidence || 'medium',
-        reviewedAt: review.reviewedAt || Date.now(),
-        photoList: uploadedPhotos,
-      };
-      if (review.passed) {
-        this.markMissionPassed(mission, nextReview);
-      } else {
-        this.saveMissionReview(mission, nextReview);
-      }
-      wx.showToast({ title: review.passed ? '核验通过' : '已给出建议', icon: 'none' });
-    } catch (error) {
-      wx.showToast({ title: '核验失败', icon: 'none' });
-    } finally {
-      this.setData({ isVerifyingMission: false });
-    }
-  },
-
-  async verifyMissionForTask(mission) {
-    if (!mission) {
-      wx.showToast({ title: '先选择一个任务', icon: 'none' });
-      return;
-    }
-
-    const missionAssets = this.getMissionAssetsForVerify(mission);
-    const missionNoteText = missionAssets.noteText || '';
-
-    const clearedReviews = { ...(this.data.draft.missionReviews || {}) };
-    delete clearedReviews[mission];
-    this.setDraft({
-      ...this.data.draft,
-      missionReviews: clearedReviews,
-      selectedMission: mission,
-    });
-    this.setData({ isVerifyingMission: true });
-    try {
-      const uploadedImages = await Promise.all((missionAssets.photoList || []).map((path) => this.uploadAsset(path, 'image')));
-      const uploadedVideos = await Promise.all((missionAssets.videoList || []).map((item) => this.uploadAsset(item.tempFilePath || item, 'video')));
-      const uploadedAudios = await Promise.all((missionAssets.audioList || []).map((item) => this.uploadAsset(item.tempFilePath || item, 'audio')));
-      const review = await verifyMission({
-        missionId: `mission-${((this.data.theme && this.data.theme.missions) || []).indexOf(mission) + 1}`,
-        mission,
-        missionNoteText,
-        overallNoteText: this.data.draft.noteText,
-        imageFileIDs: uploadedImages,
-        videoFileIDs: uploadedVideos,
-        audioFileIDs: uploadedAudios,
-      });
-      const nextReview = {
-        passed: !!review.passed,
-        score: Number(review.score || 0),
-        version: review.version || '',
-        comment: review.comment,
-        confidence: review.confidence || 'medium',
-        evidence: Array.isArray(review.evidence) ? review.evidence : [],
-        reviewedAt: review.reviewedAt || Date.now(),
-        mediaSummary: review.mediaSummary || {
-          imageCount: uploadedImages.length,
-          videoCount: uploadedVideos.length,
-          audioCount: uploadedAudios.length,
-        },
-      };
-      if (review.passed) {
-        this.markMissionPassed(mission, nextReview);
-      } else {
-        this.saveMissionReview(mission, nextReview);
-      }
-      this.updateMissionAssets(mission, {
-        ...missionAssets,
-        photoList: uploadedImages,
-        videoList: uploadedVideos,
-        audioList: uploadedAudios,
-      });
-      wx.showToast({ title: `已评分 ${nextReview.score} 分`, icon: 'none' });
-    } catch (error) {
-      wx.showToast({ title: '核验失败', icon: 'none' });
-    } finally {
-      this.setData({ isVerifyingMission: false });
-    }
-  },
-
   removeMissionPhoto(event) {
     const mission = event.detail.mission || event.currentTarget.dataset.mission;
     const index = Number(event.detail.index !== undefined ? event.detail.index : event.currentTarget.dataset.index);
@@ -1873,7 +1688,6 @@ Page({
           pointCount: routeStats.pointCount,
           distanceMeters: routeStats.distanceMeters,
         },
-        sticker: saveDraft.sticker || null,
         status: 'finished',
       });
       app.clearWalkDraft(walkId);
@@ -2037,78 +1851,6 @@ Page({
     return requestUpload(filePath, { kind }, options);
   },
 
-  openStickerModal() {
-    if (!(this.data.draft && this.data.draft.sticker)) {
-      return;
-    }
-    this.setData({ showStickerModal: true });
-  },
-
-  closeStickerModal() {
-    this.setData({ showStickerModal: false });
-  },
-
-  resolveStickerUrl() {
-    const sticker = this.data.draft && this.data.draft.sticker;
-    if (!sticker) {
-      return Promise.reject(new Error('missing_sticker'));
-    }
-    const src = sticker.imageUrl || sticker.backgroundUrl || '';
-    if (!src) {
-      return Promise.reject(new Error('missing_sticker_image'));
-    }
-    if (String(src).startsWith('cloud://')) {
-      return wx.cloud.getTempFileURL({ fileList: [src] }).then((result) => {
-        const item = result.fileList && result.fileList[0];
-        return item && item.tempFileURL ? item.tempFileURL : '';
-      });
-    }
-    return Promise.resolve(src);
-  },
-
-  async handleSaveStickerToAlbum() {
-    try {
-      await ensurePrivacyAuthorization(this, {
-        title: '保存到相册前说明',
-        content: '保存贴纸到本地时会使用相册相关能力，仅用于把这张贴纸存到你的设备相册中。',
-      });
-      const imageUrl = await this.resolveStickerUrl();
-      if (!imageUrl) {
-        throw new Error('missing_sticker_image');
-      }
-      const download = await downloadFile(imageUrl);
-      if (!download || !download.tempFilePath) {
-        throw new Error('download_sticker_failed');
-      }
-      await saveImageToAlbum(download.tempFilePath);
-      wx.showToast({ title: '已保存到相册', icon: 'success' });
-    } catch (error) {
-      if (error && error.message === 'privacy_authorization_denied') {
-        wx.showToast({ title: '未同意隐私说明，暂时无法保存', icon: 'none' });
-        return;
-      }
-      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
-      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
-        wx.showModal({
-          title: '需要相册权限',
-          content: '请在设置里允许保存到相册后，再试一次',
-          confirmText: '去设置',
-          success: (res) => {
-            if (res.confirm) {
-              wx.openSetting({});
-            }
-          },
-        });
-        return;
-      }
-      wx.showToast({ title: '保存贴纸失败', icon: 'none' });
-    }
-  },
-
-  handleShareStickerFromRecord() {
-    wx.showToast({ title: '先保存漫步，再去详情页分享', icon: 'none' });
-  },
-
   handlePrivacyAgree() {
     resolvePrivacyAuthorization(this);
   },
@@ -2121,66 +1863,6 @@ Page({
     openPrivacyContract().catch(() => {
       wx.showToast({ title: '暂时无法打开隐私指引', icon: 'none' });
     });
-  },
-
-  async handleGenerateSticker() {
-    if (!this.data.theme) {
-      wx.showToast({ title: '先生成漫步主题', icon: 'none' });
-      return;
-    }
-
-    this.setData({ isGeneratingSticker: true });
-    try {
-      const planResult = await generateStickerPlan({
-        themeTitle: this.data.theme.title,
-        themeDescription: this.data.theme.description,
-        themeCategory: this.data.theme.category,
-        walkMode: this.data.draft.walkMode,
-        locationName: this.data.draft.locationName,
-        overallNoteText: this.data.draft.noteText,
-        missions: this.data.theme.missions || [],
-        completedMissions: this.data.draft.completedMissions || [],
-      });
-      const stickerPlan = planResult && planResult.sticker ? planResult.sticker : null;
-      if (!stickerPlan) {
-        wx.showToast({ title: '贴纸文案生成失败', icon: 'none' });
-        return;
-      }
-      const themedStickerPlan = {
-        ...stickerPlan,
-        themeKey: buildThemeKey(this.data.theme, this.data.draft),
-      };
-      this.setDraft({
-        ...this.data.draft,
-        sticker: decorateSticker(themedStickerPlan),
-      });
-      const result = await generateStickerImage({
-        sticker: themedStickerPlan,
-        themeTitle: this.data.theme.title,
-      });
-      const sticker = result && result.sticker ? result.sticker : null;
-      if (!sticker) {
-        wx.showToast({ title: '贴纸生成失败', icon: 'none' });
-        return;
-      }
-      this.setDraft({
-        ...this.data.draft,
-        sticker: decorateSticker({
-          ...sticker,
-          themeKey: buildThemeKey(this.data.theme, this.data.draft),
-        }),
-      });
-      wx.showToast({ title: '贴纸图片已生成', icon: 'success' });
-    } catch (error) {
-      wx.showModal({
-        title: '贴纸生成失败',
-        content: (error && error.message) || '未知错误',
-        showCancel: false,
-        confirmText: '知道了',
-      });
-    } finally {
-      this.setData({ isGeneratingSticker: false });
-    }
   },
 
   noop() {},

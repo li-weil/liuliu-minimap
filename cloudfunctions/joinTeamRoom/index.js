@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { recalculateUserAlbumStats } = require('./album-stats');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -113,9 +114,11 @@ exports.main = async (event) => {
       createdAt: now,
     },
   });
+  const albumStats = await recalculateUserAlbumStats({ db, _: db.command, openid });
 
   return {
     joined: true,
+    albumStats,
     room: await getRoomBundle(roomId, openid),
   };
 };

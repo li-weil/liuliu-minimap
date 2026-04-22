@@ -100,7 +100,7 @@
       accentColor="{{theme.vibeColor || '#626247'}}"
       checkingInMission="{{checkingInMission}}"
       bind:select="selectMission"
-      bind:verify="handleMissionVerify"
+      bind:capturemedia="handleMissionMediaCapture"
       bind:checkin="handleMissionCheckIn"
       bind:missionnote="handleMissionNoteInput"
       bind:removephoto="removeMissionPhoto"

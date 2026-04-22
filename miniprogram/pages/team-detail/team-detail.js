@@ -1,4 +1,5 @@
-const { deleteTeamWalk, getTeamWalkDetail } = require('../../services/team');
+const { requestUpload } = require('../../services/api');
+const { deleteTeamWalk, getTeamWalkDetail, saveTeamMissionCard } = require('../../services/team');
 const { batchResolveCloudFileIds, isCloudFileId } = require('../../services/asset');
 const { ensurePlayableLocalAudio } = require('../../utils/audio');
 const { formatDate } = require('../../utils/format');
@@ -107,6 +108,18 @@ function buildMissionCardEntries(group, room) {
       photoList: useActualContent && contribution ? contribution.photoList || [] : [],
     };
   });
+}
+
+function getPersistedMissionCardPath(room, mission) {
+  const missionCardMap = room && room.missionCardMap ? room.missionCardMap : {};
+  const card = missionCardMap && mission ? missionCardMap[mission] : null;
+  if (!card) {
+    return '';
+  }
+  if (typeof card === 'string') {
+    return card;
+  }
+  return card.cardImagePath || '';
 }
 
 async function downloadAudioToLocal(src) {
@@ -436,8 +449,9 @@ Page({
       return;
     }
     const room = this.data.room || {};
+    const persistedCardPath = getPersistedMissionCardPath(room, group.mission);
     this.setData({
-      currentMissionCardSrc: '',
+      currentMissionCardSrc: persistedCardPath,
       isRenderingMissionCard: false,
       missionCardPendingNote: false,
       missionCardPendingText: '',
@@ -487,11 +501,42 @@ Page({
     this.setData({
       currentMissionCardSrc: tempFilePath,
       isRenderingMissionCard: false,
+      missionCardPendingNote: true,
+      missionCardPendingText: '正在保存团队卡片...',
       missionCardRenderPayload: {
         ...this.data.missionCardRenderPayload,
         renderVersion: 0,
       },
     });
+    try {
+      const cardImagePath = await requestUpload(tempFilePath, { kind: 'image' });
+      const result = await saveTeamMissionCard({
+        roomId: this.data.roomId,
+        missionKey: activeMissionLabel,
+        cardImagePath,
+      });
+      const nextMissionCardMap = result && result.missionCardMap
+        ? result.missionCardMap
+        : {
+          ...((this.data.room && this.data.room.missionCardMap) || {}),
+          [activeMissionLabel]: { cardImagePath },
+        };
+      this.setData({
+        currentMissionCardSrc: cardImagePath,
+        missionCardPendingNote: false,
+        missionCardPendingText: '',
+        room: {
+          ...(this.data.room || {}),
+          missionCardMap: nextMissionCardMap,
+        },
+      });
+    } catch (error) {
+      this.setData({
+        missionCardPendingNote: false,
+        missionCardPendingText: '',
+      });
+      wx.showToast({ title: '卡片已生成，暂未同步', icon: 'none' });
+    }
   },
 
   openMissionCardModal(event) {

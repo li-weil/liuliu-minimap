@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { recalculateUsersAlbumStats } = require('./album-stats');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -42,6 +43,8 @@ exports.main = async (event) => {
 
   const ownerResult = await db.collection('teamWalkMembers').where({ roomId, userId: openid }).limit(1).get();
   const owner = ownerResult.data && ownerResult.data[0] ? ownerResult.data[0] : null;
+  const membersResult = await db.collection('teamWalkMembers').where({ roomId, status: 'joined' }).get();
+  const members = membersResult.data || [];
   const now = Date.now();
   await db.collection('teamWalkRooms').doc(roomId).update({
     data: {
@@ -60,6 +63,11 @@ exports.main = async (event) => {
       payload: {},
       createdAt: now,
     },
+  });
+  await recalculateUsersAlbumStats({
+    db,
+    _: db.command,
+    userIds: members.map((item) => item.userId).filter(Boolean),
   });
   return {
     ok: true,

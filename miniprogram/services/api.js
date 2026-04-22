@@ -4,9 +4,14 @@ const { inferExtension } = require('../utils/media');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'listPublicWalks', 'getWalkDetail', 'verifyMission', 'generateSticker', 'generateStickerPlan', 'generateStickerImage', 'generateCompanionNote', 'publishWalkShare', 'deleteWalk', 'saveTeamMissionCard', 'updateTeamMemberDraftState']
+    ? ['createWalk', 'listMyWalks', 'getWalkDetail', 'publishWalkShare', 'deleteWalk']
     : []
 );
+const CLOUD_ONLY_ENDPOINTS = new Set([
+  'generateCompanionNote',
+  'saveTeamMissionCard',
+  'updateTeamMemberDraftState',
+]);
 
 function normalizeThemeResponse(data, requestData, source) {
   if (data && typeof data === 'object' && data.theme) {
@@ -110,7 +115,6 @@ function normalizeWalkRecord(item) {
       startedLabel: formatTrackTime(trackStartedAt),
       stoppedLabel: formatTrackTime(trackStoppedAt),
     },
-    sticker: item.sticker || null,
     photoList,
     videoList,
     audioList,
@@ -283,6 +287,115 @@ function normalizeTeamWalkRecord(item) {
   };
 }
 
+function pickRecordList(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (!data || typeof data !== 'object') {
+    return [];
+  }
+  if (Array.isArray(data.records)) {
+    return data.records;
+  }
+  if (Array.isArray(data.items)) {
+    return data.items;
+  }
+  if (Array.isArray(data.list)) {
+    return data.list;
+  }
+  if (Array.isArray(data.content)) {
+    return data.content;
+  }
+  if (data.data && typeof data.data === 'object') {
+    return pickRecordList(data.data);
+  }
+  return [];
+}
+
+function normalizeListPagination(data, requestData = {}, recordCount = 0) {
+  const pageSize = Number(requestData.limit || requestData.pageSize || 20);
+  const limit = Number.isFinite(pageSize) && pageSize > 0 ? pageSize : 20;
+  const requestOffset = requestData.offset !== undefined
+    ? Number(requestData.offset || 0)
+    : Number(requestData.skip || 0);
+  const page = Number(requestData.page || 1);
+  const offset = Number.isFinite(requestOffset) && requestOffset > 0
+    ? requestOffset
+    : (Number.isFinite(page) && page > 1 ? (page - 1) * limit : 0);
+  const meta = data && typeof data === 'object'
+    ? (data.pagination || data.page || data)
+    : {};
+  const hasMore = meta.hasMore !== undefined
+    ? !!meta.hasMore
+    : meta.hasNext !== undefined
+      ? !!meta.hasNext
+      : meta.last !== undefined
+        ? !meta.last
+        : recordCount >= limit;
+  const nextOffset = meta.nextOffset !== undefined
+    ? Number(meta.nextOffset || 0)
+    : offset + recordCount;
+  return {
+    limit,
+    offset,
+    nextOffset,
+    hasMore,
+  };
+}
+
+function createDefaultAlbumStats() {
+  const emptyStatusCounts = {
+    all: 0,
+    pending: 0,
+    active: 0,
+    finished: 0,
+  };
+  return {
+    totalCount: 0,
+    soloCount: 0,
+    teamCount: 0,
+    statusCounts: { ...emptyStatusCounts },
+    typeStatusCounts: {
+      solo: { ...emptyStatusCounts },
+      team: { ...emptyStatusCounts },
+    },
+    updatedAt: 0,
+  };
+}
+
+function normalizeAlbumStats(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const defaults = createDefaultAlbumStats();
+  const statusCounts = value.statusCounts || {};
+  const typeStatusCounts = value.typeStatusCounts || {};
+  return {
+    totalCount: Number(value.totalCount || 0),
+    soloCount: Number(value.soloCount || 0),
+    teamCount: Number(value.teamCount || 0),
+    statusCounts: {
+      all: Number(statusCounts.all || value.totalCount || 0),
+      pending: Number(statusCounts.pending || 0),
+      active: Number(statusCounts.active || 0),
+      finished: Number(statusCounts.finished || 0),
+    },
+    typeStatusCounts: {
+      solo: {
+        ...defaults.typeStatusCounts.solo,
+        ...(typeStatusCounts.solo || {}),
+        all: Number((typeStatusCounts.solo && typeStatusCounts.solo.all) || value.soloCount || 0),
+      },
+      team: {
+        ...defaults.typeStatusCounts.team,
+        ...(typeStatusCounts.team || {}),
+        all: Number((typeStatusCounts.team && typeStatusCounts.team.all) || value.teamCount || 0),
+      },
+    },
+    updatedAt: Number(value.updatedAt || 0),
+  };
+}
+
 const ENDPOINTS = {
   syncUser: {
     cloudName: 'syncUser',
@@ -354,33 +467,8 @@ const ENDPOINTS = {
       normalizeResponse: (data) => (Array.isArray(data) ? data : []),
     },
   },
-  verifyMission: {
-    cloudName: 'verifyMission',
-    web: {
-      path: '/ai/missions/verify',
-      method: 'POST',
-      normalizeRequest: (data) => {
-        const fileIDs = Array.isArray(data.fileIDs) ? data.fileIDs.filter(Boolean) : [];
-        return {
-          mission: data.mission,
-          noteText: data.noteText,
-          fileIDs,
-          fileUrls: fileIDs.filter((item) => String(item).startsWith('http')),
-        };
-      },
-    },
-  },
-  generateSticker: {
-    cloudName: 'generateSticker',
-  },
-  generateStickerPlan: {
-    cloudName: 'generateSticker',
-  },
-  generateStickerImage: {
-    cloudName: 'generateSticker',
-  },
   generateCompanionNote: {
-    cloudName: 'generateSticker',
+    cloudName: 'generateCompanionNote',
   },
   createWalk: {
     cloudName: 'createWalk',
@@ -434,7 +522,6 @@ const ENDPOINTS = {
           trackStartedAt: data.trackStartedAt || null,
           trackStoppedAt: data.trackStoppedAt || null,
           routeStats: data.routeStats || null,
-          sticker: data.sticker || null,
           photoUrl,
           videoUrl,
           audioUrl,
@@ -447,19 +534,30 @@ const ENDPOINTS = {
   },
   listMyWalks: {
     cloudName: 'listMyWalks',
-    normalizeCloudResponse: (data) => ({
-      records: Array.isArray(data.records) ? data.records.map(normalizeWalkRecord).filter(Boolean) : [],
-    }),
+    normalizeCloudResponse: (data, requestData) => {
+      const records = pickRecordList(data).map(normalizeWalkRecord).filter(Boolean);
+      return {
+        records,
+        albumStats: normalizeAlbumStats(data && data.albumStats),
+        pagination: normalizeListPagination(data, requestData, records.length),
+      };
+    },
     web: {
       path: '/walks/me',
       method: 'GET',
       normalizeRequest: (data) => ({
-        page: 1,
+        page: data.page || (data.offset ? Math.floor(Number(data.offset || 0) / Number(data.limit || data.pageSize || 20)) + 1 : 1),
         pageSize: data.limit || data.pageSize || 20,
+        sort: data.sort || 'album',
       }),
-      normalizeResponse: (data) => ({
-        records: Array.isArray(data) ? data.map(normalizeWalkRecord).filter(Boolean) : [],
-      }),
+      normalizeResponse: (data, requestData) => {
+        const records = pickRecordList(data).map(normalizeWalkRecord).filter(Boolean);
+        return {
+          records,
+          albumStats: normalizeAlbumStats(data && data.albumStats),
+          pagination: normalizeListPagination(data, requestData, records.length),
+        };
+      },
     },
   },
   listMyAchievements: {
@@ -473,23 +571,6 @@ const ENDPOINTS = {
       },
       updatedAt: data && data.updatedAt ? data.updatedAt : 0,
     }),
-  },
-  listPublicWalks: {
-    cloudName: 'listPublicWalks',
-    normalizeCloudResponse: (data) => ({
-      records: Array.isArray(data.records) ? data.records.map(normalizeWalkRecord).filter(Boolean) : [],
-    }),
-    web: {
-      path: '/walks/public',
-      method: 'GET',
-      normalizeRequest: (data) => ({
-        page: 1,
-        pageSize: data.limit || data.pageSize || 20,
-      }),
-      normalizeResponse: (data) => ({
-        records: Array.isArray(data) ? data.map(normalizeWalkRecord).filter(Boolean) : [],
-      }),
-    },
   },
   getWalkDetail: {
     cloudName: 'getWalkDetail',
@@ -591,12 +672,6 @@ const ENDPOINTS = {
       reason: data && data.reason ? data.reason : '',
     }),
   },
-  listTeamActivities: {
-    cloudName: 'listTeamActivities',
-    normalizeCloudResponse: (data) => ({
-      activities: Array.isArray(data && data.activities) ? data.activities.map(normalizeTeamActivity).filter(Boolean) : [],
-    }),
-  },
   finishTeamWalk: {
     cloudName: 'finishTeamWalk',
     normalizeCloudResponse: (data) => ({
@@ -618,9 +693,14 @@ const ENDPOINTS = {
   },
   listMyTeamWalks: {
     cloudName: 'listMyTeamWalks',
-    normalizeCloudResponse: (data) => ({
-      records: Array.isArray(data && data.records) ? data.records.map(normalizeTeamWalkRecord).filter(Boolean) : [],
-    }),
+    normalizeCloudResponse: (data, requestData) => {
+      const records = pickRecordList(data).map(normalizeTeamWalkRecord).filter(Boolean);
+      return {
+        records,
+        albumStats: normalizeAlbumStats(data && data.albumStats),
+        pagination: normalizeListPagination(data, requestData, records.length),
+      };
+    },
   },
   uploadMedia: {
     cloudName: '',
@@ -647,7 +727,7 @@ function shouldUseCloudEndpoint(name) {
   if (!apiBaseUrl) {
     return true;
   }
-  return CLOUD_ENDPOINTS.has(name);
+  return CLOUD_ONLY_ENDPOINTS.has(name) || CLOUD_ENDPOINTS.has(name);
 }
 
 function getStoredToken() {

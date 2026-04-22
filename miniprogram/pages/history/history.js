@@ -34,14 +34,26 @@ function readFeaturedAchievementId() {
   }
 }
 
-function resolveWalkSortTimestamp(item) {
+function resolveAlbumSortTimestamp(item) {
   if (!item || typeof item !== 'object') {
     return 0;
   }
-  if (item.status === 'finished') {
-    return Number(item.endedAt || item.createdAt || 0);
+  const statusKey = item.albumStatusKey || normalizeAlbumStatus(item);
+  if (statusKey === 'finished') {
+    return Number(item.endedAt || item.updatedAt || item.createdAt || 0);
   }
-  return Number(item.createdAt || 0);
+  return Number(item.startedAt || item.createdAt || item.updatedAt || 0);
+}
+
+function resolveAlbumSortRank(item) {
+  const statusKey = item && item.albumStatusKey ? item.albumStatusKey : normalizeAlbumStatus(item);
+  if (statusKey === 'active') {
+    return 0;
+  }
+  if (statusKey === 'pending') {
+    return 1;
+  }
+  return 2;
 }
 
 const ALBUM_STATUS_OPTIONS = [
@@ -57,25 +69,25 @@ const ALBUM_TYPE_OPTIONS = [
   { key: 'team', label: '同行' },
 ];
 
+const ALBUM_PAGE_SIZE = 10;
+const ALBUM_FETCH_PAGE_SIZE = 50;
+
 function normalizeAlbumStatus(item) {
   if (!item || typeof item !== 'object') {
     return 'pending';
   }
 
   const status = String(item.status || '').toLowerCase();
+  if (status === 'finished' || item.endedAt) {
+    return 'finished';
+  }
   if (status === 'waiting' || status === 'pending') {
     return 'pending';
   }
   if (status === 'active') {
     return 'active';
   }
-  if (status === 'finished') {
-    return 'finished';
-  }
 
-  if (item.endedAt) {
-    return 'finished';
-  }
   if (item.startedAt) {
     return 'active';
   }
@@ -122,6 +134,89 @@ function buildAlbumStatusChips(counts = {}) {
   }));
 }
 
+function createDefaultAlbumStats() {
+  const emptyStatusCounts = {
+    all: 0,
+    pending: 0,
+    active: 0,
+    finished: 0,
+  };
+  return {
+    totalCount: 0,
+    soloCount: 0,
+    teamCount: 0,
+    statusCounts: { ...emptyStatusCounts },
+    typeStatusCounts: {
+      solo: { ...emptyStatusCounts },
+      team: { ...emptyStatusCounts },
+    },
+    updatedAt: 0,
+  };
+}
+
+function normalizeAlbumStats(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const defaults = createDefaultAlbumStats();
+  const statusCounts = value.statusCounts || {};
+  const typeStatusCounts = value.typeStatusCounts || {};
+  const albumStats = {
+    totalCount: Number(value.totalCount || 0),
+    soloCount: Number(value.soloCount || 0),
+    teamCount: Number(value.teamCount || 0),
+    statusCounts: {
+      ...defaults.statusCounts,
+      all: Number(statusCounts.all || value.totalCount || 0),
+      pending: Number(statusCounts.pending || 0),
+      active: Number(statusCounts.active || 0),
+      finished: Number(statusCounts.finished || 0),
+    },
+    typeStatusCounts: {
+      solo: {
+        ...defaults.typeStatusCounts.solo,
+        ...(typeStatusCounts.solo || {}),
+        all: Number((typeStatusCounts.solo && typeStatusCounts.solo.all) || value.soloCount || 0),
+      },
+      team: {
+        ...defaults.typeStatusCounts.team,
+        ...(typeStatusCounts.team || {}),
+        all: Number((typeStatusCounts.team && typeStatusCounts.team.all) || value.teamCount || 0),
+      },
+    },
+    updatedAt: Number(value.updatedAt || 0),
+  };
+  return Number.isFinite(albumStats.totalCount) ? albumStats : null;
+}
+
+function getAlbumStatsCount(albumStats, statusKey = 'all', typeKey = 'all') {
+  if (!albumStats) {
+    return null;
+  }
+  const normalizedStatus = statusKey || 'all';
+  const normalizedType = typeKey || 'all';
+  if (normalizedType === 'all') {
+    return Number((albumStats.statusCounts || {})[normalizedStatus] || 0);
+  }
+  const typeCounts = (albumStats.typeStatusCounts || {})[normalizedType] || {};
+  return Number(typeCounts[normalizedStatus] || 0);
+}
+
+function buildAlbumStatusCountsFromStats(albumStats, typeFilter = 'all') {
+  if (!albumStats) {
+    return null;
+  }
+  const source = typeFilter === 'all'
+    ? albumStats.statusCounts || {}
+    : ((albumStats.typeStatusCounts || {})[typeFilter] || {});
+  return {
+    all: Number(source.all || 0),
+    pending: Number(source.pending || 0),
+    active: Number(source.active || 0),
+    finished: Number(source.finished || 0),
+  };
+}
+
 function buildAlbumTypeCounts(walks = [], statusFilter = 'all') {
   const scopedWalks = statusFilter === 'all'
     ? walks
@@ -148,6 +243,18 @@ function buildAlbumTypeChips(counts = {}) {
     ...item,
     count: Number(counts[item.key] || 0),
   }));
+}
+
+function buildAlbumTypeCountsFromStats(albumStats, statusFilter = 'all') {
+  if (!albumStats) {
+    return null;
+  }
+  const normalizedStatus = statusFilter || 'all';
+  return {
+    all: Number((albumStats.statusCounts || {})[normalizedStatus] || 0),
+    solo: Number((((albumStats.typeStatusCounts || {}).solo || {})[normalizedStatus]) || 0),
+    team: Number((((albumStats.typeStatusCounts || {}).team || {})[normalizedStatus]) || 0),
+  };
 }
 
 function buildAlbumEmptyState(statusKey, typeKey) {
@@ -177,7 +284,7 @@ function buildAlbumFilterSummary(statusKey, typeKey) {
 }
 
 function buildAlbumResultCountLabel(count) {
-  return `当前 ${Number(count || 0)} 条记录`;
+  return `共 ${Number(count || 0)} 条记录`;
 }
 
 function buildRecentAchievements(achievements = []) {
@@ -192,6 +299,124 @@ function buildHistoryShareTitle(data = {}) {
   }
 
   return '遛遛 | 邀你一起 citywalk';
+}
+
+function normalizeHistoryWalk(item) {
+  const albumStatusKey = normalizeAlbumStatus(item);
+  const recordType = normalizeAlbumRecordType(item);
+  const recordId = item && (item._id || item.id) ? (item._id || item.id) : '';
+  return {
+    ...item,
+    recordType,
+    albumRecordKey: `${recordType}:${recordId}`,
+    createdAtLabel: formatDate(item.createdAt),
+    albumStatusKey,
+    albumStatusLabel: getAlbumStatusLabel(albumStatusKey),
+  };
+}
+
+function getWalkIdentity(item) {
+  if (!item) {
+    return '';
+  }
+  return `${normalizeAlbumRecordType(item)}:${item._id || item.id || ''}`;
+}
+
+function mergeWalkPages(existingWalks = [], incomingWalks = []) {
+  const result = [];
+  const seen = new Set();
+  [...existingWalks, ...incomingWalks].forEach((item) => {
+    const key = getWalkIdentity(item);
+    if (!key || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push(item);
+  });
+  return result.sort(compareHistoryWalks);
+}
+
+function compareHistoryWalks(left, right) {
+  const leftRank = resolveAlbumSortRank(left);
+  const rightRank = resolveAlbumSortRank(right);
+  if (leftRank !== rightRank) {
+    return leftRank - rightRank;
+  }
+  return resolveAlbumSortTimestamp(right) - resolveAlbumSortTimestamp(left);
+}
+
+function resolveListPage(result = {}, fallbackOffset = 0, fallbackLimit = ALBUM_FETCH_PAGE_SIZE) {
+  const records = Array.isArray(result.records) ? result.records : [];
+  const pagination = result.pagination || {};
+  const nextOffset = pagination.nextOffset !== undefined
+    ? Number(pagination.nextOffset || 0)
+    : fallbackOffset + records.length;
+  const hasMore = pagination.hasMore !== undefined
+    ? !!pagination.hasMore
+    : records.length >= fallbackLimit;
+  return {
+    records,
+    nextOffset,
+    hasMore,
+  };
+}
+
+function buildAlbumPagerItems(currentPage, totalPages) {
+  const total = Number(totalPages || 0);
+  if (total <= 1) {
+    return [];
+  }
+  const current = Math.min(Math.max(Number(currentPage || 1), 1), total);
+  const pages = [];
+  const addPage = (page) => {
+    if (page < 1 || page > total || pages.includes(page)) {
+      return;
+    }
+    pages.push(page);
+  };
+
+  if (total <= 9) {
+    for (let page = 1; page <= total; page += 1) {
+      addPage(page);
+    }
+  } else if (current <= 5) {
+    for (let page = 1; page <= 7; page += 1) {
+      addPage(page);
+    }
+    addPage(total);
+  } else if (current >= total - 4) {
+    addPage(1);
+    for (let page = total - 6; page <= total; page += 1) {
+      addPage(page);
+    }
+  } else {
+    addPage(1);
+    for (let page = current - 2; page <= current + 2; page += 1) {
+      addPage(page);
+    }
+    addPage(total);
+  }
+
+  pages.sort((left, right) => left - right);
+  const items = [];
+  pages.forEach((page, index) => {
+    const previous = pages[index - 1];
+    if (previous && page - previous > 1) {
+      items.push({
+        key: `ellipsis-${previous}-${page}`,
+        type: 'ellipsis',
+        label: '...',
+      });
+    }
+    items.push({
+      key: `page-${page}`,
+      type: 'page',
+      label: String(page),
+      page,
+      active: page === current,
+    });
+  });
+  return items;
 }
 
 Page({
@@ -209,6 +434,14 @@ Page({
     albumFilterSummary: buildAlbumFilterSummary('all', 'all'),
     albumFilterExpanded: false,
     albumResultCountLabel: buildAlbumResultCountLabel(0),
+    albumStats: createDefaultAlbumStats(),
+    albumTotalCount: 0,
+    albumCurrentPage: 1,
+    albumTotalPages: 0,
+    albumPagerItems: [],
+    albumPagerSummary: '',
+    albumJumpPageValue: '',
+    albumPageTransitioning: false,
     albumStatusCounts: {
       all: 0,
       pending: 0,
@@ -232,14 +465,31 @@ Page({
     loginState: 'ready',
   },
 
+  onLoad() {
+    this.setData({
+      albumCurrentPage: 1,
+      albumPagerItems: [],
+      albumPagerSummary: '',
+      albumJumpPageValue: '',
+      albumPageTransitioning: false,
+    });
+  },
+
+  onUnload() {
+    this.clearAlbumPageTransitionTimers();
+  },
+
   async onShow() {
     await app.ensureUserReady();
     const user = app.globalData.user || null;
     this.setData({
       user,
+      albumStats: normalizeAlbumStats(user && user.albumStats) || createDefaultAlbumStats(),
+      albumTotalCount: getAlbumStatsCount(normalizeAlbumStats(user && user.albumStats), 'all', 'all') || 0,
       loginState: user ? 'ready' : (isManualLogoutSuppressed() ? 'paused' : 'register'),
     });
     if (!user) {
+      this.clearAlbumPageTransitionTimers();
       app.globalData.achievementSnapshot = null;
       this.setData({
         allWalks: [],
@@ -250,6 +500,14 @@ Page({
         albumEmptySubtitle: buildAlbumEmptyState(this.data.albumStatusFilter || 'all', this.data.albumTypeFilter || 'all').subtitle,
         albumFilterSummary: buildAlbumFilterSummary(this.data.albumStatusFilter || 'all', this.data.albumTypeFilter || 'all'),
         albumResultCountLabel: buildAlbumResultCountLabel(0),
+        albumStats: createDefaultAlbumStats(),
+        albumTotalCount: 0,
+        albumCurrentPage: 1,
+        albumTotalPages: 0,
+        albumPagerItems: [],
+        albumPagerSummary: '',
+        albumJumpPageValue: '',
+        albumPageTransitioning: false,
         albumStatusCounts: buildAlbumStatusCounts([], this.data.albumTypeFilter || 'all'),
         albumTypeCounts: buildAlbumTypeCounts([], this.data.albumStatusFilter || 'all'),
         achievements: [],
@@ -282,53 +540,72 @@ Page({
   },
 
   async fetchWalks() {
-    this.setData({ loading: true });
+    this.clearAlbumPageTransitionTimers();
+    this.setData({
+      loading: true,
+      albumCurrentPage: 1,
+      albumPagerItems: [],
+      albumPagerSummary: '',
+      albumPageTransitioning: false,
+    });
     try {
       const [soloResult, teamResult, achievementResult] = await Promise.all([
-        listMyWalks({ limit: 20 }),
-        listMyTeamWalks({ limit: 20 }),
+        this.loadAllAlbumRecords(listMyWalks),
+        this.loadAllAlbumRecords(listMyTeamWalks),
         listMyAchievements(),
       ]);
-      const walks = [...(soloResult.records || []), ...(teamResult.records || [])]
-        .map((item) => {
-          const albumStatusKey = normalizeAlbumStatus(item);
-          return {
-            ...item,
-            createdAtLabel: formatDate(item.createdAt),
-            albumStatusKey,
-            albumStatusLabel: getAlbumStatusLabel(albumStatusKey),
-          };
-        })
-        .sort((left, right) => resolveWalkSortTimestamp(right) - resolveWalkSortTimestamp(left));
+      const albumStats = normalizeAlbumStats(soloResult.albumStats)
+        || normalizeAlbumStats(teamResult.albumStats)
+        || normalizeAlbumStats(this.data.user && this.data.user.albumStats)
+        || null;
+      const walks = mergeWalkPages([], [
+        ...soloResult.records,
+        ...teamResult.records,
+      ].map(normalizeHistoryWalk));
       const albumStatusCounts = buildAlbumStatusCounts(walks, this.data.albumTypeFilter || 'all');
       const albumTypeCounts = buildAlbumTypeCounts(walks, this.data.albumStatusFilter || 'all');
-      const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
-      const featuredAchievement = this.resolveFeaturedAchievement(achievements);
-      const recentAchievements = buildRecentAchievements(achievements);
-      app.globalData.achievementSnapshot = {
-        achievements,
-        recentAchievements,
-        summary: achievementResult.summary || {
-          unlockedCount: 0,
-          totalCount: achievements.length,
-          completionRate: 0,
-        },
-        updatedAt: Date.now(),
-      };
-      this.setData({
+      const nextData = {
         allWalks: walks,
+        albumStats: albumStats || createDefaultAlbumStats(),
+        albumTotalCount: walks.length,
         albumStatusCounts,
         albumStatusChips: buildAlbumStatusChips(albumStatusCounts),
         albumTypeCounts,
         albumTypeChips: buildAlbumTypeChips(albumTypeCounts),
+      };
+
+      const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
+      const featuredAchievement = this.resolveFeaturedAchievement(achievements);
+      const recentAchievements = buildRecentAchievements(achievements);
+      const achievementSummary = achievementResult.summary || {
+        unlockedCount: 0,
+        totalCount: achievements.length,
+        completionRate: 0,
+      };
+      app.globalData.achievementSnapshot = {
         achievements,
-        achievementSummary: achievementResult.summary || {
-          unlockedCount: 0,
-          totalCount: achievements.length,
-          completionRate: 0,
-        },
+        recentAchievements,
+        summary: achievementSummary,
+        updatedAt: Date.now(),
+      };
+      Object.assign(nextData, {
+        achievements,
+        achievementSummary,
         featuredAchievement,
-      }, () => {
+      });
+
+      if (albumStats && this.data.user) {
+        const nextUser = {
+          ...this.data.user,
+          albumStats,
+        };
+        nextData.user = nextUser;
+        if (app.setCurrentUser) {
+          app.setCurrentUser(nextUser);
+        }
+      }
+
+      this.setData(nextData, () => {
         this.applyWalkFilter();
       });
       this.notifyNewAchievements(achievements);
@@ -337,6 +614,47 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  async loadAllAlbumRecords(service) {
+    const records = [];
+    const seen = new Set();
+    let albumStats = null;
+    let offset = 0;
+    let hasMore = true;
+    let guard = 0;
+
+    while (hasMore && guard < 200) {
+      const result = await service({
+        limit: ALBUM_FETCH_PAGE_SIZE,
+        offset,
+        sort: 'album',
+      });
+      const incoming = Array.isArray(result.records) ? result.records : [];
+      const nextStats = normalizeAlbumStats(result && result.albumStats);
+      if (nextStats) {
+        albumStats = nextStats;
+      }
+      let newCount = 0;
+      incoming.forEach((item) => {
+        const id = item && (item._id || item.id);
+        if (!id || seen.has(id)) {
+          return;
+        }
+        seen.add(id);
+        records.push(item);
+        newCount += 1;
+      });
+      const page = resolveListPage(result, offset, ALBUM_FETCH_PAGE_SIZE);
+      hasMore = !!page.hasMore && page.nextOffset > offset && incoming.length > 0 && newCount > 0;
+      offset = page.nextOffset;
+      guard += 1;
+    }
+
+    return {
+      records,
+      albumStats,
+    };
   },
 
   notifyNewAchievements(achievements) {
@@ -392,13 +710,32 @@ Page({
     this.setData({ activeTab: event.currentTarget.dataset.tab });
   },
 
+  clearAlbumPageTransitionTimers() {
+    if (this.albumPageTransitionTimer) {
+      clearTimeout(this.albumPageTransitionTimer);
+      this.albumPageTransitionTimer = null;
+    }
+    if (this.albumPageSettleTimer) {
+      clearTimeout(this.albumPageSettleTimer);
+      this.albumPageSettleTimer = null;
+    }
+    if (this.albumPageScrollTimer) {
+      clearTimeout(this.albumPageScrollTimer);
+      this.albumPageScrollTimer = null;
+    }
+  },
+
   switchAlbumStatus(event) {
     const nextFilter = event.currentTarget.dataset.status;
     if (!nextFilter || nextFilter === this.data.albumStatusFilter) {
       return;
     }
+    this.clearAlbumPageTransitionTimers();
     this.setData({
       albumStatusFilter: nextFilter,
+      albumCurrentPage: 1,
+      albumJumpPageValue: '',
+      albumPageTransitioning: false,
     }, () => {
       this.applyWalkFilter();
     });
@@ -409,8 +746,12 @@ Page({
     if (!nextFilter || nextFilter === this.data.albumTypeFilter) {
       return;
     }
+    this.clearAlbumPageTransitionTimers();
     this.setData({
       albumTypeFilter: nextFilter,
+      albumCurrentPage: 1,
+      albumJumpPageValue: '',
+      albumPageTransitioning: false,
     }, () => {
       this.applyWalkFilter();
     });
@@ -420,9 +761,13 @@ Page({
     if (this.data.albumStatusFilter === 'all' && this.data.albumTypeFilter === 'all') {
       return;
     }
+    this.clearAlbumPageTransitionTimers();
     this.setData({
       albumStatusFilter: 'all',
       albumTypeFilter: 'all',
+      albumCurrentPage: 1,
+      albumJumpPageValue: '',
+      albumPageTransitioning: false,
     }, () => {
       this.applyWalkFilter();
     });
@@ -432,11 +777,89 @@ Page({
     this.setData({ albumFilterExpanded: !this.data.albumFilterExpanded });
   },
 
+  switchAlbumPage(event) {
+    const page = Number(event.currentTarget.dataset.page || 1);
+    this.changeAlbumPage(page);
+  },
+
+  handleAlbumJumpInput(event) {
+    this.setData({
+      albumJumpPageValue: String(event.detail.value || '').replace(/[^\d]/g, '').slice(0, 4),
+    });
+  },
+
+  submitAlbumJump() {
+    const totalPages = Number(this.data.albumTotalPages || 0);
+    const page = Number(this.data.albumJumpPageValue || 0);
+    if (!totalPages) {
+      return;
+    }
+    if (!page || page < 1 || page > totalPages) {
+      wx.showToast({
+        title: `请输入 1-${totalPages} 页`,
+        icon: 'none',
+      });
+      return;
+    }
+    this.changeAlbumPage(page);
+  },
+
+  changeAlbumPage(page) {
+    const totalPages = Number(this.data.albumTotalPages || 0);
+    const nextPage = Math.min(Math.max(Number(page || 1), 1), totalPages || 1);
+    if (!totalPages) {
+      return;
+    }
+    if (nextPage === this.data.albumCurrentPage) {
+      if (this.data.albumJumpPageValue) {
+        this.setData({ albumJumpPageValue: '' });
+      }
+      return;
+    }
+
+    this.clearAlbumPageTransitionTimers();
+    this.setData({ albumPageTransitioning: true });
+    this.albumPageTransitionTimer = setTimeout(() => {
+      this.albumPageTransitionTimer = null;
+      this.setData({
+        albumCurrentPage: nextPage,
+        albumJumpPageValue: '',
+      }, () => {
+        this.applyWalkFilter();
+        this.scrollAlbumPageToBottom();
+        this.albumPageSettleTimer = setTimeout(() => {
+          this.albumPageSettleTimer = null;
+          this.setData({ albumPageTransitioning: false });
+        }, 240);
+      });
+    }, 80);
+  },
+
+  scrollAlbumPageToBottom() {
+    if (!wx.pageScrollTo) {
+      return;
+    }
+    const scrollToBottom = () => {
+      wx.pageScrollTo({
+        scrollTop: 999999,
+        duration: 260,
+      });
+    };
+    if (wx.nextTick) {
+      wx.nextTick(scrollToBottom);
+      return;
+    }
+    this.albumPageScrollTimer = setTimeout(() => {
+      this.albumPageScrollTimer = null;
+      scrollToBottom();
+    }, 30);
+  },
+
   applyWalkFilter() {
     const allWalks = Array.isArray(this.data.allWalks) ? this.data.allWalks : [];
     const statusFilter = this.data.albumStatusFilter || 'all';
     const typeFilter = this.data.albumTypeFilter || 'all';
-    const walks = allWalks.filter((item) => {
+    const filteredWalks = allWalks.filter((item) => {
       const statusMatched = statusFilter === 'all' || item.albumStatusKey === statusFilter;
       const typeMatched = typeFilter === 'all' || normalizeAlbumRecordType(item) === typeFilter;
       return statusMatched && typeMatched;
@@ -444,8 +867,19 @@ Page({
     const emptyState = buildAlbumEmptyState(statusFilter, typeFilter);
     const albumStatusCounts = buildAlbumStatusCounts(allWalks, typeFilter);
     const albumTypeCounts = buildAlbumTypeCounts(allWalks, statusFilter);
+    const resultCount = filteredWalks.length;
+    const totalPages = resultCount > 0 ? Math.ceil(resultCount / ALBUM_PAGE_SIZE) : 0;
+    const currentPage = totalPages
+      ? Math.min(Math.max(Number(this.data.albumCurrentPage || 1), 1), totalPages)
+      : 1;
+    const pageStart = (currentPage - 1) * ALBUM_PAGE_SIZE;
+    const walks = filteredWalks.slice(pageStart, pageStart + ALBUM_PAGE_SIZE);
     this.setData({
       walks,
+      albumCurrentPage: currentPage,
+      albumTotalPages: totalPages,
+      albumPagerItems: buildAlbumPagerItems(currentPage, totalPages),
+      albumPagerSummary: totalPages ? `第 ${currentPage} / ${totalPages} 页` : '',
       albumStatusCounts,
       albumStatusChips: buildAlbumStatusChips(albumStatusCounts),
       albumTypeCounts,
@@ -453,7 +887,7 @@ Page({
       albumEmptyTitle: emptyState.title,
       albumEmptySubtitle: emptyState.subtitle,
       albumFilterSummary: buildAlbumFilterSummary(statusFilter, typeFilter),
-      albumResultCountLabel: buildAlbumResultCountLabel(walks.length),
+      albumResultCountLabel: buildAlbumResultCountLabel(resultCount),
     });
   },
 

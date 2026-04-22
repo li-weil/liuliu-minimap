@@ -8,12 +8,7 @@ function generateCombinedTheme(payload) {
   return callApi('generateCombinedTheme', payload);
 }
 
-function verifyMission(payload) {
-  return callApi('verifyMission', payload);
-}
-
 module.exports = {
   generateCombinedTheme,
   generateTheme,
-  verifyMission,
 };

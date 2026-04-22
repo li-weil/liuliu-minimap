@@ -3,7 +3,7 @@
     <view class="history-hero-main">
       <view class="history-kicker">城市纪念卡册</view>
       <view class="history-title">足迹册</view>
-      <view wx:if="{{user}}" class="history-subtitle">已保存 {{allWalks.length}} 次漫步 / 已点亮 {{achievementSummary.unlockedCount}} 枚成就</view>
+      <view wx:if="{{user}}" class="history-subtitle">共 {{albumTotalCount}} 次漫步 / 已点亮 {{achievementSummary.unlockedCount}} 枚成就</view>
       <view wx:elif="{{loginState === 'paused'}}" class="history-subtitle">登录后可以恢复你的足迹与成就。</view>
       <view wx:else class="history-subtitle">完善资料后，这里会开始收住每一次漫步。</view>
     </view>
@@ -29,13 +29,13 @@
   <view wx:if="{{!user}}" class="history-placeholder">
     <view class="placeholder-title">{{loginState === 'paused' ? '足迹册暂时合上了' : '还没有个人资料'}}</view>
     <view class="placeholder-copy">{{loginState === 'paused' ? '去个人页点一次登录，就能继续查看走过的街角和点亮的成就。' : '先设置头像和昵称，之后每次漫步都会自动收进你的纪念卡册。'}}</view>
-    <button class="primary-btn placeholder-btn" bindtap="goToProfile">{{loginState === 'paused' ? '去恢复登录' : '去完善资料'}}</button>
+    <button class="primary-btn placeholder-btn" hover-class="history-button-press" hover-stay-time="80" bindtap="goToProfile">{{loginState === 'paused' ? '去恢复登录' : '去完善资料'}}</button>
   </view>
 
   <view wx:else>
     <view class="history-tabs">
-      <view class="history-tab {{activeTab === 'album' ? 'history-tab-active' : ''}}" bindtap="switchTab" data-tab="album">纪念卡册</view>
-      <view class="history-tab {{activeTab === 'achievement' ? 'history-tab-active' : ''}}" bindtap="switchTab" data-tab="achievement">成就墙</view>
+      <view class="history-tab {{activeTab === 'album' ? 'history-tab-active' : ''}}" hover-class="history-tab-press" hover-stay-time="80" bindtap="switchTab" data-tab="album">纪念卡册</view>
+      <view class="history-tab {{activeTab === 'achievement' ? 'history-tab-active' : ''}}" hover-class="history-tab-press" hover-stay-time="80" bindtap="switchTab" data-tab="achievement">成就墙</view>
     </view>
 
     <view wx:if="{{activeTab === 'album'}}" class="album-section">
@@ -48,11 +48,13 @@
           <view
             wx:if="{{albumStatusFilter !== 'all' || albumTypeFilter !== 'all'}}"
             class="filter-text-action"
+            hover-class="history-button-press"
+            hover-stay-time="80"
             bindtap="resetAlbumFilters"
           >
             清除
           </view>
-          <view class="filter-toggle" bindtap="toggleAlbumFilter">{{albumFilterExpanded ? '收起' : '筛选'}}</view>
+          <view class="filter-toggle" hover-class="history-button-press" hover-stay-time="80" bindtap="toggleAlbumFilter">{{albumFilterExpanded ? '收起' : '筛选'}}</view>
         </view>
       </view>
 
@@ -65,6 +67,8 @@
                 wx:for="{{albumStatusChips}}"
                 wx:key="key"
                 class="album-filter-chip {{albumStatusFilter === item.key ? 'album-filter-chip-active' : ''}}"
+                hover-class="album-filter-chip-press"
+                hover-stay-time="80"
                 bindtap="switchAlbumStatus"
                 data-status="{{item.key}}"
               >
@@ -81,6 +85,8 @@
                 wx:for="{{albumTypeChips}}"
                 wx:key="key"
                 class="album-filter-chip {{albumTypeFilter === item.key ? 'album-filter-chip-active' : ''}}"
+                hover-class="album-filter-chip-press"
+                hover-stay-time="80"
                 bindtap="switchAlbumType"
                 data-type="{{item.key}}"
               >
@@ -92,8 +98,8 @@
         </view>
       </view>
 
-      <view wx:if="{{!loading && walks.length}}" class="album-list">
-        <walk-card wx:for="{{walks}}" wx:key="_id" walk="{{item}}" bind:open="openDetail" />
+      <view wx:if="{{!loading && walks.length}}" class="album-list {{albumPageTransitioning ? 'album-list-switching' : ''}}">
+        <walk-card wx:for="{{walks}}" wx:key="albumRecordKey" walk="{{item}}" bind:open="openDetail" />
       </view>
       <view wx:elif="{{loading}}" class="history-loading">
         <view class="history-skeleton history-skeleton-lg"></view>
@@ -103,7 +109,45 @@
       <view wx:else class="history-placeholder">
         <view class="placeholder-title">{{albumEmptyTitle}}</view>
         <view class="placeholder-copy">{{albumEmptySubtitle}}</view>
-        <button class="ghost-btn placeholder-btn" bindtap="goToProfile">去个人页看看</button>
+        <button class="ghost-btn placeholder-btn" hover-class="history-button-press" hover-stay-time="80" bindtap="goToProfile">去个人页看看</button>
+      </view>
+
+      <view wx:if="{{!loading && albumTotalPages > 1}}" class="album-pagination">
+        <view class="album-page-summary">{{albumPagerSummary}}</view>
+        <scroll-view scroll-x class="album-page-scroll" enhanced show-scrollbar="{{false}}">
+          <view class="album-page-strip">
+            <block wx:for="{{albumPagerItems}}" wx:key="key">
+              <view
+                wx:if="{{item.type === 'ellipsis'}}"
+                class="album-page-ellipsis"
+              >
+                {{item.label}}
+              </view>
+              <view
+                wx:else
+                class="album-page-number {{item.active ? 'album-page-number-active' : ''}}"
+                hover-class="album-page-number-press"
+                hover-stay-time="80"
+                data-page="{{item.page}}"
+                bindtap="switchAlbumPage"
+              >
+                {{item.label}}
+              </view>
+            </block>
+          </view>
+        </scroll-view>
+        <view class="album-jump-row">
+          <input
+            class="album-jump-input"
+            type="number"
+            value="{{albumJumpPageValue}}"
+            placeholder="页码"
+            confirm-type="go"
+            bindinput="handleAlbumJumpInput"
+            bindconfirm="submitAlbumJump"
+          />
+          <view class="ghost-btn album-jump-btn" hover-class="history-button-press" hover-stay-time="80" bindtap="submitAlbumJump">跳转</view>
+        </view>
       </view>
     </view>
 

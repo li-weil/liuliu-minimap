@@ -26,19 +26,19 @@
         </view>
 
         <view class="mission-inline-row">
-          <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{card.mission}}" data-mode="photo">
+          <button class="mission-inline-btn" bindtap="captureMissionMedia" data-mission="{{card.mission}}" data-mode="photo">
             <view class="mission-inline-btn-inner">
               <image class="mission-inline-icon-image" src="/assets/icons/camera.svg" mode="aspectFit" />
               <text class="mission-inline-btn-text">拍照</text>
             </view>
           </button>
-          <button class="mission-inline-btn" bindtap="verifyMission" data-mission="{{card.mission}}" data-mode="video">
+          <button class="mission-inline-btn" bindtap="captureMissionMedia" data-mission="{{card.mission}}" data-mode="video">
             <view class="mission-inline-btn-inner">
               <image class="mission-inline-icon-image" src="/assets/icons/video.svg" mode="aspectFit" />
               <text class="mission-inline-btn-text">录像</text>
             </view>
           </button>
-          <button class="mission-inline-btn {{isRecordingAudio && recordingMission === card.mission ? 'mission-inline-btn-recording' : ''}}" bindtap="verifyMission" data-mission="{{card.mission}}" data-mode="audio">
+          <button class="mission-inline-btn {{isRecordingAudio && recordingMission === card.mission ? 'mission-inline-btn-recording' : ''}}" bindtap="captureMissionMedia" data-mission="{{card.mission}}" data-mode="audio">
             <view class="mission-inline-btn-inner">
               <image class="mission-inline-icon-image" src="/assets/icons/mic.svg" mode="aspectFit" />
               <text class="mission-inline-btn-text">{{isRecordingAudio && recordingMission === card.mission ? '停止' : '录音'}}</text>
@@ -109,7 +109,7 @@
           <image class="mission-card-embed-image" src="{{card.assets.cardImagePath}}" mode="widthFix" />
         </view>
 
-        <button class="mission-verify-btn" bindtap="checkIn" data-mission="{{card.mission}}" loading="{{checkingInMission === card.mission}}" disabled="{{checkingInMission === card.mission || card.completed}}">
+        <button class="mission-checkin-btn" bindtap="checkIn" data-mission="{{card.mission}}" loading="{{checkingInMission === card.mission}}" disabled="{{checkingInMission === card.mission || card.completed}}">
           {{card.completed ? '已打卡' : (checkingInMission === card.mission ? '正在打卡' : (card.needsRecheck ? '重新打卡' : '完成这一站'))}}
         </button>
 

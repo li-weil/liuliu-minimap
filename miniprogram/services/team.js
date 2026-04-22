@@ -28,10 +28,6 @@ function submitContentFeedback(payload = {}) {
   return callApi('submitContentFeedback', payload);
 }
 
-function listTeamActivities(payload = {}) {
-  return callApi('listTeamActivities', payload);
-}
-
 function finishTeamWalk(payload = {}) {
   return callApi('finishTeamWalk', payload);
 }
@@ -42,6 +38,10 @@ function getTeamWalkDetail(payload = {}) {
 
 function updateTeamMemberDraftState(payload = {}) {
   return callApi('updateTeamMemberDraftState', payload);
+}
+
+function saveTeamMissionCard(payload = {}) {
+  return callApi('saveTeamMissionCard', payload);
 }
 
 function listMyTeamWalks(payload = {}) {
@@ -61,7 +61,7 @@ module.exports = {
   joinTeamRoom,
   leaveTeamRoom,
   listMyTeamWalks,
-  listTeamActivities,
+  saveTeamMissionCard,
   startTeamWalk,
   submitContentFeedback,
   submitTeamContribution,

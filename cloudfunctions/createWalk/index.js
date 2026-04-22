@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk');
 const { recalculateUserAchievements } = require('./achievement');
+const { recalculateUserAlbumStats } = require('./album-stats');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -37,7 +38,6 @@ exports.main = async (event) => {
       pointCount: Array.isArray(event.routePoints) ? event.routePoints.length : 0,
       distanceMeters: 0,
     },
-    sticker: event.sticker || null,
     isPublic: !!event.isPublic,
     walkMode: event.walkMode || 'pure',
     generationSource: event.generationSource || 'unknown',
@@ -68,25 +68,33 @@ exports.main = async (event) => {
       },
     });
     const updatedDoc = await db.collection('walkRecords').doc(walkId).get();
-    const achievementState = status === 'finished'
-      ? await recalculateUserAchievements({
+    const achievementPromise = status === 'finished'
+      ? recalculateUserAchievements({
           db,
           _,
           openid: wxContext.OPENID,
         })
-      : null;
-    return { ok: true, id: walkId, walk: updatedDoc.data, achievements: achievementState };
+      : Promise.resolve(null);
+    const [achievementState, albumStats] = await Promise.all([
+      achievementPromise,
+      recalculateUserAlbumStats({ db, _, openid: wxContext.OPENID }),
+    ]);
+    return { ok: true, id: walkId, walk: updatedDoc.data, achievements: achievementState, albumStats };
   }
 
   payload.createdAt = now;
   const result = await db.collection('walkRecords').add({ data: payload });
   const createdDoc = await db.collection('walkRecords').doc(result._id).get();
-  const achievementState = status === 'finished'
-    ? await recalculateUserAchievements({
+  const achievementPromise = status === 'finished'
+    ? recalculateUserAchievements({
         db,
         _,
         openid: wxContext.OPENID,
       })
-    : null;
-  return { ok: true, id: result._id, walk: createdDoc.data, achievements: achievementState };
+    : Promise.resolve(null);
+  const [achievementState, albumStats] = await Promise.all([
+    achievementPromise,
+    recalculateUserAlbumStats({ db, _, openid: wxContext.OPENID }),
+  ]);
+  return { ok: true, id: result._id, walk: createdDoc.data, achievements: achievementState, albumStats };
 };

@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { createDefaultAlbumStats } = require('./album-stats');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -113,6 +114,7 @@ exports.main = async (event) => {
         nickName: profile.nickName || '微信用户',
         avatarUrl: profile.avatarUrl || '',
         role: 'user',
+        albumStats: createDefaultAlbumStats(),
         createdAt: db.serverDate(),
         lastLoginAt: db.serverDate(),
         updatedAt: db.serverDate(),

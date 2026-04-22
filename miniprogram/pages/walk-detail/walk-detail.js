@@ -60,43 +60,6 @@ function queryCanShare(walk, source) {
   return !!(walk.id || walk._id);
 }
 
-function splitPoemLines(poem) {
-  const normalized = String(poem || '').replace(/[。！？]+$/g, '');
-  const lines = normalized
-    .split(/[，、；]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (lines.length) {
-    return lines;
-  }
-  const compact = normalized.replace(/\s+/g, '');
-  const result = [];
-  for (let index = 0; index < compact.length; index += 6) {
-    result.push(compact.slice(index, index + 6));
-  }
-  return result.filter(Boolean);
-}
-
-function splitPoemColumns(poemLines) {
-  return (poemLines || []).map((line) => String(line || '').split('').filter(Boolean));
-}
-
-function decorateSticker(sticker) {
-  if (!sticker) {
-    return null;
-  }
-  const poemLines = Array.isArray(sticker.poemLines) && sticker.poemLines.length
-    ? sticker.poemLines
-    : splitPoemLines(sticker.poem);
-  return {
-    ...sticker,
-    poemLines,
-    poemColumns: Array.isArray(sticker.poemColumns) && sticker.poemColumns.length
-      ? sticker.poemColumns
-      : splitPoemColumns(poemLines),
-  };
-}
-
 function downloadFile(url) {
   return new Promise((resolve, reject) => {
     wx.downloadFile({
@@ -286,12 +249,43 @@ function buildMissionItems(walk) {
   const themeMissions = Array.isArray(walk.themeSnapshot && walk.themeSnapshot.missions)
     ? walk.themeSnapshot.missions.filter((mission) => !!mission && mission !== SUMMARY_MISSION_KEY)
     : [];
-  const missionNames = [
-    ...themeMissions.map((mission) => ({
+  const missionMap = {};
+  themeMissions.forEach((mission) => {
+    missionMap[mission] = {
       key: mission,
       label: mission,
       isSupplemental: false,
-    })),
+    };
+  });
+  getCompletedMissionList(walk).forEach((mission) => {
+    if (mission && mission !== SUMMARY_MISSION_KEY && !missionMap[mission]) {
+      missionMap[mission] = {
+        key: mission,
+        label: mission,
+        isSupplemental: false,
+      };
+    }
+  });
+  Object.keys(walk.missionReviews || {}).forEach((mission) => {
+    if (mission && mission !== SUMMARY_MISSION_KEY && !missionMap[mission]) {
+      missionMap[mission] = {
+        key: mission,
+        label: mission,
+        isSupplemental: false,
+      };
+    }
+  });
+  Object.keys(missionAssetMap).forEach((mission) => {
+    if (mission && mission !== SUMMARY_MISSION_KEY && !missionMap[mission]) {
+      missionMap[mission] = {
+        key: mission,
+        label: mission,
+        isSupplemental: false,
+      };
+    }
+  });
+  const missionNames = [
+    ...Object.keys(missionMap).map((mission) => missionMap[mission]),
     {
       key: SUMMARY_MISSION_KEY,
       label: SUMMARY_MISSION_LABEL,
@@ -431,7 +425,6 @@ function buildDetailMetrics(walk, missionItems) {
     noteCount,
     routePointCount: countList(safeWalk.routePoints),
     hasRoute: countList(safeWalk.routePoints) > 0,
-    hasSticker: !!safeWalk.sticker,
   };
 }
 
@@ -454,7 +447,6 @@ Page({
       dateLabel: '',
       renderVersion: 0,
     },
-    showStickerModal: false,
     showMissionCardModal: false,
     missionCardModal: {
       title: '',
@@ -508,7 +500,7 @@ Page({
     return {
       title: `遛遛｜邀请你看我的漫步记录` ,
       path: walk ? `/pages/walk-detail/walk-detail?id=${walk.id || walk._id}&source=share` : '/pages/history/history',
-      imageUrl: walk && (walk.coverImage || (walk.sticker && walk.sticker.imageUrl) || ''),
+      imageUrl: walk && (walk.coverImage || ''),
     };
   },
 
@@ -521,7 +513,6 @@ Page({
       const walk = result.walk
         ? {
             ...result.walk,
-            sticker: decorateSticker(result.walk.sticker),
             createdAtLabel: formatDate(result.walk.createdAt),
             missionItems,
             detailMetrics: buildDetailMetrics(result.walk, missionItems),
@@ -687,7 +678,6 @@ Page({
       startedAt: walk.startedAt,
       endedAt: walk.endedAt,
       routeStats: walk.routeStats || {},
-      sticker: walk.sticker || null,
       status: walk.status || 'finished',
     });
     const persistedWalk = result && result.walk ? result.walk : { ...walk, missionAssetMap };
@@ -695,7 +685,6 @@ Page({
     this.setData({
       walk: {
         ...persistedWalk,
-        sticker: decorateSticker(persistedWalk.sticker),
         createdAtLabel: formatDate(persistedWalk.createdAt),
         missionItems: persistedMissionItems,
         detailMetrics: buildDetailMetrics(persistedWalk, persistedMissionItems),
@@ -730,17 +719,6 @@ Page({
     } catch (error) {
       wx.showToast({ title: '卡片已生成，持久化失败', icon: 'none' });
     }
-  },
-
-  openStickerModal() {
-    if (!(this.data.walk && this.data.walk.sticker)) {
-      return;
-    }
-    this.setData({ showStickerModal: true });
-  },
-
-  closeStickerModal() {
-    this.setData({ showStickerModal: false });
   },
 
   openMissionCardModal(event) {
@@ -823,63 +801,6 @@ Page({
     }
   },
 
-  resolveStickerUrl() {
-    const sticker = this.data.walk && this.data.walk.sticker;
-    if (!sticker) {
-      return Promise.reject(new Error('missing_sticker'));
-    }
-    const src = sticker.imageUrl || sticker.backgroundUrl || '';
-    if (!src) {
-      return Promise.reject(new Error('missing_sticker_image'));
-    }
-    if (String(src).startsWith('cloud://')) {
-      return wx.cloud.getTempFileURL({ fileList: [src] }).then((result) => {
-        const item = result.fileList && result.fileList[0];
-        return item && item.tempFileURL ? item.tempFileURL : '';
-      });
-    }
-    return Promise.resolve(src);
-  },
-
-  async handleSaveStickerToAlbum() {
-    try {
-      await ensurePrivacyAuthorization(this, {
-        title: '保存到相册前说明',
-        content: '保存贴纸到本地时会使用相册相关能力，仅用于把这张贴纸存到你的设备相册中。',
-      });
-      const imageUrl = await this.resolveStickerUrl();
-      if (!imageUrl) {
-        throw new Error('missing_sticker_image');
-      }
-      const download = await downloadFile(imageUrl);
-      if (!download || !download.tempFilePath) {
-        throw new Error('download_sticker_failed');
-      }
-      await saveImageToAlbum(download.tempFilePath);
-      wx.showToast({ title: '已保存到相册', icon: 'success' });
-    } catch (error) {
-      if (error && error.message === 'privacy_authorization_denied') {
-        wx.showToast({ title: '未同意隐私说明，暂时无法保存', icon: 'none' });
-        return;
-      }
-      const errMsg = String((error && error.errMsg) || (error && error.message) || '');
-      if (errMsg.includes('auth deny') || errMsg.includes('authorize')) {
-        wx.showModal({
-          title: '需要相册权限',
-          content: '请在设置里允许保存到相册后，再试一次',
-          confirmText: '去设置',
-          success: (res) => {
-            if (res.confirm) {
-              wx.openSetting({});
-            }
-          },
-        });
-        return;
-      }
-      wx.showToast({ title: '保存贴纸失败', icon: 'none' });
-    }
-  },
-
   handleShareTap() {
     if (!(this.data.walk && (this.data.walk.id || this.data.walk._id))) {
       wx.showToast({ title: '缺少漫步记录', icon: 'none' });
@@ -900,7 +821,6 @@ Page({
           const nextWalk = {
             ...this.data.walk,
             ...result.walk,
-            sticker: decorateSticker(result.walk.sticker),
             canShare: queryCanShare(result.walk, this.data.source),
           };
           const missionItems = Array.isArray(nextWalk.missionItems) && nextWalk.missionItems.length

@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk');
 const { recalculateUserAchievements } = require('./achievement');
+const { recalculateUserAlbumStats } = require('./album-stats');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -56,13 +57,16 @@ exports.main = async (event) => {
         recordDeletedBy: openid,
       },
     });
-    await recalculateUserAchievements({ db, _, openid });
+    const [albumStats] = await Promise.all([
+      recalculateUserAlbumStats({ db, _, openid }),
+      recalculateUserAchievements({ db, _, openid }),
+    ]);
+    return {
+      ok: true,
+      id: roomId,
+      albumStats,
+    };
   } catch (error) {
     return { ok: false, reason: 'delete_failed' };
   }
-
-  return {
-    ok: true,
-    id: roomId,
-  };
 };

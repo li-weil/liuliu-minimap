@@ -1,9 +1,10 @@
 const app = getApp();
 const { requestUpload } = require('../../services/api');
-const { generateCompanionNote } = require('../../services/sticker');
+const { generateCompanionNote } = require('../../services/companion');
 const { finishTeamWalk, getTeamRoomDetail, submitTeamContribution, updateTeamMemberDraftState } = require('../../services/team');
 const { normalizeRecordedDuration } = require('../../utils/audio');
 const { chooseImage, chooseVideo } = require('../../utils/media');
+const { loadTeamDraftRoom, removeTeamDraftRoom, saveTeamDraftRoom } = require('../../utils/team-draft');
 const {
   createDefaultPrivacyPopup,
   ensurePrivacyAuthorization,
@@ -287,6 +288,7 @@ Page({
     this.missionDraftCache = {};
     this.missionDraftDirtyMap = {};
     this.draftStateReportTimers = {};
+    this.persistedDraftRoomKey = '';
     this.recordingMission = '';
     this.isPageUnloaded = false;
     this.setData({ roomId: query.roomId || query.id || '' });
@@ -410,7 +412,8 @@ Page({
         this.goHistoryWithFinishNotice();
         return;
       }
-      const activeMission = this.data.activeMission || (room && room.themeSnapshot && room.themeSnapshot.missions && room.themeSnapshot.missions[0]) || '';
+      const defaultActiveMission = this.data.activeMission || (room && room.themeSnapshot && room.themeSnapshot.missions && room.themeSnapshot.missions[0]) || '';
+      const activeMission = this.restorePersistedDrafts(room, defaultActiveMission);
       const missionViews = withMissionSelection(groupMissionViews(room || {}), activeMission);
       this.setData({
         room,
@@ -437,6 +440,80 @@ Page({
     return user.openid || user.userId || user._id || '';
   },
 
+  getTeamDraftRoomKey() {
+    const userId = this.getCurrentUserId();
+    return this.data.roomId && userId ? `${this.data.roomId}:${userId}` : '';
+  },
+
+  restorePersistedDrafts(room, fallbackMission = '') {
+    const userId = this.getCurrentUserId();
+    const roomId = this.data.roomId;
+    const roomKey = this.getTeamDraftRoomKey();
+    if (!roomId || !userId || !roomKey || this.persistedDraftRoomKey === roomKey) {
+      return fallbackMission;
+    }
+
+    this.persistedDraftRoomKey = roomKey;
+    const persisted = loadTeamDraftRoom(roomId, userId);
+    const missions = Array.isArray(room && room.themeSnapshot && room.themeSnapshot.missions)
+      ? room.themeSnapshot.missions
+      : [];
+    const missionSet = new Set(missions);
+    const persistedDrafts = persisted && persisted.drafts ? persisted.drafts : {};
+
+    Object.keys(persistedDrafts).forEach((mission) => {
+      if (!mission || (missionSet.size && !missionSet.has(mission))) {
+        return;
+      }
+      const entry = persistedDrafts[mission] || {};
+      this.missionDraftCache[mission] = cloneDraft(entry.draft);
+      this.missionDraftDirtyMap[mission] = !!entry.dirty;
+      if (entry.dirty) {
+        this.scheduleDraftStateReport(mission, entry.draft, true);
+      }
+    });
+
+    if (persisted.activeMission && (!missionSet.size || missionSet.has(persisted.activeMission))) {
+      return persisted.activeMission;
+    }
+    return fallbackMission;
+  },
+
+  persistTeamDrafts() {
+    const userId = this.getCurrentUserId();
+    if (!this.data.roomId || !userId) {
+      return;
+    }
+    const dirtyDrafts = {};
+    Object.keys(this.missionDraftDirtyMap || {}).forEach((mission) => {
+      if (this.missionDraftDirtyMap[mission] && this.missionDraftCache && this.missionDraftCache[mission]) {
+        dirtyDrafts[mission] = this.missionDraftCache[mission];
+      }
+    });
+
+    if (!Object.keys(dirtyDrafts).length) {
+      removeTeamDraftRoom(this.data.roomId, userId);
+      return;
+    }
+
+    saveTeamDraftRoom({
+      roomId: this.data.roomId,
+      userId,
+      activeMission: this.data.activeMission || '',
+      drafts: dirtyDrafts,
+      dirtyMap: this.missionDraftDirtyMap || {},
+    });
+  },
+
+  clearPersistedDrafts() {
+    const userId = this.getCurrentUserId();
+    if (!this.data.roomId || !userId) {
+      return;
+    }
+    removeTeamDraftRoom(this.data.roomId, userId);
+    this.persistedDraftRoomKey = '';
+  },
+
   getDraftCache(mission) {
     if (!mission) {
       return null;
@@ -458,6 +535,7 @@ Page({
     this.missionDraftDirtyMap = this.missionDraftDirtyMap || {};
     this.missionDraftCache[mission] = cloneDraft(draft);
     this.missionDraftDirtyMap[mission] = !!dirty;
+    this.persistTeamDrafts();
     this.scheduleDraftStateReport(mission, draft, !!dirty);
   },
 
@@ -549,6 +627,8 @@ Page({
     this.setData({
       activeMission: mission,
       missionViews: withMissionSelection(this.data.missionViews, mission),
+    }, () => {
+      this.persistTeamDrafts();
     });
     this.syncEditorDraft(mission);
   },

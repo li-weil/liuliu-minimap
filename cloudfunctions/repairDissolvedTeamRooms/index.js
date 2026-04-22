@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { recalculateUsersAlbumStats } = require('./album-stats');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -43,6 +44,15 @@ async function getJoinedMemberCount(roomId) {
   return result && typeof result.total === 'number' ? result.total : 0;
 }
 
+async function getJoinedMemberUserIds(roomId) {
+  const result = await db.collection('teamWalkMembers')
+    .where({ roomId, status: 'joined' })
+    .get();
+  return (result.data || [])
+    .map((item) => item && item.userId)
+    .filter(Boolean);
+}
+
 exports.main = async (event) => {
   const dryRun = !!event.dryRun;
   const limit = Math.min(Math.max(Number(event.limit || DEFAULT_LIMIT), 1), DEFAULT_LIMIT);
@@ -76,6 +86,11 @@ exports.main = async (event) => {
 
     if (!dryRun) {
       await db.collection('teamWalkRooms').doc(roomId).update({ data: nextData });
+      await recalculateUsersAlbumStats({
+        db,
+        _: db.command,
+        userIds: await getJoinedMemberUserIds(roomId),
+      });
     }
 
     results.push({

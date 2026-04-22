@@ -397,7 +397,7 @@
   font-weight: 700;
 }
 
-.mission-verify-btn,
+.mission-checkin-btn,
 .mission-card-action-btn {
   width: 100%;
   margin-top: 18rpx;
@@ -412,7 +412,7 @@
   text-align: center;
 }
 
-.mission-verify-btn {
+.mission-checkin-btn {
   background: #626247;
   color: #fffdf8;
   box-shadow: 0 12rpx 22rpx rgba(63, 64, 47, 0.16);
@@ -424,7 +424,7 @@
   box-shadow: inset 0 0 0 1rpx rgba(98, 98, 71, 0.22);
 }
 
-.mission-verify-btn[disabled] {
+.mission-checkin-btn[disabled] {
   background: #9a9082;
   box-shadow: none;
   opacity: 0.72;

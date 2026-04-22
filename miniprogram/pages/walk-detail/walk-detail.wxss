@@ -231,7 +231,6 @@
 }
 
 .route-panel,
-.sticker-section,
 .mission-archive {
   margin-top: 24rpx;
   border-radius: 32rpx;
@@ -322,52 +321,10 @@
 
 .text-action:active,
 .mission-row:active,
-.sticker-preview:active,
 .action-main:active,
 .action-delete:active {
   transform: translateY(1rpx) scale(0.985);
   opacity: 0.92;
-}
-
-.sticker-preview {
-  position: relative;
-  height: 390rpx;
-  margin-top: 22rpx;
-  border-radius: 28rpx;
-  overflow: hidden;
-  background: #efe7da;
-  transition-property: transform, opacity;
-  transition-duration: 180ms;
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.sticker-preview-image {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.sticker-preview-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 26rpx;
-  background: linear-gradient(180deg, rgba(36, 31, 25, 0.02), rgba(36, 31, 25, 0.46));
-}
-
-.sticker-preview-title {
-  color: #fffdf8;
-  font-size: 30rpx;
-  line-height: 1.35;
-  font-weight: 700;
-}
-
-.sticker-preview-poem {
-  margin-top: 8rpx;
-  color: rgba(255, 253, 248, 0.9);
-  font-size: 23rpx;
-  line-height: 1.5;
 }
 
 .mission-archive-head {
@@ -747,7 +704,6 @@
   padding: 22rpx 24rpx;
 }
 
-.sticker-modal-mask,
 .mission-card-modal-mask {
   position: fixed;
   top: 0;
@@ -763,78 +719,9 @@
   background: rgba(36, 31, 25, 0.58);
 }
 
-.sticker-modal-sheet,
 .mission-card-modal-sheet {
   width: 100%;
   max-width: 680rpx;
-}
-
-.sticker-modal-card {
-  position: relative;
-  height: 920rpx;
-  border-radius: 34rpx;
-  overflow: hidden;
-  background: #efe7da;
-  box-shadow: 0 22rpx 62rpx rgba(36, 31, 25, 0.24);
-}
-
-.sticker-modal-image {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.sticker-modal-overlay {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 38rpx 34rpx;
-  box-sizing: border-box;
-  background: linear-gradient(180deg, rgba(36, 31, 25, 0.05), rgba(36, 31, 25, 0.36));
-}
-
-.sticker-modal-theme {
-  align-self: flex-start;
-  padding: 12rpx 18rpx;
-  border-radius: 18rpx;
-  background: rgba(36, 31, 25, 0.32);
-  color: #fffdf8;
-  font-size: 24rpx;
-  line-height: 1.4;
-  font-weight: 600;
-}
-
-.sticker-modal-poem {
-  align-self: flex-end;
-  display: flex;
-  flex-direction: row-reverse;
-  max-width: 60%;
-  padding: 18rpx 20rpx;
-  border-radius: 24rpx;
-  background: rgba(36, 31, 25, 0.28);
-  color: #fffdf8;
-  font-family: "STKaiti", "KaiTi", "Songti SC", serif;
-  font-weight: 600;
-}
-
-.sticker-modal-poem-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.sticker-modal-poem-column + .sticker-modal-poem-column {
-  margin-right: 18rpx;
-}
-
-.sticker-modal-poem-char {
-  font-size: 54rpx;
-  line-height: 1.08;
 }
 
 .modal-actions {
