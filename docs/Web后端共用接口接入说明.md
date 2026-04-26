@@ -12,9 +12,9 @@
 
 对齐原则：
 
-- 不走 Web 后端里单独给小程序准备的 `/api/v1/miniapp/**`
 - 优先复用 Web 前端实际在调用的 `/api/v1/**`
 - 尽量保持请求语义、返回结构和前端使用逻辑一致
+- 例外：当前 `syncUser` 的 Web endpoint 仍配置为 `/api/v1/miniapp/auth/sync-user`，它不是 Web 前端同款登录链路，只能视为小程序登录过渡接口
 
 ---
 
@@ -57,8 +57,16 @@
 其中：
 
 - Web 接口统一前缀已改为 `/api/v1`
-- `apiBaseUrl` 有值时，小程序优先调用 Web 前端同款接口
+- `apiBaseUrl` 有值时，已配置 Web endpoint 且未被云存储开关强制兜底的接口会优先调用 Web 接口
 - 为了不改页面层业务逻辑，接入层对请求体和响应体做了兼容映射
+
+当前默认配置仍是：
+
+- `apiBaseUrl: ''`
+- `useCloudWalkStorage: true`
+- `useCloudMediaStorage: true`
+
+因此只把 `apiBaseUrl` 改成域名，并不会让所有能力都切到 Web。记录保存、历史、详情、删除、成就列表会受 `useCloudWalkStorage` 影响；媒体上传会受 `useCloudMediaStorage` 影响；同行模式多数接口目前没有 Web endpoint。
 
 ### 3.2 已可共用的接口清单
 
@@ -146,7 +154,7 @@ Web 前端调用：
 结论：
 
 - 可以共用
-- 已接入
+- 已接入，但当前 `useCloudMediaStorage: true` 时仍会强制走微信云存储
 
 说明：
 
@@ -195,6 +203,7 @@ Web 前端调用：
 - Web 前端上传接口返回 `fileId/url/contentType/size`
 - 小程序当前只需要最终 URL
 - 当前接入层已把小程序上传从旧的 `/uploads/media` 逻辑改成对齐 Web 的 `/api/v1/files/upload`
+- 只有关闭 `useCloudMediaStorage` 后，才会真正走 Web 上传
 - 同时把上传类型映射为：
   - 图片 -> `mission_media`
   - 视频 -> `video`
@@ -213,7 +222,7 @@ Web 前端调用：
 结论：
 
 - 可以接，但需要字段映射
-- 已接入适配层
+- 已接入适配层，但当前 `useCloudWalkStorage: true` 时仍会强制走云函数 `createWalk`
 
 说明：
 
@@ -237,12 +246,11 @@ Web 前端调用：
 - 无图片但有轨迹 -> `location`
 - 其他情况 -> `event`
 
-#### 8. 我的足迹 / 公共足迹 / 足迹详情
+#### 8. 我的足迹 / 足迹详情
 
 Web 前端调用：
 
 - `GET /api/v1/walks/me`
-- `GET /api/v1/walks/public`
 - `GET /api/v1/walks/{id}`
 
 小程序当前功能：
@@ -253,7 +261,8 @@ Web 前端调用：
 结论：
 
 - 基本可以接
-- 已做兼容适配
+- 已做兼容适配，但当前 `useCloudWalkStorage: true` 时仍会强制走云函数
+- 小程序当前没有公共列表页，也没有 `listPublicWalks` service/page
 
 说明：
 
@@ -315,6 +324,7 @@ Web 前端当前有：
 结论：
 
 - 不能直接一一对应
+- 小程序代码里虽然配置了 `/api/v1/miniapp/auth/sync-user`，但它是过渡接口，不等同于 Web 前端的 `auth/me/login/logout` 链路
 
 原因：
 
@@ -355,6 +365,24 @@ Web 前端当前公开调用中没有：
 
 当前适配层只是做了兼容重组，不代表语义已经完全对齐。
 
+### 4.5 同行模式
+
+同行模式当前主要依赖微信云函数：
+
+- `createTeamRoom`
+- `getTeamRoomDetail`
+- `joinTeamRoom`
+- `startTeamWalk`
+- `submitTeamContribution`
+- `finishTeamWalk`
+- `getTeamWalkDetail`
+- `listMyTeamWalks`
+- `deleteTeamWalk`
+- `updateTeamMemberDraftState`
+- `saveTeamMissionCard`
+
+这些 endpoint 在 `miniprogram/services/api.js` 中多数只有 `cloudName`，没有 `web.path`。因此 Web 模式下不能把同行主链路视为已接入。
+
 ---
 
 ## 5. 当前两个项目的核心差异
@@ -385,7 +413,8 @@ Web 前端主要通过后端接口实现：
 当前状态：
 
 - 搜索已经可以切到 Web 后端
-- 周边 POI 已经可以切到 Web 后端 `/api/v1/map/pois/nearby`
+- `fetchNearbyPois` 代理能力已经配置了 Web 后端 `/api/v1/map/pois/nearby`
+- 探索页当前附近地点推荐主链路仍来自高德小程序 SDK 的逆地理 `getRegeo()`，没有直接调用 `fetchNearbyPois`
 - 逆地理依然保留高德 SDK
 
 这说明：
@@ -452,21 +481,25 @@ Web 前端的保存结构更轻：
 
 则：
 
-- 优先走 Web 共用接口 `/api/v1/**`
+- 已配置 Web endpoint 且未被云存储开关强制兜底的接口优先走 Web 共用接口 `/api/v1/**`
 
-当前已经切换为共用接口的能力包括：
+当前已经具备 Web endpoint 适配的能力包括：
 
 - 主题生成
 - 随机主题，前端随机选 `category` 后复用单主题生成接口
 - 组合主题
 - 地点环境
 - 地点搜索
-- 周边 POI
-- 文件上传
-- 保存漫步
-- 历史列表
-- 公共列表
-- 详情查询
+- `fetchNearbyPois` 代理能力
+- 文件上传，需 `useCloudMediaStorage: false`
+- 保存漫步 / 历史列表 / 详情查询 / 分享 / 删除，需 `useCloudWalkStorage: false`
+
+当前仍主要依赖云函数的能力包括：
+
+- 同行模式主链路
+- 成就列表
+- 默认配置下的单人记录和媒体上传
+- 公共列表，小程序当前没有对应入口
 
 ---
 
@@ -479,9 +512,10 @@ Web 前端的保存结构更轻：
 1. 探索页搜索地点
 2. 生成主题
 3. 开始漫步
-4. 上传图片/视频/录音
-5. 保存漫步记录
-6. 历史页读取记录
+4. 如需测试 Web 上传，先关闭 `useCloudMediaStorage`
+5. 如需测试 Web 保存和历史，先关闭 `useCloudWalkStorage`
+6. 保存漫步记录
+7. 历史页读取记录
 
 这是当前最值得优先打通的一条链路。
 

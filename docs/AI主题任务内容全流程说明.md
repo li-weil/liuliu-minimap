@@ -10,10 +10,10 @@
 
 1. 用户在探索页选择生成方式。
 2. 前端确认探索点、时间、天气、模式、主题、偏好和附近 AOI 等上下文。
-3. 前端调用云函数 `generateTheme` 或 `generateCombinedTheme`。
-4. 云函数根据上下文构造模型输入，包括 system prompt、固定协议、生成规则、策略输入、动态上下文、上下文摘要和返回格式。
+3. 前端通过 `services/theme.js` 调用 `callApi()`；默认云开发模式下落到云函数 `generateTheme` / `generateCombinedTheme`，Web 模式且 endpoint 可用时走 `/api/v1/ai/themes/generate` / `/api/v1/ai/themes/combine`。
+4. 云函数或 Web 后端根据上下文构造模型输入，包括 system prompt、固定协议、生成规则、策略输入、动态上下文、上下文摘要和返回格式。
 5. 模型直接生成主题内容 JSON。
-6. 云函数解析 JSON，做轻量结构检查。
+6. 云函数或 Web 后端解析 JSON，做轻量结构检查。
 7. 如果模型返回任务数量不足或请求失败，用本地 fallback 补足。
 8. 前端展示主题卡片；调试开关打开时，可以查看模型输入和原始返回。
 
@@ -79,8 +79,8 @@ handleSelectedThemeGenerate()
 - 如果没有选择主题，前端直接提示 `请先选择主题`，不会再自动随机选择。
 - 纯粹模式下只允许单主题生成。
 - 进阶模式下：
-  - 选择一个主题时，调用 `generateTheme`。
-  - 选择多个主题时，调用 `generateCombinedTheme`。
+  - 选择一个主题时，通过 service 调用单主题生成链路。
+  - 选择多个主题时，通过 service 调用组合主题生成链路。
 
 ## 3. 生成等待状态
 
@@ -402,13 +402,13 @@ https://dashscope.aliyuncs.com/compatible-mode/v1
 2. 本地配置文件中的 `model`
 3. 代码默认模型
 
-当前建议模型：
+当前代码默认模型：
 
 ```text
-qwen3.5-plus
+deepseek-v3.2
 ```
 
-但模型不是在业务逻辑里硬编码决定的。实际线上使用哪个模型，以云函数环境变量、云端配置和调试面板中的 `modelRequest.request.model` 为准。
+但模型不是由页面业务逻辑决定的。实际线上使用哪个模型，以云函数环境变量、云端配置和调试面板中的 `modelRequest.request.model` 为准。历史文档里出现过 `qwen3.5-plus` 推荐口径，当前不要把它当成代码默认值。
 
 部署时应通过环境变量或云函数安全配置指定模型与密钥，避免把密钥和敏感配置写入仓库。
 

@@ -261,7 +261,7 @@ function buildAlbumEmptyState(statusKey, typeKey) {
   if (statusKey === 'all' && typeKey === 'all') {
     return {
       title: '纪念卡册',
-      subtitle: '这里会放 AI 根据一次漫步内容生成的纪念卡，当前先留空。',
+      subtitle: '完成一次漫步后，这里会收进你的单人和同行足迹。',
     };
   }
   const statusLabel = statusKey === 'all' ? '全部状态' : getAlbumStatusLabel(statusKey);
@@ -289,7 +289,9 @@ function buildAlbumResultCountLabel(count) {
 
 function buildRecentAchievements(achievements = []) {
   const unlocked = (Array.isArray(achievements) ? achievements : []).filter((item) => item && item.unlocked);
-  return unlocked.slice(0, 3);
+  return unlocked
+    .sort((left, right) => Number(right.unlockedAt || 0) - Number(left.unlockedAt || 0))
+    .slice(0, 3);
 }
 
 function buildHistoryShareTitle(data = {}) {
@@ -567,11 +569,11 @@ Page({
       const nextData = {
         allWalks: walks,
         albumStats: albumStats || createDefaultAlbumStats(),
-        albumTotalCount: walks.length,
-        albumStatusCounts,
-        albumStatusChips: buildAlbumStatusChips(albumStatusCounts),
-        albumTypeCounts,
-        albumTypeChips: buildAlbumTypeChips(albumTypeCounts),
+        albumTotalCount: getAlbumStatsCount(albumStats, 'all', 'all') || walks.length,
+        albumStatusCounts: buildAlbumStatusCountsFromStats(albumStats, this.data.albumTypeFilter || 'all') || albumStatusCounts,
+        albumStatusChips: buildAlbumStatusChips(buildAlbumStatusCountsFromStats(albumStats, this.data.albumTypeFilter || 'all') || albumStatusCounts),
+        albumTypeCounts: buildAlbumTypeCountsFromStats(albumStats, this.data.albumStatusFilter || 'all') || albumTypeCounts,
+        albumTypeChips: buildAlbumTypeChips(buildAlbumTypeCountsFromStats(albumStats, this.data.albumStatusFilter || 'all') || albumTypeCounts),
       };
 
       const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
@@ -865,9 +867,11 @@ Page({
       return statusMatched && typeMatched;
     });
     const emptyState = buildAlbumEmptyState(statusFilter, typeFilter);
-    const albumStatusCounts = buildAlbumStatusCounts(allWalks, typeFilter);
-    const albumTypeCounts = buildAlbumTypeCounts(allWalks, statusFilter);
-    const resultCount = filteredWalks.length;
+    const albumStats = this.data.albumStats || null;
+    const albumStatusCounts = buildAlbumStatusCountsFromStats(albumStats, typeFilter) || buildAlbumStatusCounts(allWalks, typeFilter);
+    const albumTypeCounts = buildAlbumTypeCountsFromStats(albumStats, statusFilter) || buildAlbumTypeCounts(allWalks, statusFilter);
+    const statsResultCount = getAlbumStatsCount(albumStats, statusFilter, typeFilter);
+    const resultCount = statsResultCount === null ? filteredWalks.length : statsResultCount;
     const totalPages = resultCount > 0 ? Math.ceil(resultCount / ALBUM_PAGE_SIZE) : 0;
     const currentPage = totalPages
       ? Math.min(Math.max(Number(this.data.albumCurrentPage || 1), 1), totalPages)

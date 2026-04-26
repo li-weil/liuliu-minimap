@@ -414,7 +414,8 @@ function computeAchievements(records = []) {
       return withPresentation(item, luckyRecord ? 1 : 0, !!luckyRecord, luckyRecord && getRecordEventTimestamp(luckyRecord));
     }
     if (item.id === 'cat_marathon') {
-      return withPresentation(item, maxDistance, maxDistance >= item.target, maxDistanceRecord && getRecordEventTimestamp(maxDistanceRecord));
+      const unlocked = maxDistance >= item.target;
+      return withPresentation(item, maxDistance, unlocked, unlocked && maxDistanceRecord ? getRecordEventTimestamp(maxDistanceRecord) : null);
     }
     if (item.id === 'no_photo_five_walks') {
       return withPresentation(item, noPhotoResult.progress, noPhotoResult.unlocked, noPhotoResult.unlockedAt);
@@ -526,6 +527,7 @@ async function recalculateUserAchievements({ db, _, openid }) {
 }
 
 module.exports = {
+  ACHIEVEMENTS,
   computeAchievements,
   recalculateUserAchievements,
 };

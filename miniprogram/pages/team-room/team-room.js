@@ -1,5 +1,23 @@
 const { finishTeamWalk, getTeamRoomDetail, leaveTeamRoom, startTeamWalk } = require('../../services/team');
 
+function explainFinishError(error) {
+  const raw = String((error && (error.message || error.errMsg)) || error || '');
+  if (raw.includes('pending_member_sync')) {
+    const names = raw.split('pending_member_sync:')[1] || '';
+    const memberNames = names.split(',').map((item) => item.trim()).filter(Boolean).join('、');
+    return memberNames
+      ? `${memberNames} 还有内容未同步，请提醒 TA 先完成提交`
+      : '还有成员内容未同步，请先提醒队友完成提交';
+  }
+  if (raw.includes('permission_denied')) {
+    return '只有房主可以结束同行漫步';
+  }
+  if (raw.includes('room_not_active')) {
+    return '这次同行当前不在进行中';
+  }
+  return '结束失败，请稍后重试';
+}
+
 function buildInviteShareTitle() {
   const app = getApp();
   const user = app.globalData.user || null;
@@ -240,7 +258,7 @@ Page({
       await finishTeamWalk({ roomId: this.data.roomId });
       wx.navigateTo({ url: `/pages/team-detail/team-detail?roomId=${encodeURIComponent(this.data.roomId)}` });
     } catch (error) {
-      wx.showToast({ title: '结束失败', icon: 'none' });
+      wx.showToast({ title: explainFinishError(error).slice(0, 20), icon: 'none', duration: 3000 });
     } finally {
       wx.hideLoading();
     }

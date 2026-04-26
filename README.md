@@ -18,7 +18,7 @@
 - 单人模式：开始时创建记录，保存时结束记录
 - 同行模式：建房 -> 开始 -> 多人提交 -> 房主结束
 - 探索页、足迹页、个人页主背景基色统一为 `#f5f2ed`
-- 小程序服务层已为 Web 共用接口做适配
+- 小程序服务层已为 Web 共用接口做了部分适配；当前默认仍以云开发兜底模式为主
 - 漫步主题已统一为 `形状 / 色彩 / 声音 / 数字 / 气味`
 - AI 主题生成已接入结构化 `contextPacket`、规则检查和前端调试面板；生成逻辑统一在 `generation-runtime`
 
@@ -37,7 +37,8 @@
 
 当 `apiBaseUrl` 有值时：
 
-- 优先走 Spring Boot Web 共用接口 `/api/v1/**`
+- 已配置 Web endpoint 且未被云存储开关强制兜底的能力，会优先走 Spring Boot Web 共用接口 `/api/v1/**`
+- 同行接口、成就列表，以及 `useCloudWalkStorage/useCloudMediaStorage` 保持 `true` 时的记录和媒体能力，仍会继续走云函数或云存储
 
 ## 项目结构
 
@@ -144,6 +145,7 @@ Web 后端模式：
 
 - 把 `apiBaseUrl` 改成你的线上域名，例如 `https://your-domain.com`
 - 确保服务端已经把 `/api/v1/` 和 `/uploads/` 反向代理到 Spring Boot
+- 如需让记录保存、历史、详情或媒体上传也走 Web，需要同步关闭 `useCloudWalkStorage` / `useCloudMediaStorage`，并确认对应 endpoint 已在 `miniprogram/services/api.js` 中配置
 
 ## 注意点
 

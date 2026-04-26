@@ -253,6 +253,14 @@ function syncDraftAggregates(draft) {
   };
 }
 
+function findUnconfirmedMissionContent(missions, draft) {
+  const missionAssetMap = ensureMissionAssetMap((draft && draft.missionAssetMap) || {});
+  return (missions || []).filter((mission) => {
+    const assets = missionAssetMap[mission] || createEmptyMissionAssets();
+    return hasMissionContent(assets) && !hasMissionCheckIn(draft, mission);
+  });
+}
+
 function buildDraftFromWalk(walk) {
   if (!walk) {
     return null;
@@ -1287,6 +1295,16 @@ Page({
       const saveDraft = {
         ...syncDraftAggregates(app.globalData.walkDraft),
       };
+      const unconfirmedContentMissions = findUnconfirmedMissionContent(checkableMissions, saveDraft);
+      if (unconfirmedContentMissions.length) {
+        wx.showModal({
+          title: '请先完成打卡',
+          content: `有 ${unconfirmedContentMissions.length} 个任务已经记录了内容。请点任务里的“完成这一站”后，再结束漫步。`,
+          showCancel: false,
+          confirmText: '知道了',
+        });
+        return null;
+      }
       saveDraft.completedMissions = deriveCompletedMissions(checkableMissions, saveDraft);
       const recheckBeforeUpload = checkableMissions.filter((mission) => hasMissionRecheckRequired(saveDraft, mission));
       if (recheckBeforeUpload.length) {
