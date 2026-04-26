@@ -1,21 +1,23 @@
-# AI 主题任务内容全流程说明
+﻿# AI 主题任务内容全流程说明
 
-本文档记录当前小程序“AI 生成主题与任务”的实际实现链路。当前方案已经从早期的主题 RAG、AI 二次验证、AI 改写循环，回退并收敛为更轻的直接模型生成方案：前端整理基础上下文，云函数构造完整 prompt，模型直接返回主题卡片 JSON；本地只做轻量结构检查和必要兜底。
+本文档说明小程序现在如何生成 AI 主题和任务。
 
-## 1. 当前方案总览
+现在的方案已经去掉早期的主题 RAG、AI 二次验证和 AI 改写循环。流程更简单：前端整理基础上下文，云函数生成完整 prompt，模型直接返回主题卡片 JSON。云函数只做结构检查；模型失败或任务数量不足时，再用本地 fallback 补齐。
 
-当前主线是：
+## 1. 方案总览
+
+主流程是：
 
 1. 用户在探索页选择生成方式。
 2. 前端确认探索点、时间、天气、模式、主题、偏好和附近 AOI 等上下文。
 3. 前端调用云函数 `generateTheme` 或 `generateCombinedTheme`。
-4. 云函数根据上下文构造完整模型输入，包括 system prompt、固定协议、生成规则、策略输入、动态上下文、上下文摘要和返回格式。
+4. 云函数根据上下文构造模型输入，包括 system prompt、固定协议、生成规则、策略输入、动态上下文、上下文摘要和返回格式。
 5. 模型直接生成主题内容 JSON。
 6. 云函数解析 JSON，做轻量结构检查。
-7. 如果模型返回任务数量不足或请求失败，使用本地 fallback 补足或兜底。
-8. 前端展示主题卡片，并在调试开关中展示真正传给模型的完整输入和模型原始返回。
+7. 如果模型返回任务数量不足或请求失败，用本地 fallback 补足。
+8. 前端展示主题卡片；调试开关打开时，可以查看模型输入和原始返回。
 
-当前不再使用：
+不再使用：
 
 - 主题 RAG 检索。
 - AI 二次验证。
@@ -38,26 +40,30 @@
 - `miniprogram/pages/index/index.js`
 - `miniprogram/services/api.js`
 
-### 2.1 随机生成
+### 2.1 主题方向与随机选项
 
-入口函数：
+探索页现在只有一个生成入口：
 
 ```js
-handleRandomTheme()
+handleSelectedThemeGenerate()
 ```
 
 行为：
 
-- 从当前可用主题中随机选择一个主题。
-- 调用单主题云函数 `generateTheme`。
-- 随机行为发生在前端，不依赖后端随机主题接口。
-- 后端只接收已经确定的主题。
+- 用户必须先设定探索点。
+- 用户必须先选择主题方向；“随机”只是一个主题选项。
+- 选择“随机”时，前端会从形状、色彩、声音、数字、气味中抽一个真实主题，然后继续调用单主题生成。
+- 后端只接收确定后的主题，不再提供独立随机主题接口。
 
-source 标签会被前端归一化：
+source 标签保持云函数返回值：
 
-- `ai-direct-raw` / `ai-direct` -> `random-direct`
-- `ai-direct-partial-fallback` -> `random-direct-partial-fallback`
-- `ai-direct-fallback` / `ai-direct-error` -> `random-direct-fallback`
+- `ai-direct-raw`
+- `ai-direct-partial-fallback`
+- `ai-direct-fallback`
+- `combined-direct-raw`
+- `combined-direct-partial-fallback`
+- `combined-direct-fallback`
+- `combined-direct-error`
 
 ### 2.2 选择生成
 
@@ -76,36 +82,20 @@ handleSelectedThemeGenerate()
   - 选择一个主题时，调用 `generateTheme`。
   - 选择多个主题时，调用 `generateCombinedTheme`。
 
-### 2.3 普通生成入口
-
-入口函数：
-
-```js
-handleGenerateTheme()
-```
-
-行为：
-
-- 确认探索点。
-- 整理附近地点和时间线索。
-- 根据当前主题选择情况决定调用单主题或组合主题云函数。
-- 如果没有显式选择主题，会从可用主题中随机选择一个。
-
-## 3. 等待体验链路
+## 3. 生成等待状态
 
 前端使用全局 `generationStage` 做阶段式 loading。
 
 阶段顺序：
 
-1. `正在确认探索点位置`
-2. `正在整理附近地点和时间线索`
-3. `正在生成漫步主题和任务`
-4. `正在整理任务卡片`
+1. `正在读取探索点附近的街区信息`
+2. `正在整理时间、地点和主题线索`
+3. `正在生成今天的任务票据`
 
-体验策略：
+展示规则：
 
 - 阶段切换用连续进度条，不做生硬跳段。
-- 前置阶段会尽量复用已经准备好的探索点、附近地点和时间上下文。
+- 前置阶段会优先复用已经准备好的探索点、附近地点和时间上下文。
 - 如果等待超过轻量阈值，会显示：
 
 ```text
@@ -118,7 +108,7 @@ handleGenerateTheme()
 66 迷路啦，请再次尝试生成
 ```
 
-## 4. 前端上下文准备
+## 4. 前端上下文
 
 核心函数：
 
@@ -126,7 +116,7 @@ handleGenerateTheme()
 buildGenerationPayload(basePayload)
 ```
 
-它负责把页面状态整理成云函数入参。主要数据包括：
+它负责把页面状态整理成云函数入参。主要包括：
 
 - 当前探索点。
 - 当前时间段。
@@ -139,7 +129,7 @@ buildGenerationPayload(basePayload)
 - 历史生成任务。
 - 调试用 `contextPacket`。
 
-### 4.1 时间上下文
+### 4.1 时间
 
 前端会生成 `timeContext`，包括：
 
@@ -148,11 +138,11 @@ buildGenerationPayload(basePayload)
 - 适合当前时间段的时间线索。
 - 与天气组合后的时间骨架。
 
-时间骨架不直接写具体主题，而是描述当下最有代表性的城市线索，例如“谁还在运转”“哪里开始收摊”“哪里显得更安静”。
+时间骨架不直接生成主题，只描述当前时段可能出现的城市线索，例如“谁还在运转”“哪里开始收摊”“哪里显得更安静”。
 
-### 4.2 地点上下文
+### 4.2 地点
 
-当前地点信息主要来自高德逆地理结果，而不是普通周边 POI 检索。
+地点信息主要来自高德逆地理结果，不依赖普通周边 POI 检索。
 
 前端仍会整理地点上下文，重点字段包括：
 
@@ -163,21 +153,21 @@ buildGenerationPayload(basePayload)
 - `nearby.aoiTypes`
 - `nearby.businessAreas`
 
-当前策略：
+处理方式：
 
 - 这些字段保留在前端上下文、调试视图和 fallback 可用信息中。
-- `location.name` 不进入真正提交给模型的 prompt，因为它太具体，容易把任务锁死在某个建筑、食堂、店铺或入口。
+- `location.name` 不进入模型 prompt。它太具体，容易让任务被某个建筑、食堂、店铺或入口限制住。
 - `location.region` 会进入 prompt，提供省市区这类粗粒度地区语境。
 - `nearby.aoi`、`nearby.aoiList`、`nearby.aoiTypes`、`nearby.businessAreas` 仍会进入 prompt，作为轻量场域参考。
 - 不再把 `location.sceneTag` 传给模型。
 - 不再把 `nearby.nearbyScene` 传给模型。
 - 不再向模型强调“附近语境以某某为主”。
 - 不再把 POI 列表作为主要 prompt 约束。
-- 当前 direct AI 主链路更强调主题、时间、天气、偏好、任务骨架、省市区和 AOI 语境，让模型不要被某个具体当前位置名称锁死。
+- 现在的生成更依赖主题、时间、天气、偏好、任务骨架、省市区和 AOI 语境，避免被具体点位名带偏。
 
 ### 4.3 `contextPacket` 的作用
 
-`contextPacket` 是前端整理出的结构化上下文包，主要用于：
+`contextPacket` 是前端整理出的结构化上下文包，主要用来：
 
 - 给云函数提供原始上下文。
 - 给调试视图展示前端传入的基础信息。
@@ -191,7 +181,7 @@ buildGenerationPayload(basePayload)
 modelRequest.request.messages
 ```
 
-两者关系是：
+两者关系：
 
 - `contextPacket` 是原料。
 - 云函数把 `contextPacket` 和其他 event 字段重新组织成 prompt。
@@ -496,7 +486,7 @@ buildTaskSkeletonHints()
 - 餐饮和生活服务经常排在前面。
 - 著名景点、校园、园区等代表性地点不一定靠前。
 - 不指定类型时，结果不一定覆盖风景名胜。
-- 指定类型时能取到代表性地点，但不适合作为通用生成链路。
+- 指定类型时能取到代表性地点，但不适合作为通用生成流程。
 
 因此当前 prompt 不再把 POI 作为核心输入。
 
@@ -688,17 +678,17 @@ cloudfunctions/generateCombinedTheme/ai.js
 
 也需要重新部署对应云函数。
 
-## 17. 当前链路判断
+## 17. 当前流程判断
 
-当前链路相比此前 RAG + AI 验证 + 改写循环更清楚：
+当前流程相比此前 RAG + AI 验证 + 改写循环更清楚：
 
 - 前端只负责收集上下文和展示调试。
 - 云函数负责构造完整 prompt。
 - 模型负责一次性生成主题任务。
-- 本地只负责结构兜底，不再过度干预内容。
+- 本地只负责结构补齐，不再过度干预内容。
 - 调试视图直接展示真实模型输入和真实模型返回。
 
-这套链路的核心取向是：减少具体地点名对模型的过度绑架，把生成自由度还给模型，同时通过省市区、AOI 语境、时间、主题骨架、偏好 instruction 和轻量规则维持基本质量。
+这套流程的核心取向是：减少具体地点名对模型的过度绑架，把生成自由度还给模型，同时通过省市区、AOI 语境、时间、主题骨架、偏好 instruction 和轻量规则维持基本质量。
 
 ## 18. 后续可优化方向
 

@@ -232,43 +232,6 @@ function searchAmapPois({ keyword, location, limit = 20 }) {
   });
 }
 
-function fetchAmapNearbyPois({ latitude, longitude, limit = 12, radius = 3000 }) {
-  const lat = Number(latitude);
-  const lng = Number(longitude);
-  if (!amapKey || !Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return Promise.resolve([]);
-  }
-
-  return requestAmapRest({
-    url: 'https://restapi.amap.com/v3/place/around',
-    data: {
-      location: `${lng},${lat}`,
-      sortrule: 'distance',
-      radius,
-      offset: limit,
-      page: 1,
-      extensions: 'all',
-    },
-  }).then((pois) => (
-    dedupeLocations((pois || []).map(normalizePoi).filter(Boolean))
-      .map((item) => ({
-        ...item,
-        distance: Number.isFinite(Number(item.distance))
-          ? Number(item.distance)
-          : getDistanceMeters({ latitude: lat, longitude: lng }, item),
-      }))
-      .sort((a, b) => {
-        const distanceA = Number.isFinite(Number(a.distance)) ? Number(a.distance) : Number.MAX_SAFE_INTEGER;
-        const distanceB = Number.isFinite(Number(b.distance)) ? Number(b.distance) : Number.MAX_SAFE_INTEGER;
-        if (distanceA !== distanceB) {
-          return distanceA - distanceB;
-        }
-        return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN');
-      })
-      .slice(0, limit)
-  ));
-}
-
 function normalizeAmapLocation(regeo, fallbackName) {
   if (!regeo) {
     return {
@@ -314,7 +277,6 @@ function normalizeAmapLocation(regeo, fallbackName) {
 }
 
 module.exports = {
-  fetchAmapNearbyPois,
   getInputTips,
   getRegeo,
   hasAmapSdk,

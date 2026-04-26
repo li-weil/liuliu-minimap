@@ -317,14 +317,11 @@ function normalizeGenerationStructureCheckMeta(structureCheck) {
 }
 
 function buildStructureCheckSummary(generationSource, generationStructureCheck) {
-  const source = String(generationSource || '').trim();
-  const isDirectMode = /direct/.test(source);
   if (!generationSource) {
     return {
       status: '未生成',
       details: '尚未发起生成',
       score: '未提供',
-      missingCategories: [],
       reasons: [],
     };
   }
@@ -332,9 +329,7 @@ function buildStructureCheckSummary(generationSource, generationStructureCheck) 
     return {
       status: '云函数未返回',
       details: '本次结果带有 source，但没有返回 structureCheck，通常表示当前云函数还是旧版本',
-      score: isDirectMode ? '未启用' : 'AI 未提供',
-      precheckScore: '未提供',
-      missingCategories: [],
+      score: '未提供',
       reasons: [],
     };
   }
@@ -353,8 +348,6 @@ function buildStructureCheckSummary(generationSource, generationStructureCheck) 
     status,
     details,
     score: Number.isFinite(Number(generationStructureCheck.score)) ? Number(generationStructureCheck.score) : '未提供',
-    precheckScore: '未启用',
-    missingCategories: generationStructureCheck.missingCategories || [],
     reasons: generationStructureCheck.reasons || [],
   };
 }
@@ -1202,7 +1195,6 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
   const runtimeVersion = generationContext && generationContext.runtimeVersion
     ? String(generationContext.runtimeVersion)
     : (contextPacket && contextPacket.runtimeVersion ? String(contextPacket.runtimeVersion) : '');
-  const isDirectMode = /direct/.test(generationSource || '');
   if (!contextPacket) {
     return {
       lastGenerationContext: generationContext || null,
@@ -1289,16 +1281,16 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
       ),
     },
     {
-      label: isDirectMode ? '检查状态' : '验证状态',
+      label: '检查状态',
       value: formatDebugValue(structureCheckSummary.status),
     },
     {
-      label: isDirectMode ? '检查细节' : '验证细节',
+      label: '检查细节',
       value: formatDebugValue(structureCheckSummary.details),
     },
     {
-      label: isDirectMode ? '检查说明' : '复核原因',
-      value: formatDebugValue(structureCheckSummary.reasons.length ? structureCheckSummary.reasons : (isDirectMode ? '未提供' : 'AI 未提供')),
+      label: '检查说明',
+      value: formatDebugValue(structureCheckSummary.reasons.length ? structureCheckSummary.reasons : '未提供'),
     },
   ];
 
@@ -1359,7 +1351,6 @@ function isGenericLocationName(value) {
   return !text
     || text === '当前位置'
     || text === '定位成功'
-    || text === '已设为探索点'
     || text === '已选地点'
     || text === '城市街道';
 }
@@ -1563,7 +1554,6 @@ Page({
     currentTheme: null,
     currentThemeSource: 'preset',
     displaySummary: '根据你的位置与模式生成今天的 citywalk 任务。',
-    displayTag: '展示栏',
     isCombining: false,
     generationBusy: false,
     generationViewState: null,
@@ -1642,14 +1632,7 @@ Page({
   },
 
   onReady() {
-    this.ensureMapContext();
     this.locationResolveToken = 0;
-  },
-
-  ensureMapContext() {
-    if (typeof wx !== 'undefined' && wx.createMapContext) {
-      this.mapCtx = wx.createMapContext('explore-map', this);
-    }
   },
 
   onShareAppMessage() {
@@ -1700,26 +1683,8 @@ Page({
 
   syncDisplayMeta(theme, source, walkMode = this.data.walkMode) {
     const modeLabel = walkMode === 'advanced' ? '进阶模式' : '纯粹模式';
-    const sourceLabelMap = {
-      preset: '预设展示',
-      'ai-direct': 'AI 直出',
-      'ai-direct-raw': '模型原样',
-      'ai-direct-error': '模型失败',
-      'ai-direct-fallback': '直出兜底',
-      'ai-direct-partial-fallback': '模型补齐',
-      'random-direct': '随机直出',
-      'random-direct-fallback': '随机兜底',
-      'random-direct-partial-fallback': '随机补齐',
-      'combined-direct': '组合直出',
-      'combined-direct-raw': '组合模型原样',
-      'combined-direct-error': '组合模型失败',
-      'combined-direct-fallback': '组合兜底',
-      'combined-direct-partial-fallback': '组合补齐',
-    };
-    const sourceLabel = sourceLabelMap[source] || '主题结果';
     this.setData({
       currentThemeSource: source,
-      displayTag: sourceLabel,
       displaySummary: `${modeLabel} · ${theme.category || '探索'} · ${theme.missions ? theme.missions.length : 0} 个任务`,
     });
   },
@@ -1914,17 +1879,11 @@ Page({
       return;
     }
     const nextStep = step === 'generate' ? 'generate' : 'location';
-    this.setData({ exploreStep: nextStep }, () => {
-      if (nextStep === 'location') {
-        this.ensureMapContext();
-      }
-    });
+    this.setData({ exploreStep: nextStep });
   },
 
   changeExplorePoint() {
-    this.setData({ exploreStep: 'location' }, () => {
-      this.ensureMapContext();
-    });
+    this.setData({ exploreStep: 'location' });
   },
 
   toggleGenerationDebug() {
@@ -2529,7 +2488,7 @@ Page({
     }
 
     if (!this.data.hasConfirmedExplorePoint) {
-      wx.showToast({ title: '请先定位、搜索或设为探索点', icon: 'none', duration: 2500 });
+      wx.showToast({ title: '请先定位、搜索或选择附近地点', icon: 'none', duration: 2500 });
       return;
     }
 

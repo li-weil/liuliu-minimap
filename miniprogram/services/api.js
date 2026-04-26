@@ -4,7 +4,7 @@ const { inferExtension } = require('../utils/media');
 
 const CLOUD_ENDPOINTS = new Set(
   useCloudWalkStorage
-    ? ['createWalk', 'listMyWalks', 'getWalkDetail', 'publishWalkShare', 'deleteWalk']
+    ? ['createWalk', 'listMyWalks', 'getWalkDetail', 'publishWalkShare', 'deleteWalk', 'listMyAchievements']
     : []
 );
 const CLOUD_ONLY_ENDPOINTS = new Set([
@@ -402,11 +402,19 @@ const ENDPOINTS = {
     web: {
       path: '/miniapp/auth/sync-user',
       method: 'POST',
-      normalizeRequest: (data) => ({
-        code: data.code,
-        nickName: data.nickName,
-        avatarUrl: data.avatarUrl,
-      }),
+      normalizeRequest: (data) => {
+        const profile = data.profile && typeof data.profile === 'object' ? data.profile : data;
+        return {
+          action: data.action,
+          code: data.code,
+          profile: {
+            nickName: profile.nickName || '',
+            avatarUrl: profile.avatarUrl || '',
+          },
+          nickName: profile.nickName || '',
+          avatarUrl: profile.avatarUrl || '',
+        };
+      },
       normalizeResponse: (data) => {
         persistAuthSession(data);
         return data;

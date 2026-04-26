@@ -77,10 +77,6 @@ Component({
       type: String,
       value: '#c96f4a',
     },
-    generatedMissionCardMap: {
-      type: Object,
-      value: {},
-    },
     supplementalMissionKey: {
       type: String,
       value: '',
@@ -97,29 +93,20 @@ Component({
       type: String,
       value: '',
     },
-    generatingMissionCard: {
-      type: String,
-      value: '',
-    },
     checkingInMission: {
       type: String,
       value: '',
     },
-    showCardActions: {
-      type: Boolean,
-      value: true,
-    },
   },
 
   observers: {
-    'missions, activeMission, expandedMission, completedMissions, missionReviews, missionAssetMap, generatedMissionCardMap, supplementalMissionKey, supplementalMissionLabel': function updateMissionCards(
+    'missions, activeMission, expandedMission, completedMissions, missionReviews, missionAssetMap, supplementalMissionKey, supplementalMissionLabel': function updateMissionCards(
       missions,
       activeMission,
       expandedMission,
       completedMissions,
       missionReviews,
       missionAssetMap,
-      generatedMissionCardMap,
       supplementalMissionKey,
       supplementalMissionLabel
     ) {
@@ -146,7 +133,6 @@ Component({
           needsRecheck: hasMissionRecheckRequired(missionReviews, mission),
           review: missionReviews && missionReviews[mission] ? missionReviews[mission] : null,
           assets: missionAssetMap && missionAssetMap[mission] ? missionAssetMap[mission] : null,
-          cardVersion: generatedMissionCardMap && generatedMissionCardMap[mission] ? generatedMissionCardMap[mission] : 0,
         };
       });
       this.setData({ missionCards: cards });
@@ -168,20 +154,6 @@ Component({
     checkIn(event) {
       const mission = event.currentTarget.dataset.mission;
       this.triggerEvent('checkin', { mission });
-    },
-
-    generateCard(event) {
-      const mission = event.currentTarget.dataset.mission;
-      this.triggerEvent('generatecard', { mission });
-    },
-
-    openCard(event) {
-      const mission = event.currentTarget.dataset.mission;
-      const src = event.currentTarget.dataset.src || '';
-      if (!mission || !src) {
-        return;
-      }
-      this.triggerEvent('opencard', { mission, src });
     },
 
     inputMissionNote(event) {

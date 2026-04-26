@@ -343,7 +343,6 @@ Page({
 
   onLoad(query) {
     this.missionCardRenderVersion = 0;
-    this.prepareMissionToken = 0;
     this.setData({ roomId: query.roomId || query.id || '' });
     this.fetchDetail();
   },
@@ -428,8 +427,6 @@ Page({
   },
 
   async prepareMissionCard() {
-    const token = Date.now();
-    this.prepareMissionToken = token;
     const group = this.getActiveMissionGroup();
     if (!group || !Array.isArray(group.contributions) || !group.contributions.length) {
       this.setData({
