@@ -408,14 +408,16 @@ Web 前端主要通过后端接口实现：
 小程序当前是：
 
 - 地图展示与浏览用微信 `map`
-- 搜索和逆地理原本更依赖高德 SDK
+- 搜索仍优先使用高德搜索能力
+- 逆地理已经收敛到 `miniprogram/utils/amap.js#getRegeo()` 统一封装，内部直连高德 REST 逆地理并手动归一化
 
 当前状态：
 
 - 搜索已经可以切到 Web 后端
 - `fetchNearbyPois` 代理能力已经配置了 Web 后端 `/api/v1/map/pois/nearby`
-- 探索页当前附近地点推荐主链路仍来自高德小程序 SDK 的逆地理 `getRegeo()`，没有直接调用 `fetchNearbyPois`
-- 逆地理依然保留高德 SDK
+- 探索页当前附近地点推荐主链路仍来自 `getRegeo()` 返回的 `regeocode.pois`，没有直接调用 `fetchNearbyPois`
+- `getRegeo()` 会保留 `nativeContext`，包括地址组件、AOI、商圈、POI 和道路；缺失字段保持为空，不做 mock
+- AOI 为空不代表逆地理失败，生成链路会继续使用地区、商圈、POI 摘要和其他上下文
 
 这说明：
 

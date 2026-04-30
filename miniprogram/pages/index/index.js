@@ -754,8 +754,22 @@ function getOfficialTypeLabelFromCode(code) {
     || '';
 }
 
+function normalizeAoiObject(aoi) {
+  return aoi && typeof aoi === 'object' ? aoi : {};
+}
+
+function getAoiArea(aoi) {
+  const normalizedAoi = normalizeAoiObject(aoi);
+  if (normalizedAoi.area === undefined || normalizedAoi.area === null || normalizedAoi.area === '') {
+    return null;
+  }
+  const area = Number(normalizedAoi.area);
+  return Number.isFinite(area) ? area : null;
+}
+
 function getAoiOfficialTypecode(aoi = {}) {
-  const value = String(aoi.typecode || aoi.type || '').trim();
+  const normalizedAoi = normalizeAoiObject(aoi);
+  const value = String(normalizedAoi.typecode || normalizedAoi.type || '').trim();
   return /^\d{4,6}$/.test(value) ? value : '';
 }
 
@@ -764,11 +778,12 @@ function getAoiOfficialTypeLabel(aoi = {}) {
 }
 
 function getAoiText(aoi = {}) {
+  const normalizedAoi = normalizeAoiObject(aoi);
   return [
-    aoi.name,
-    aoi.type,
-    getAoiOfficialTypeLabel(aoi),
-    aoi.address,
+    normalizedAoi.name,
+    normalizedAoi.type,
+    getAoiOfficialTypeLabel(normalizedAoi),
+    normalizedAoi.address,
   ].map((item) => String(item || '').trim()).filter(Boolean).join(' ');
 }
 
@@ -800,38 +815,43 @@ function pickPrimaryAoiFromHierarchy(aois) {
 function pickLargestWalkableAoi(aois) {
   return (Array.isArray(aois) ? aois : [])
     .filter((item) => {
-      const area = Number(item && item.area);
-      return Number.isFinite(area)
+      const area = getAoiArea(item);
+      return area !== null
         && area >= WALKABLE_AOI_MIN_AREA
         && area <= WALKABLE_AOI_MAX_AREA;
     })
-    .sort((left, right) => Number(right.area) - Number(left.area))[0] || null;
+    .sort((left, right) => (getAoiArea(right) || 0) - (getAoiArea(left) || 0))[0] || null;
 }
 
 function buildLocationNativeEvidence(contextResponse) {
   const nativeContext = contextResponse && contextResponse.nativeContext && typeof contextResponse.nativeContext === 'object'
     ? contextResponse.nativeContext
     : {};
-  const allAois = Array.isArray(nativeContext.aois) ? nativeContext.aois.filter(Boolean) : [];
+  const allAois = Array.isArray(nativeContext.aois)
+    ? nativeContext.aois.filter((item) => item && typeof item === 'object')
+    : [];
   const currentAoiHierarchy = allAois
     .filter((item) => {
-      const distance = Number(item && item.distance);
+      const normalizedItem = normalizeAoiObject(item);
+      const distance = Number(normalizedItem.distance);
       return !Number.isFinite(distance) || distance <= 0;
     })
     .sort((left, right) => {
-      const leftArea = Number(left && left.area);
-      const rightArea = Number(right && right.area);
-      if (Number.isFinite(leftArea) && Number.isFinite(rightArea) && rightArea !== leftArea) {
+      const leftArea = getAoiArea(left);
+      const rightArea = getAoiArea(right);
+      if (leftArea !== null && rightArea !== null && rightArea !== leftArea) {
         return rightArea - leftArea;
       }
       return 0;
     });
-  const businessAreas = Array.isArray(nativeContext.businessAreas) ? nativeContext.businessAreas.filter(Boolean).slice(0, 6) : [];
+  const businessAreas = Array.isArray(nativeContext.businessAreas)
+    ? nativeContext.businessAreas.filter((item) => item && typeof item === 'object').slice(0, 6)
+    : [];
   const effectiveAoiHierarchy = currentAoiHierarchy.length ? currentAoiHierarchy : allAois;
   const aoiHierarchyByAreaAsc = effectiveAoiHierarchy.slice().sort((left, right) => {
-    const leftArea = Number(left && left.area);
-    const rightArea = Number(right && right.area);
-    if (Number.isFinite(leftArea) && Number.isFinite(rightArea) && leftArea !== rightArea) {
+    const leftArea = getAoiArea(left);
+    const rightArea = getAoiArea(right);
+    if (leftArea !== null && rightArea !== null && leftArea !== rightArea) {
       return leftArea - rightArea;
     }
     return 0;
@@ -848,7 +868,7 @@ function buildLocationNativeEvidence(contextResponse) {
     primaryAoiName: primaryAoi && primaryAoi.name ? String(primaryAoi.name).trim() : '',
     primaryAoiType: primaryAoi ? getAoiOfficialTypeLabel(primaryAoi) : '',
     primaryAoiTypecode: primaryAoi ? getAoiOfficialTypecode(primaryAoi) : '',
-    primaryAoiArea: Number.isFinite(Number(primaryAoi && primaryAoi.area)) ? Number(primaryAoi.area) : null,
+    primaryAoiArea: getAoiArea(primaryAoi),
     aoiTypes: dedupeStrings(aoiHierarchyByAreaAsc.map((item) => getAoiOfficialTypeLabel(item)), 20),
     aoiTypecodes: dedupeStrings(aoiHierarchyByAreaAsc.map((item) => getAoiOfficialTypecode(item)), 20),
   };
@@ -963,20 +983,26 @@ function buildNearbySummary(nearbyPlaces, contextResponse = null, timeContext = 
   const poiNames = dedupeStrings(places.map((item) => item.name), 8);
   const poiTypes = dedupeStrings(places.map((item) => buildNativeCategoryLabel(item)), 8);
   const poiTypecodes = dedupeStrings(places.map((item) => item.typecode), 12);
+  const aoiNames = dedupeStrings((nativeEvidence.aois || []).map((item) => item.name), 20);
+  const primaryAoiName = nativeEvidence.primaryAoiName || aoiNames[0] || '';
+  const businessAreaNames = dedupeStrings((nativeEvidence.businessAreas || []).map((item) => item.name), 6);
   return {
     poiNames,
     poiTypes,
     poiTypecodes,
     representativePoiNames: dedupeStrings(representativePlaces.map((item) => item.name), 20),
     representativePoiTypes: dedupeStrings(representativePlaces.map((item) => buildNativeCategoryLabel(item)), 20),
-    aoiNames: dedupeStrings((nativeEvidence.aois || []).map((item) => item.name), 20),
+    aoi: primaryAoiName,
+    aoiList: aoiNames,
+    aoiNames,
     aoiTypes: nativeEvidence.aoiTypes || [],
     aoiTypecodes: nativeEvidence.aoiTypecodes || [],
-    primaryAoiName: nativeEvidence.primaryAoiName,
+    primaryAoiName,
     primaryAoiType: nativeEvidence.primaryAoiType,
     primaryAoiTypecode: nativeEvidence.primaryAoiTypecode,
     primaryAoiArea: nativeEvidence.primaryAoiArea,
-    businessAreaNames: dedupeStrings((nativeEvidence.businessAreas || []).map((item) => item.name), 6),
+    businessAreas: businessAreaNames,
+    businessAreaNames,
     activityHints: inferNativeActivityHints(places, timeContext, nativeEvidence, null),
     source: 'amap-native',
   };
@@ -1137,6 +1163,44 @@ function buildReadableModelRequestLines(value) {
   }
 }
 
+function buildLocationRawDebugSnapshot(generationContext = {}) {
+  const contextPacket = generationContext && generationContext.contextPacket && typeof generationContext.contextPacket === 'object'
+    ? generationContext.contextPacket
+    : {};
+  const locationContextResponse = generationContext && generationContext.locationContextResponse && typeof generationContext.locationContextResponse === 'object'
+    ? generationContext.locationContextResponse
+    : null;
+  const nativeContext = locationContextResponse && locationContextResponse.nativeContext && typeof locationContextResponse.nativeContext === 'object'
+    ? locationContextResponse.nativeContext
+    : null;
+  return {
+    location: contextPacket.location || null,
+    nearby: contextPacket.nearby || null,
+    locationContextResponse: locationContextResponse
+      ? {
+        context: locationContextResponse.context || '',
+        placeName: locationContextResponse.placeName || '',
+        formattedAddress: locationContextResponse.formattedAddress || '',
+        district: locationContextResponse.district || '',
+        primaryAoiName: locationContextResponse.primaryAoiName || '',
+        primaryAoiType: locationContextResponse.primaryAoiType || '',
+        primaryAoiTypecode: locationContextResponse.primaryAoiTypecode || '',
+        reason: locationContextResponse.reason || '',
+      }
+      : null,
+    nativeContext: nativeContext
+      ? {
+        addressComponent: nativeContext.addressComponent || null,
+        primaryAoi: nativeContext.primaryAoi || null,
+        aois: Array.isArray(nativeContext.aois) ? nativeContext.aois : [],
+        businessAreas: Array.isArray(nativeContext.businessAreas) ? nativeContext.businessAreas : [],
+        pois: Array.isArray(nativeContext.pois) ? nativeContext.pois : [],
+        roads: Array.isArray(nativeContext.roads) ? nativeContext.roads : [],
+      }
+      : null,
+  };
+}
+
 function extractModelCacheStats(modelResponse) {
   const usage = modelResponse && modelResponse.usage && typeof modelResponse.usage === 'object'
     ? modelResponse.usage
@@ -1200,6 +1264,7 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
       lastGenerationContext: generationContext || null,
       debugContextAvailable: false,
       debugContextRows: [],
+      debugLocationRawLines: [],
       debugModelRequestLines: [],
       debugModelResponseLines: [],
     };
@@ -1210,12 +1275,14 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
       lastGenerationContext: generationContext,
       debugContextAvailable: true,
       debugContextRows: [],
+      debugLocationRawLines: [],
       debugModelRequestLines: [],
       debugModelResponseLines: [],
     };
   }
 
   const structureCheckSummary = buildStructureCheckSummary(generationSource, generationStructureCheck);
+  const locationRawDebug = buildLocationRawDebugSnapshot(generationContext);
   const rows = [
     {
       label: '结果来源',
@@ -1298,6 +1365,7 @@ function buildGenerationDebugState(generationContext, includeHeavy = false) {
     lastGenerationContext: generationContext,
     debugContextAvailable: true,
     debugContextRows: rows,
+    debugLocationRawLines: buildReadableModelRequestLines(locationRawDebug),
     debugModelRequestLines: includeHeavy && generationModelRequest ? buildReadableModelRequestLines(generationModelRequest) : [],
     debugModelResponseLines: includeHeavy && generationModelResponse ? buildReadableModelRequestLines(generationModelResponse) : [],
   };
@@ -1490,6 +1558,13 @@ function buildNearbyPlaceViews(results) {
       return String(left.name || '').localeCompare(String(right.name || ''), 'zh-CN');
     })
     .slice(0, NEARBY_QUERY_OPTIONS.limit);
+}
+
+function buildNativeContextPoiViews(contextResponse) {
+  const nativeContext = contextResponse && contextResponse.nativeContext && typeof contextResponse.nativeContext === 'object'
+    ? contextResponse.nativeContext
+    : {};
+  return buildNearbyPlaceViews(Array.isArray(nativeContext.pois) ? nativeContext.pois : []);
 }
 
 function extractErrorMessage(error, fallback) {
@@ -2023,11 +2098,28 @@ Page({
         longitude: Number(location.longitude),
         placeName: initialLocationName,
       });
-      const nearbyPlaces = regeoNearbyPlaces.length ? regeoNearbyPlaces : fetchedNearbyPlaces;
+      const mergedLocationContextResult = locationContextResult
+        && locationContextResult.nativeContext
+        ? locationContextResult
+        : (amapSummary.nativeContext
+          ? {
+            ...(locationContextResult || {}),
+            context: locationContextResult && locationContextResult.context
+              ? locationContextResult.context
+              : (initialLocationName || amapSummary.placeName || ''),
+            nativeContext: amapSummary.nativeContext,
+          }
+          : locationContextResult);
+      const contextNearbyPlaces = buildNativeContextPoiViews(mergedLocationContextResult);
+      const nearbyPlaces = regeoNearbyPlaces.length
+        ? regeoNearbyPlaces
+        : contextNearbyPlaces.length
+          ? contextNearbyPlaces
+          : fetchedNearbyPlaces;
       const displayLocationName = pickBestLocationName({
         location,
         amapSummary,
-        contextResponse: locationContextResult,
+        contextResponse: mergedLocationContextResult,
         nearbyPlaces,
       });
       const nextLocationAddress = amapSummary.address || location.address || '';
@@ -2039,10 +2131,10 @@ Page({
       latitude: location.latitude,
       longitude: location.longitude,
       locationName: displayLocationName,
-      locationContext: locationContextResult && locationContextResult.context
-        ? String(locationContextResult.context).trim()
+      locationContext: mergedLocationContextResult && mergedLocationContextResult.context
+        ? String(mergedLocationContextResult.context).trim()
         : (displayLocationName && displayLocationName !== '当前位置' ? displayLocationName : ''),
-      locationContextResponse: locationContextResult || null,
+      locationContextResponse: mergedLocationContextResult || null,
       locationAddress: nextLocationAddress,
       locationAddressDisplay,
       searchResults: [],
@@ -2069,11 +2161,20 @@ Page({
         const regeo = await getRegeo({ latitude, longitude }).catch(() => null);
         const amapSummary = normalizeAmapLocation(regeo, this.data.locationName || this.data.locationAddress);
         const regeoNearbyPlaces = buildNearbyPlaceViews(amapSummary.pois || []);
+        const locationContextResult = await this.fetchLocationContextWithCache({
+          latitude: Number(latitude),
+          longitude: Number(longitude),
+          placeName: this.data.locationName,
+        }).catch(() => null);
+        const contextNearbyPlaces = buildNativeContextPoiViews(locationContextResult);
         const nearbyPlaces = regeoNearbyPlaces.length
           ? regeoNearbyPlaces
-          : await this.fetchNearbyPlacesWithCache(Number(latitude), Number(longitude), { force: true });
+          : contextNearbyPlaces.length
+            ? contextNearbyPlaces
+            : await this.fetchNearbyPlacesWithCache(Number(latitude), Number(longitude), { force: true });
         this.setData({
           nearbyPlaces,
+          locationContextResponse: locationContextResult || this.data.locationContextResponse || null,
           nearbyExpanded: nearbyPlaces.length ? this.data.nearbyExpanded : false,
         });
     } catch (error) {
@@ -2240,6 +2341,7 @@ Page({
       locationRegion,
       timeContext,
       nearbySummary,
+      locationContextResponse: locationContextResult || this.data.locationContextResponse || null,
       generationSeed: contextPacket.generation.seed,
       contextPacket,
     };
@@ -2471,6 +2573,7 @@ Page({
         result.source || (useCombinedTheme ? 'combined-direct-fallback' : 'ai-direct-fallback')
       );
     } catch (error) {
+      console.error('handleSelectedThemeGenerate failed', error);
       this.setData(this.failGenerationStageFlow());
       wx.showToast({
         title: GENERATION_ERROR_COPY,

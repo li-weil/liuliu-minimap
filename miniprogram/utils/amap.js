@@ -1,4 +1,4 @@
-const { amapKey } = require('./config');
+const { amapKey, requestTimeout } = require('./config');
 
 let amapSdk = null;
 
@@ -19,19 +19,108 @@ function createAmapInstance() {
   return new amapSdk.AMapWX({ key: amapKey });
 }
 
-function getRegeo({ latitude, longitude }) {
-  const amap = createAmapInstance();
-  if (!amap) {
+function normalizeRegeoLocation(value, fallback) {
+  const parts = String(value || '').split(',');
+  const longitude = Number(parts[0]);
+  const latitude = Number(parts[1]);
+  return {
+    longitude: Number.isFinite(longitude) ? longitude : fallback && fallback.longitude,
+    latitude: Number.isFinite(latitude) ? latitude : fallback && fallback.latitude,
+  };
+}
+
+function normalizeRegeoResponse(payload, fallbackLocation) {
+  const regeocode = payload && payload.regeocode && typeof payload.regeocode === 'object'
+    ? payload.regeocode
+    : {};
+  const addressComponent = regeocode.addressComponent && typeof regeocode.addressComponent === 'object'
+    ? regeocode.addressComponent
+    : {};
+  const pois = Array.isArray(regeocode.pois) ? regeocode.pois : [];
+  const roads = Array.isArray(regeocode.roads) ? regeocode.roads : [];
+  const streetNumber = addressComponent.streetNumber && typeof addressComponent.streetNumber === 'object'
+    ? addressComponent.streetNumber
+    : {};
+  const firstPoi = pois[0] || null;
+  const firstRoad = roads[0] || null;
+  const point = normalizeRegeoLocation(firstPoi && firstPoi.location, fallbackLocation);
+  const district = String(addressComponent.district || addressComponent.township || '').trim();
+  const roadName = String((firstRoad && firstRoad.name) || streetNumber.street || '').trim();
+  const desc = firstPoi && firstPoi.name
+    ? `${firstPoi.name}附近`
+    : roadName
+      ? `${roadName}附近`
+      : '';
+  const nameParts = [
+    addressComponent.province,
+    Array.isArray(addressComponent.city) ? addressComponent.city[0] : addressComponent.city,
+    district,
+    streetNumber.street,
+    streetNumber.number,
+  ].map((item) => String(item || '').trim()).filter(Boolean);
+
+  return {
+    name: nameParts.join(''),
+    desc,
+    longitude: point.longitude,
+    latitude: point.latitude,
+    district,
+    pois,
+    id: 0,
+    regeocodeData: regeocode,
+  };
+}
+
+function requestRegeoRest({ latitude, longitude }) {
+  if (!amapKey) {
     return Promise.resolve(null);
   }
 
-  return new Promise((resolve, reject) => {
-    amap.getRegeo({
-      location: `${longitude},${latitude}`,
-      success: (result) => resolve(result && result[0] ? result[0] : result),
-      fail: reject,
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    wx.request({
+      url: 'https://restapi.amap.com/v3/geocode/regeo',
+      method: 'GET',
+      data: {
+        key: amapKey,
+        location: `${lng},${lat}`,
+        extensions: 'all',
+        s: 'rsx',
+        platform: 'WXJS',
+        appname: amapKey,
+        sdkversion: '1.2.0',
+        logversion: '2.0',
+      },
+      header: {
+        'content-type': 'application/json',
+      },
+      timeout: requestTimeout,
+      success(res) {
+        try {
+          const payload = res && res.data;
+          if (payload && payload.status === '1') {
+            resolve(normalizeRegeoResponse(payload, { latitude: lat, longitude: lng }));
+            return;
+          }
+          resolve(null);
+        } catch (error) {
+          resolve(null);
+        }
+      },
+      fail() {
+        resolve(null);
+      },
     });
   });
+}
+
+function getRegeo({ latitude, longitude }) {
+  return requestRegeoRest({ latitude, longitude });
 }
 
 function getInputTips({ keyword, location }) {
@@ -66,6 +155,7 @@ function requestAmapRest({ url, data }) {
       header: {
         'content-type': 'application/json',
       },
+      timeout: requestTimeout,
       success(res) {
         const payload = res && res.data;
         if (payload && payload.status === '1') {
@@ -137,6 +227,46 @@ function normalizePoi(item) {
     latitude: Number.isFinite(latitude) ? latitude : null,
     longitude: Number.isFinite(longitude) ? longitude : null,
     distance: Number.isFinite(distance) ? distance : null,
+  };
+}
+
+function normalizeAoi(item) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const point = normalizeRegeoLocation(item.location, {});
+  const area = item.area !== undefined && item.area !== null && item.area !== ''
+    ? Number(item.area)
+    : null;
+  const distance = item.distance !== undefined && item.distance !== null && item.distance !== ''
+    ? Number(item.distance)
+    : null;
+  return {
+    id: item.id || '',
+    name: String(item.name || '').trim(),
+    type: String(item.type || item.typecode || '').trim(),
+    typecode: String(item.typecode || item.type || '').trim(),
+    area: Number.isFinite(area) ? area : null,
+    address: String(item.address || '').trim(),
+    adcode: String(item.adcode || '').trim(),
+    distance: Number.isFinite(distance) ? distance : null,
+    latitude: Number.isFinite(Number(point.latitude)) ? Number(point.latitude) : null,
+    longitude: Number.isFinite(Number(point.longitude)) ? Number(point.longitude) : null,
+  };
+}
+
+function normalizeBusinessArea(item) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const point = normalizeRegeoLocation(item.location, {});
+  return {
+    id: String(item.id || '').trim(),
+    name: String(item.name || '').trim(),
+    latitude: Number.isFinite(Number(point.latitude)) ? Number(point.latitude) : null,
+    longitude: Number.isFinite(Number(point.longitude)) ? Number(point.longitude) : null,
   };
 }
 
@@ -243,16 +373,25 @@ function normalizeAmapLocation(regeo, fallbackName) {
   }
 
   const regeoData = regeo.regeocodeData || {};
+  const addressComponent = regeoData.addressComponent && typeof regeoData.addressComponent === 'object'
+    ? regeoData.addressComponent
+    : {};
   const rawPois = Array.isArray(regeo.pois) && regeo.pois.length
     ? regeo.pois
     : Array.isArray(regeoData.pois)
       ? regeoData.pois
       : [];
+  const nativeAois = Array.isArray(regeoData.aois)
+    ? regeoData.aois.map(normalizeAoi).filter(Boolean)
+    : [];
+  const nativeBusinessAreas = Array.isArray(addressComponent.businessAreas)
+    ? addressComponent.businessAreas.map(normalizeBusinessArea).filter(Boolean)
+    : [];
   const normalizedPois = rawPois
     .map((poi) => normalizePoi({
       ...poi,
-      district: poi.district || (regeoData.addressComponent && regeoData.addressComponent.district) || regeo.district || '',
-      city: poi.cityname || (regeoData.addressComponent && regeoData.addressComponent.city) || '',
+      district: poi.district || addressComponent.district || regeo.district || '',
+      city: poi.cityname || addressComponent.city || '',
     }))
     .filter(Boolean)
     .sort((left, right) => {
@@ -273,6 +412,27 @@ function normalizeAmapLocation(regeo, fallbackName) {
     address: regeo.desc || '',
     district: regeo.district || '',
     pois: normalizedPois,
+    nativeContext: {
+      primaryAoi: nativeAois[0] || null,
+      aois: nativeAois,
+      businessAreas: nativeBusinessAreas,
+      addressComponent: {
+        province: String(addressComponent.province || '').trim(),
+        city: Array.isArray(addressComponent.city)
+          ? String(addressComponent.city[0] || '').trim()
+          : String(addressComponent.city || '').trim(),
+        district: String(addressComponent.district || '').trim(),
+        township: String(addressComponent.township || '').trim(),
+        neighborhood: addressComponent.neighborhood && addressComponent.neighborhood.name
+          ? String(addressComponent.neighborhood.name).trim()
+          : '',
+        building: addressComponent.building && addressComponent.building.name
+          ? String(addressComponent.building.name).trim()
+          : '',
+        adcode: String(addressComponent.adcode || '').trim(),
+        citycode: String(addressComponent.citycode || '').trim(),
+      },
+    },
   };
 }
 
