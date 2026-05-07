@@ -12,7 +12,12 @@
     "pages/history/history",
     "pages/profile/profile"
   ],
-  "__usePrivacyCheck__": false,
+  "__usePrivacyCheck__": true,
+  "requiredPrivateInfos": [
+    "getLocation",
+    "onLocationChange",
+    "startLocationUpdate"
+  ],
   "window": {
     "navigationBarTitleText": "城市漫步者",
     "navigationBarBackgroundColor": "#f5f2ed",
