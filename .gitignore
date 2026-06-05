@@ -5,3 +5,9 @@ dist/
 *.log
 private/
 feature-worklog/
+
+.playwright-mcp/
+.codegraph/
+.claude/
+CLAUDE.md
+superpowers/

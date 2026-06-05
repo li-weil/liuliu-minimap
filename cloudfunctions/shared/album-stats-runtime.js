@@ -1,5 +1,5 @@
 const STATUS_KEYS = ['all', 'pending', 'active', 'finished'];
-const TYPE_KEYS = ['solo', 'team'];
+const TYPE_KEYS = ['solo', 'team', 'dongao'];
 
 function createStatusCounts() {
   return STATUS_KEYS.reduce((result, key) => {
@@ -13,10 +13,12 @@ function createDefaultAlbumStats(updatedAt = 0) {
     totalCount: 0,
     soloCount: 0,
     teamCount: 0,
+    dongaoCount: 0,
     statusCounts: createStatusCounts(),
     typeStatusCounts: {
       solo: createStatusCounts(),
       team: createStatusCounts(),
+      dongao: createStatusCounts(),
     },
     updatedAt,
   };
@@ -33,8 +35,14 @@ function normalizeAlbumStatus(item = {}) {
   return 'active';
 }
 
+function resolveRecordType(type, item = {}) {
+  if (type === 'team') return 'team';
+  if (type === 'dongao' || (item && item.walkMode === 'dongao')) return 'dongao';
+  return 'solo';
+}
+
 function addAlbumStatsRecord(stats, type, item = {}) {
-  const recordType = type === 'team' ? 'team' : 'solo';
+  const recordType = resolveRecordType(type, item);
   const status = normalizeAlbumStatus(item);
   stats.totalCount += 1;
   stats[`${recordType}Count`] += 1;

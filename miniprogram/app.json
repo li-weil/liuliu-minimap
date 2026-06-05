@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/dongao/dongao",
     "pages/team-join/team-join",
     "pages/team-room/team-room",
     "pages/team-record/team-record",
@@ -39,6 +40,10 @@
       {
         "pagePath": "pages/index/index",
         "text": "探索"
+      },
+      {
+        "pagePath": "pages/dongao/dongao",
+        "text": "东澳岛"
       },
       {
         "pagePath": "pages/history/history",

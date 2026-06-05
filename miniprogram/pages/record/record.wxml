@@ -18,7 +18,7 @@
       </view>
       <view class="record-stage-stamp">
         <view class="record-stage-glyph">{{theme.displayGlyph || '遛'}}</view>
-        <view class="record-stage-stamp-text">{{draft.walkMode === 'advanced' ? '进阶' : '纯粹'}}</view>
+        <view class="record-stage-stamp-text">{{draft.walkMode === 'dongao' ? '东澳岛' : (draft.walkMode === 'advanced' ? '进阶' : '纯粹')}}</view>
       </view>
     </view>
 
@@ -30,7 +30,7 @@
         </view>
         <view class="record-meta-item">
           <view class="record-meta-label">模式</view>
-          <view class="record-meta-value">{{draft.walkMode === 'advanced' ? '进阶模式' : '纯粹模式'}}</view>
+          <view class="record-meta-value">{{draft.walkMode === 'dongao' ? '东澳岛模式' : (draft.walkMode === 'advanced' ? '进阶模式' : '纯粹模式')}}</view>
         </view>
       </view>
       <view class="hero-progress-head">

@@ -414,7 +414,7 @@ function buildDetailMetrics(walk, missionItems) {
     sourceLabel: safeWalk.sourceLabel || '',
     statusLabel: safeWalk.status === 'active' ? '进行中' : '已结束',
     visibilityLabel: safeWalk.isPublic ? '可分享给好友' : '仅自己可见',
-    modeLabel: safeWalk.walkMode === 'advanced' ? '进阶模式' : '纯粹模式',
+    modeLabel: safeWalk.walkMode === 'dongao' ? '东澳岛模式' : (safeWalk.walkMode === 'advanced' ? '进阶模式' : '纯粹模式'),
     completedCount,
     missionTotalCount,
     missionProgressPercent,
