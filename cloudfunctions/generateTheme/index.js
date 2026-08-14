@@ -21,7 +21,7 @@ const RUNTIME_VERSION = '2026-04-16-direct-ai-fallback-r12';
 function buildModelRequestDebug(systemPrompt, userPrompt) {
   const config = getAiConfig();
   return {
-    provider: 'dashscope-compatible',
+    provider: 'deepseek-compatible',
     request: {
       model: config.model,
       temperature: 0.9,

@@ -67,6 +67,7 @@ const ALBUM_TYPE_OPTIONS = [
   { key: 'all', label: '全部' },
   { key: 'solo', label: '单人' },
   { key: 'team', label: '同行' },
+  { key: 'dongao', label: '东澳岛' },
 ];
 
 const ALBUM_PAGE_SIZE = 10;
@@ -100,7 +101,9 @@ function getAlbumStatusLabel(statusKey) {
 }
 
 function normalizeAlbumRecordType(item) {
-  return item && item.recordType === 'team' ? 'team' : 'solo';
+  if (item && item.recordType === 'team') return 'team';
+  if (item && (item.recordType === 'dongao' || item.walkMode === 'dongao')) return 'dongao';
+  return 'solo';
 }
 
 function getAlbumTypeLabel(typeKey) {
@@ -235,7 +238,21 @@ function buildAlbumTypeCounts(walks = [], statusFilter = 'all') {
     all: 0,
     solo: 0,
     team: 0,
+    dongao: 0,
   });
+}
+
+function mergeTypeCounts(statsCounts, walkCounts) {
+  if (!statsCounts) return walkCounts || { all: 0, solo: 0, team: 0, dongao: 0 };
+  const merged = { ...statsCounts };
+  ALBUM_TYPE_OPTIONS.forEach((opt) => {
+    const key = opt.key;
+    if (key === 'all') return;
+    if (!merged[key] && walkCounts && walkCounts[key]) {
+      merged[key] = walkCounts[key];
+    }
+  });
+  return merged;
 }
 
 function buildAlbumTypeChips(counts = {}) {
@@ -254,6 +271,7 @@ function buildAlbumTypeCountsFromStats(albumStats, statusFilter = 'all') {
     all: Number((albumStats.statusCounts || {})[normalizedStatus] || 0),
     solo: Number((((albumStats.typeStatusCounts || {}).solo || {})[normalizedStatus]) || 0),
     team: Number((((albumStats.typeStatusCounts || {}).team || {})[normalizedStatus]) || 0),
+    dongao: Number((((albumStats.typeStatusCounts || {}).dongao || {})[normalizedStatus]) || 0),
   };
 }
 
@@ -572,8 +590,14 @@ Page({
         albumTotalCount: getAlbumStatsCount(albumStats, 'all', 'all') || walks.length,
         albumStatusCounts: buildAlbumStatusCountsFromStats(albumStats, this.data.albumTypeFilter || 'all') || albumStatusCounts,
         albumStatusChips: buildAlbumStatusChips(buildAlbumStatusCountsFromStats(albumStats, this.data.albumTypeFilter || 'all') || albumStatusCounts),
-        albumTypeCounts: buildAlbumTypeCountsFromStats(albumStats, this.data.albumStatusFilter || 'all') || albumTypeCounts,
-        albumTypeChips: buildAlbumTypeChips(buildAlbumTypeCountsFromStats(albumStats, this.data.albumStatusFilter || 'all') || albumTypeCounts),
+        albumTypeCounts: mergeTypeCounts(
+          buildAlbumTypeCountsFromStats(albumStats, this.data.albumStatusFilter || 'all'),
+          albumTypeCounts,
+        ),
+        albumTypeChips: buildAlbumTypeChips(mergeTypeCounts(
+          buildAlbumTypeCountsFromStats(albumStats, this.data.albumStatusFilter || 'all'),
+          albumTypeCounts,
+        )),
       };
 
       const achievements = await hydrateAchievementAssets(achievementResult.achievements || []);
@@ -861,6 +885,9 @@ Page({
     const allWalks = Array.isArray(this.data.allWalks) ? this.data.allWalks : [];
     const statusFilter = this.data.albumStatusFilter || 'all';
     const typeFilter = this.data.albumTypeFilter || 'all';
+    console.log('[dongao-debug] applyWalkFilter: allWalks=', allWalks.length,
+      'statusFilter=', statusFilter, 'typeFilter=', typeFilter,
+      'walkModes=', allWalks.map(w => w.walkMode + '/' + w.recordType));
     const filteredWalks = allWalks.filter((item) => {
       const statusMatched = statusFilter === 'all' || item.albumStatusKey === statusFilter;
       const typeMatched = typeFilter === 'all' || normalizeAlbumRecordType(item) === typeFilter;
@@ -869,9 +896,15 @@ Page({
     const emptyState = buildAlbumEmptyState(statusFilter, typeFilter);
     const albumStats = this.data.albumStats || null;
     const albumStatusCounts = buildAlbumStatusCountsFromStats(albumStats, typeFilter) || buildAlbumStatusCounts(allWalks, typeFilter);
-    const albumTypeCounts = buildAlbumTypeCountsFromStats(albumStats, statusFilter) || buildAlbumTypeCounts(allWalks, statusFilter);
+    const walkTypeCounts = buildAlbumTypeCounts(allWalks, statusFilter);
+    const albumTypeCounts = mergeTypeCounts(
+      buildAlbumTypeCountsFromStats(albumStats, statusFilter),
+      walkTypeCounts,
+    );
     const statsResultCount = getAlbumStatsCount(albumStats, statusFilter, typeFilter);
-    const resultCount = statsResultCount === null ? filteredWalks.length : statsResultCount;
+    const resultCount = (statsResultCount !== null && statsResultCount > 0)
+      ? statsResultCount
+      : filteredWalks.length;
     const totalPages = resultCount > 0 ? Math.ceil(resultCount / ALBUM_PAGE_SIZE) : 0;
     const currentPage = totalPages
       ? Math.min(Math.max(Number(this.data.albumCurrentPage || 1), 1), totalPages)

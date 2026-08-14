@@ -354,10 +354,12 @@ function createDefaultAlbumStats() {
     totalCount: 0,
     soloCount: 0,
     teamCount: 0,
+    dongaoCount: 0,
     statusCounts: { ...emptyStatusCounts },
     typeStatusCounts: {
       solo: { ...emptyStatusCounts },
       team: { ...emptyStatusCounts },
+      dongao: { ...emptyStatusCounts },
     },
     updatedAt: 0,
   };
@@ -374,6 +376,7 @@ function normalizeAlbumStats(value) {
     totalCount: Number(value.totalCount || 0),
     soloCount: Number(value.soloCount || 0),
     teamCount: Number(value.teamCount || 0),
+    dongaoCount: Number(value.dongaoCount || 0),
     statusCounts: {
       all: Number(statusCounts.all || value.totalCount || 0),
       pending: Number(statusCounts.pending || 0),
@@ -390,6 +393,11 @@ function normalizeAlbumStats(value) {
         ...defaults.typeStatusCounts.team,
         ...(typeStatusCounts.team || {}),
         all: Number((typeStatusCounts.team && typeStatusCounts.team.all) || value.teamCount || 0),
+      },
+      dongao: {
+        ...defaults.typeStatusCounts.dongao,
+        ...(typeStatusCounts.dongao || {}),
+        all: Number((typeStatusCounts.dongao && typeStatusCounts.dongao.all) || value.dongaoCount || 0),
       },
     },
     updatedAt: Number(value.updatedAt || 0),
@@ -698,6 +706,22 @@ const ENDPOINTS = {
   },
   updateTeamMemberDraftState: {
     cloudName: 'updateTeamMemberDraftState',
+  },
+  dongaoRecommend: {
+    cloudName: 'dongaoRecommend',
+    normalizeCloudResponse: (data) => ({
+      spots: Array.isArray(data && data.spots) ? data.spots : [],
+    }),
+  },
+  dongaoGenerate: {
+    cloudName: 'dongaoGenerate',
+    normalizeCloudResponse: (data) => ({
+      mission: (data && data.mission) || '',
+      tips: (data && data.tips) || '',
+      safetyNote: (data && data.safetyNote) || '',
+      spotName: (data && data.spotName) || '',
+      debug: (data && data.debug) || null,
+    }),
   },
   listMyTeamWalks: {
     cloudName: 'listMyTeamWalks',

@@ -58,9 +58,9 @@ function stripCodeFence(text) {
 
 function getAiConfig() {
   return {
-    apiKey: process.env.AI_API_KEY || fileConfig.apiKey || '',
-    baseUrl: process.env.AI_BASE_URL || fileConfig.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: process.env.AI_CHAT_MODEL || fileConfig.model || 'deepseek-v3.2',
+    apiKey: process.env.DEEPSEEK_API_KEY || process.env.AI_API_KEY || fileConfig.apiKey || '',
+    baseUrl: process.env.DEEPSEEK_BASE_URL || process.env.AI_BASE_URL || fileConfig.baseUrl || 'https://api.deepseek.com',
+    model: process.env.DEEPSEEK_CHAT_MODEL || process.env.AI_CHAT_MODEL || fileConfig.model || 'deepseek-v4-flash',
   };
 }
 

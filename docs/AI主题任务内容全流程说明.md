@@ -396,28 +396,29 @@ cloudfunctions/generateCombinedTheme/ai.js
 
 接口形态：
 
-- 使用 DashScope 兼容 OpenAI Chat Completions 的接口格式。
+- 使用 DeepSeek 官方 OpenAI 兼容 Chat Completions 接口格式。
 - 默认 base URL：
 
 ```text
-https://dashscope.aliyuncs.com/compatible-mode/v1
+https://api.deepseek.com
 ```
 
 模型配置来源：
 
-1. 环境变量 `AI_CHAT_MODEL`
-2. 本地配置文件中的 `model`
-3. 代码默认模型
+1. 环境变量 `DEEPSEEK_CHAT_MODEL`
+2. 兼容旧环境变量 `AI_CHAT_MODEL`
+3. 本地配置文件中的 `model`
+4. 代码默认模型
 
 当前代码默认模型：
 
 ```text
-deepseek-v3.2
+deepseek-v4-flash
 ```
 
-但模型不是由页面业务逻辑决定的。实际线上使用哪个模型，以云函数环境变量、云端配置和调试面板中的 `modelRequest.request.model` 为准。历史文档里出现过 `qwen3.5-plus` 推荐口径，当前不要把它当成代码默认值。
+但模型不是由页面业务逻辑决定的。实际线上使用哪个模型，以云函数环境变量和调试面板中的 `modelRequest.request.model` 为准。历史文档里出现过 `qwen3.5-plus`、`deepseek-v3.2` 推荐口径，当前不要把它们当成代码默认值。
 
-部署时应通过环境变量或云函数安全配置指定模型与密钥，避免把密钥和敏感配置写入仓库。
+部署时应通过环境变量或云函数安全配置指定模型与密钥，避免把密钥和敏感配置写入仓库。推荐使用 `DEEPSEEK_API_KEY`；为兼容旧环境，代码仍会读取 `AI_API_KEY`。
 
 关键请求参数：
 
