@@ -723,6 +723,23 @@ const ENDPOINTS = {
       debug: (data && data.debug) || null,
     }),
   },
+  campusRecommend: {
+    cloudName: 'campusRecommend',
+    normalizeCloudResponse: (data) => ({
+      spots: Array.isArray(data && data.spots) ? data.spots : [],
+    }),
+  },
+  campusGenerate: {
+    cloudName: 'campusGenerate',
+    normalizeCloudResponse: (data) => ({
+      mission: (data && data.mission) || '',
+      tips: (data && data.tips) || '',
+      safetyNote: (data && data.safetyNote) || '',
+      spotName: (data && data.spotName) || '',
+      tag: (data && data.tag) || '',
+      debug: (data && data.debug) || null,
+    }),
+  },
   listMyTeamWalks: {
     cloudName: 'listMyTeamWalks',
     normalizeCloudResponse: (data, requestData) => {
