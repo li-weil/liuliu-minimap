@@ -732,7 +732,8 @@ const ENDPOINTS = {
   campusGenerate: {
     cloudName: 'campusGenerate',
     normalizeCloudResponse: (data) => ({
-      mission: (data && data.mission) || '',
+      mainTask: (data && data.mainTask) || '',
+      sensoryTask: (data && data.sensoryTask) || null,
       tips: (data && data.tips) || '',
       safetyNote: (data && data.safetyNote) || '',
       spotName: (data && data.spotName) || '',

@@ -1,13 +1,18 @@
 <view class="page-shell record-page" wx:if="{{theme && draft}}">
   <view class="record-hero">
-    <view wx:if="{{isTracking}}" class="record-map-stage">
+    <view wx:if="{{isTracking || hasRoutePoints}}" class="record-map-stage">
       <map
-        longitude="{{draft.longitude || 116.39747}}"
-        latitude="{{draft.latitude || 39.908823}}"
+        longitude="{{mapCenterLongitude}}"
+        latitude="{{mapCenterLatitude}}"
         scale="15"
         show-location
+        polyline="{{routePolyline}}"
         class="record-map"
       />
+      <view wx:if="{{!isTracking}}" class="record-map-badge">
+        <view class="record-map-badge-title">{{theme.title}}</view>
+        <view class="record-map-badge-sub">已记录轨迹 · {{routeStats.pointCount}} 个点</view>
+      </view>
     </view>
 
     <view wx:else class="record-theme-stage">
@@ -47,8 +52,8 @@
     <view class="location-status-copy-cell">
       <view class="location-status-dot {{isTracking ? 'location-status-dot-active' : ''}}"></view>
       <view class="location-status-main">
-        <view class="location-status-title">{{isTracking ? '前台定位中' : '位置显示未开启'}}</view>
-        <view class="location-status-copy">{{isTracking ? '当前位置会显示在顶部地图。' : '仅在当前页显示位置。'}}</view>
+        <view class="location-status-title">{{isTracking ? '前台定位中' : (hasRoutePoints ? '轨迹已记录' : '位置显示未开启')}}</view>
+        <view class="location-status-copy">{{isTracking ? '当前位置会显示在顶部地图。' : (hasRoutePoints ? '顶部地图展示已记录的轨迹，开启定位可继续记录。' : '仅在当前页显示位置。')}}</view>
       </view>
     </view>
     <view class="location-status-duration">

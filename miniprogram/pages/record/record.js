@@ -139,6 +139,50 @@ function getDistanceMeters(from, to) {
   return earthRadius * c;
 }
 
+function buildRoutePolyline(routePoints) {
+  const points = (Array.isArray(routePoints) ? routePoints : [])
+    .map((point) => ({
+      latitude: Number(point && point.latitude),
+      longitude: Number(point && point.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+  if (points.length < 2) {
+    return [];
+  }
+  return [
+    {
+      points,
+      color: '#626247',
+      width: 4,
+      dottedLine: false,
+    },
+  ];
+}
+
+function getRouteMapCenter(routePoints, draft = {}) {
+  const points = (Array.isArray(routePoints) ? routePoints : [])
+    .map((point) => ({
+      latitude: Number(point && point.latitude),
+      longitude: Number(point && point.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+  if (points.length) {
+    return points[points.length - 1];
+  }
+  const fallbackLatitude = Number(draft.latitude);
+  const fallbackLongitude = Number(draft.longitude);
+  if (Number.isFinite(fallbackLatitude) && Number.isFinite(fallbackLongitude)) {
+    return {
+      latitude: fallbackLatitude,
+      longitude: fallbackLongitude,
+    };
+  }
+  return {
+    latitude: 39.908823,
+    longitude: 116.39747,
+  };
+}
+
 function formatDuration(durationMs) {
   const totalSeconds = Math.max(0, Math.round((durationMs || 0) / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -423,6 +467,10 @@ Page({
     isTracking: false,
     isSaving: false,
     isMapOpen: false,
+    hasRoutePoints: false,
+    routePolyline: [],
+    mapCenterLatitude: 39.908823,
+    mapCenterLongitude: 116.39747,
     isRecordingAudio: false,
     recordingMission: '',
     expandedMission: '',
@@ -620,6 +668,8 @@ Page({
     const routeStats = mergeRouteStatsWithDraft(draft, this.data.isTracking);
     const nextDraft = draft;
     const missionProgress = buildMissionProgress(theme, nextDraft);
+    const routePoints = Array.isArray(nextDraft.routePoints) ? nextDraft.routePoints : [];
+    const mapCenter = getRouteMapCenter(routePoints, nextDraft);
     this.setData({
       activeMission: nextDraft.selectedMission || this.data.activeMission || ((theme && theme.missions && theme.missions[0]) || SUMMARY_MISSION_KEY),
       theme,
@@ -630,6 +680,10 @@ Page({
       missionCompletedCount: missionProgress.completedCount,
       missionTotalCount: missionProgress.totalCount,
       missionProgressPercent: missionProgress.percent,
+      hasRoutePoints: routePoints.length > 0,
+      routePolyline: buildRoutePolyline(routePoints),
+      mapCenterLatitude: mapCenter.latitude,
+      mapCenterLongitude: mapCenter.longitude,
     });
   },
 

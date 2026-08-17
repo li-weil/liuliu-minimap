@@ -1,6 +1,6 @@
 const cloud = require('wx-server-sdk');
 const https = require('https');
-const fileConfig = require('./config.json');
+const fileConfig = require('./config.ai.json');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -60,29 +60,49 @@ async function chatJson(systemPrompt, userPrompt) {
 
   const requestBody = {
     model: config.model,
-    temperature: 0.9,
-    response_format: { type: 'json_object' },
+    temperature: 0.5,
+    max_tokens: 2048,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
   };
-  const payload = await requestJson(
-    `${config.baseUrl.replace(/\/$/, '')}/chat/completions`,
-    JSON.stringify(requestBody)
-  );
-  const text = (payload && payload.choices && payload.choices[0] && payload.choices[0].message && payload.choices[0].message.content) || '';
-  const stripped = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
-  return {
-    parsed: JSON.parse(stripped || '{}'),
-    rawText: text,
-    strippedText: stripped,
-    request: requestBody,
-    response: payload,
-  };
+
+  // 解析容错：最多尝试 2 次（偶发截断/JSON 不完整时重试一次即可成功）
+  let lastError = null;
+  let lastPayload = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const startedAt = Date.now();
+    const payload = await requestJson(
+      `${config.baseUrl.replace(/\/$/, '')}/chat/completions`,
+      JSON.stringify(requestBody)
+    );
+    const elapsedMs = Date.now() - startedAt;
+    const text = (payload && payload.choices && payload.choices[0] && payload.choices[0].message && payload.choices[0].message.content) || '';
+    const stripped = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    lastPayload = payload;
+    try {
+      return {
+        parsed: JSON.parse(stripped || '{}'),
+        rawText: text,
+        strippedText: stripped,
+        request: requestBody,
+        response: payload,
+        elapsedMs,
+        attempts: attempt + 1,
+      };
+    } catch (error) {
+      lastError = error;
+      lastError.rawText = text;
+      lastError.strippedText = stripped;
+      lastError.finishReason = payload && payload.choices && payload.choices[0] ? payload.choices[0].finish_reason || '' : '';
+      lastError.attempt = attempt + 1;
+    }
+  }
+  throw lastError;
 }
 
-// === 时间与开放判断 ===
+// === 时间 ===
 
 function getChinaNow() {
   return new Date(Date.now() + 8 * 60 * 60 * 1000);
@@ -121,29 +141,25 @@ function getTimeContext() {
 
 // === 攻略素材提取 ===
 
-function pickSensoryOne(play) {
-  const result = [];
-  if (!play || typeof play !== 'object') return result;
-  ['色', '声', '形', '味'].forEach((sense) => {
-    const items = Array.isArray(play[sense]) ? play[sense] : [];
-    if (items.length) {
-      const item = items[0];
-      result.push(`【${sense}】${item.name}：${item.description}`);
-    }
-  });
-  return result;
+function toLines(list, fallback) {
+  if (!Array.isArray(list) || !list.length) return fallback;
+  return list.map((item, index) => `${index + 1}. ${item}`).join('\n');
 }
 
-function buildGuideContext(guideData) {
-  if (!guideData || typeof guideData !== 'object') return '';
-  const env = guideData.task1_environment || {};
-  const parts = [];
-  if (env.physical_features) parts.push(`环境：${env.physical_features}`);
-  if (env.nearby_environment) parts.push(`周边：${env.nearby_environment}`);
-  if (Array.isArray(env.atmosphere) && env.atmosphere.length) parts.push(`氛围：${env.atmosphere.join('、')}`);
-  const sensory = pickSensoryOne(guideData.task3_sensory_play);
-  if (sensory.length) parts.push(`五感玩法：${sensory.join('；')}`);
-  return parts.join('\n');
+// 随机抽样：保持多样性并缩短 prompt（每次生成抽不同条目，也辅助避开雷同）
+function sampleItems(list, max) {
+  if (!Array.isArray(list) || !list.length) return [];
+  const arr = list.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr.slice(0, max);
+}
+
+function formatSensoryExamples(list) {
+  if (!Array.isArray(list) || !list.length) return '';
+  return list.map((s) => `- ${s.sense}｜${s.name}：${s.description}`).join('\n');
 }
 
 // === Main ===
@@ -152,7 +168,8 @@ exports.main = async (event) => {
   const wxContext = cloud.getWXContext();
   const mapName = String(event.map_name || '').trim();
   const tag = String(event.tag || '').trim() || '景点';
-  if (!mapName) return { mission: '', tips: '', safetyNote: '', spotName: '' };
+  const lastTask = String(event.lastTask || '').trim();
+  if (!mapName) return { mainTask: '', sensoryTask: null, tips: '', safetyNote: '', spotName: '' };
 
   // 1. 读取攻略（云存储 campus-content/{map_name}.json，文件名与 map_name 一致，中文名不编码）
   let guideData = null;
@@ -167,29 +184,53 @@ exports.main = async (event) => {
   }
 
   const time = getTimeContext();
-  const guideContext = buildGuideContext(guideData);
-  const openHoursText = (guideData && guideData.openHours) ? guideData.openHours : '';
-  const themeTips = (guideData && guideData.themeTips && Array.isArray(guideData.themeTips[tag]))
+
+  // 按主题取素材：themeTips 主题介绍（理解用）、mainTasks 主任务素材库、sensoryExamples 感官任务示例、tips 提示素材库
+  const themeIntro = (guideData && guideData.themeTips && typeof guideData.themeTips[tag] === 'string')
     ? guideData.themeTips[tag]
+    : '';
+  const mainTasksAll = (guideData && guideData.mainTasks && Array.isArray(guideData.mainTasks[tag]))
+    ? guideData.mainTasks[tag]
     : [];
+  const tipPoolAll = (guideData && guideData.tips && Array.isArray(guideData.tips[tag]))
+    ? guideData.tips[tag]
+    : [];
+  const sensoryAll = (guideData && guideData.sensoryExamples && Array.isArray(guideData.sensoryExamples[tag]))
+    ? guideData.sensoryExamples[tag]
+    : [];
+  const openHoursText = (guideData && guideData.openHours) ? guideData.openHours : '';
+
+  // 抽样传入 prompt（控制长度、加快生成、增加每次差异）
+  const mainTasks = sampleItems(mainTasksAll, 5);
+  const tipPool = sampleItems(tipPoolAll, 4);
+  const sensoryExamples = sampleItems(sensoryAll, 3);
 
   const THEME_META = {
-    美食: { name: '美食', focus: '推荐这里怎么吃、吃什么、有什么招牌窗口或好吃的小店', fallbackMission: `在${mapName}看看窗口和招牌，挑一份最想吃的` },
-    历史: { name: '历史', focus: '这里的故事、意义、纪念点，值得了解什么', fallbackMission: `在${mapName}看看铭牌和介绍，记住一个关于它的故事` },
-    景点: { name: '景点', focus: '这里有什么看点、怎么逛、怎么打卡', fallbackMission: `在${mapName}走走看看，找一处最吸引你的角落` },
+    美食: { name: '美食', fallbackMain: `在${mapName}看看窗口和招牌，挑一份最想吃的` },
+    历史: { name: '历史', fallbackMain: `在${mapName}看看铭牌和介绍，记住一个关于它的故事` },
+    景点: { name: '景点', fallbackMain: `在${mapName}走走看看，找一处最吸引你的角落` },
   };
   const meta = THEME_META[tag] || THEME_META.景点;
 
-  // 2. Build prompt（带开放时间判断）
-  const systemPrompt = `你是遛遛小程序「校园导览」的任务助手，服务中山大学珠海校区。只返回合法 JSON，不要输出解释。语气像一位熟悉校园的学长学姐，温暖、自然、不堆砌词藻。`;
+  // 2. Build prompt（主题理解已包含地点环境，不再重复传基础信息）
+  const systemPrompt = `你是遛遛小程序「校园导览」的任务助手，服务中山大学珠海校区。只返回合法 JSON，不要输出解释。语气像一位熟悉校园的学长学姐，温暖、自然、不堆砌词藻。直接给出简洁结果，不要犹豫、不要自我检查、不要多余说明。`;
 
   const userPrompt = `为地点「${mapName}」生成一条「${meta.name}」主题的校园导览任务。
 
-【地点信息】
-${guideContext || '暂无详细信息'}
+【主题理解】
+${themeIntro || `请基于「${mapName}」的实际情况理解这个地点`}
 
-【${meta.name}主题素材】
-${themeTips.length ? themeTips.join('\n') : '暂无，请基于地点信息合理生成'}
+【主任务素材库】（从真实攻略提炼的具体可做的事，本次抽取部分）
+${toLines(mainTasks, '暂无素材，请合理生成一件具体的事')}
+
+【感官任务示例】（感官任务是对主任务的延伸和补充，参考此格式）
+${formatSensoryExamples(sensoryExamples) || '暂无示例，感官任务请从主任务自然延伸'}
+
+【提示素材库】（从真实攻略提炼的注意/实用提醒，本次抽取部分；生成 tips 时从这里挑选）
+${toLines(tipPool, '暂无素材，请结合开放时间与当前时间合理生成')}
+
+${lastTask ? `【上次生成的主任务】（请避开与其雷同的内容，换一件不同的事）
+${lastTask}` : ''}
 
 【开放时间】
 ${openHoursText || '未提供，视为正常开放'}
@@ -198,26 +239,31 @@ ${openHoursText || '未提供，视为正常开放'}
 ${time.currentTime}，${time.season}季，${time.weekday}
 
 【生成要求】
-1. 先根据开放时间判断当前是否适合前往：若当前明显不开放（如已闭馆、周一闭馆），在 tips 里提醒"开放时间以官方为准/建议改天"；无法判断则视为开放。
-2. mission：一条具体可执行的任务，14-30字，围绕「${meta.focus}」。必须是"做一件小事情"（看/听/闻/找/尝/读），结合地点真实环境，不要空话。
-3. tips：一条贴心的提示，8-20字。两类内容都可以写：(a) 实用建议，(b) 礼仪文明提醒——保持安静、勿打扰自习的同学、文明参观、不要乱碰展品。语气像学长的随口提醒。
-4. safetyNote：一条**只和安全相关**的提醒，8-18字。只写人身安全内容：注意脚下台阶、路面湿滑、防滑、防晒补水、不要靠近水边或危险区域。**不要写礼仪、文明、安静类内容**（那些放 tips）。
+1. mainTask：主导览任务。从【主任务素材库】中挑选或组合、或基于素材合理衍生一件具体的事，14-30字。必须是"做一件小事情"（看/听/闻/找/尝/读/拍/爬），结合地点真实环境，不要空话。若提供了【上次生成的主任务】，必须避开与其雷同的内容。
+2. sensoryTask：感官任务（副任务），是对 mainTask 的延伸和补充，让玩法更丰富。参考【感官任务示例】格式输出一个对象：{"sense":"色|声|形|味","name":"具体可观察对象","description":"怎么观察，12-25字"}。必须与主任务相关、具体可执行、口语化，禁止 AI 腔套话。
+3. tips：一条贴心的提示，12-26字。优先从【提示素材库】挑选最合适的一条（可结合开放时间、当前时间、季节微调），也可以补充礼仪文明提醒（保持安静、勿打扰、文明参观）。不要自己编造素材库里没有的禁忌信息。语气像学长的随口提醒。
+4. safetyNote：一条**只和安全相关**的提醒，8-18字。只写人身安全内容：注意脚下台阶、路面湿滑、防滑、防晒补水、不要靠近水边或危险区域。不要写礼仪、文明、安静类内容（那些放 tips）。
 
-
+⚠️ 区分：
+- tips = 实用建议 + 礼仪文明（怎么做更好、安静、勿打扰、文明参观）
+- safetyNote = 只写人身安全（脚下、湿滑、防晒、远离危险）
 
 返回 JSON：
 {
-  "mission": "任务文本",
-  "tips": "小提示",
+  "mainTask": "主导览任务",
+  "sensoryTask": {"sense": "色", "name": "对象", "description": "观察方式"},
+  "tips": "提示",
   "safetyNote": "安全提醒"
 }`;
 
   // 3. Call AI with fallback
-  let mission = '', tips = '', safetyNote = '';
+  let mainTask = '', sensoryTask = null, tips = '', safetyNote = '';
   let rawModelText = '';
+  let strippedText = '';
   let parsedModelJson = null;
   let modelResponseMeta = null;
   let fallbackReason = '';
+  let aiRequestInfo = null;
   try {
     const aiResult = await chatJson(systemPrompt, userPrompt);
     const generated = aiResult.parsed || {};
@@ -229,13 +275,34 @@ ${time.currentTime}，${time.season}季，${time.weekday}
       usage: aiResult.response && aiResult.response.usage,
       created: aiResult.response && aiResult.response.created,
     };
-    mission = String(generated.mission || '').trim();
+    aiRequestInfo = {
+      model: aiResult.request && aiResult.request.model,
+      baseUrl: getAiConfig().baseUrl,
+      apiKeySet: true,
+      elapsedMs: aiResult.elapsedMs,
+      attempts: aiResult.attempts,
+    };
+    mainTask = String(generated.mainTask || '').trim() || meta.fallbackMain;
+    const st = generated.sensoryTask;
+    sensoryTask = (st && typeof st === 'object' && st.sense && st.name)
+      ? { sense: String(st.sense).trim(), name: String(st.name).trim(), description: String(st.description || '').trim() }
+      : null;
     tips = String(generated.tips || '').trim();
     safetyNote = String(generated.safetyNote || '').trim();
   } catch (err) {
     console.error('[campusGenerate] AI generation failed:', err.message);
     fallbackReason = err.message || 'unknown_error';
-    mission = meta.fallbackMission;
+    if (err.rawText) rawModelText = err.rawText;
+    if (err.strippedText) strippedText = err.strippedText;
+    aiRequestInfo = {
+      model: getAiConfig().model,
+      baseUrl: getAiConfig().baseUrl,
+      apiKeySet: !!getAiConfig().apiKey,
+      error: err.message || '',
+      finishReason: err.finishReason || '',
+    };
+    mainTask = meta.fallbackMain;
+    sensoryTask = null;
     tips = '放慢脚步，看看路牌和介绍，会有收获';
     safetyNote = '注意开放时间，文明参观';
   }
@@ -245,28 +312,24 @@ ${time.currentTime}，${time.season}季，${time.weekday}
     userId: wxContext.OPENID,
     spotName: mapName,
     tag,
-    mission,
+    mainTask,
+    sensoryTask,
     tips,
     safetyNote,
     openHoursSnapshot: openHoursText,
     createdAt: Date.now(),
     debug: {
       modelInput: {
-        model: getAiConfig().model,
-        currentTime: time.currentTime,
-        tag,
-        hasGuideData: !!guideData,
-        guideLoadError,
-        guideContext,
-        openHoursText,
-        themeTips,
+        // 真正传给模型的 prompt（与 chatJson 请求完全一致）
         systemPrompt,
         userPrompt,
       },
       modelOutput: {
         rawText: rawModelText,
+        strippedText,
         parsedJson: parsedModelJson,
         responseMeta: modelResponseMeta,
+        requestInfo: aiRequestInfo,
         usedFallback: !!fallbackReason,
         fallbackReason,
       },

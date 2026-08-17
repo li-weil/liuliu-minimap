@@ -44,6 +44,7 @@ Page({
     themes: THEMES,
     selectedTheme: '',
     currentCard: null,
+    lastTask: '',
     generatingSpotName: '',
     recommendList: [],
     eliminatedNames: [],
@@ -151,11 +152,12 @@ Page({
   async generateAndShow(spot) {
     this._startGenerationLoading(spot);
     try {
-      const result = await generateMission(spot.map_name, this.data.selectedTheme);
+      const result = await generateMission(spot.map_name, this.data.selectedTheme, this.data.lastTask);
       this._stopGenerationLoading();
       this._cacheModelDebug(result.debug);
       const card = {
-        mission: result.mission,
+        mainTask: result.mainTask,
+        sensoryTask: result.sensoryTask,
         tips: result.tips,
         safetyNote: result.safetyNote,
         spotName: spot.map_name,
@@ -170,6 +172,7 @@ Page({
         currentCard: card,
         historyCards,
         cardIndex: 0,
+        lastTask: result.mainTask,
         phase: 'ready',
         generationProgress: 100,
         generationStepIndex: GENERATION_STEPS.length - 1,
@@ -291,13 +294,17 @@ Page({
   onStartWalk() {
     const card = this.data.currentCard;
     const { selectedTheme } = this.data;
-    if (!card || !card.mission || this.data.phase !== 'ready' || !selectedTheme) return;
+    if (!card || !card.mainTask || this.data.phase !== 'ready' || !selectedTheme) return;
     const themeName = (THEMES.find((t) => t.key === selectedTheme) || {}).name || selectedTheme;
+    const missions = [card.mainTask];
+    if (card.sensoryTask && card.sensoryTask.name) {
+      missions.push(`${card.sensoryTask.name}：${card.sensoryTask.description}`);
+    }
     const app = getApp();
     app.globalData.currentTheme = {
       title: card.spotName,
       category: `校园导览·${themeName}`,
-      missions: [card.mission],
+      missions,
     };
     app.setWalkDraft({
       walkId: '',
@@ -306,7 +313,7 @@ Page({
       themeSnapshot: {
         title: card.spotName,
         category: `校园导览·${themeName}`,
-        missions: [card.mission],
+        missions,
       },
       locationName: card.spotName,
       latitude: card.lat,

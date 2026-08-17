@@ -287,6 +287,33 @@
   border-top: 1rpx solid rgba(126, 111, 89, 0.16);
 }
 
+.route-empty-panel {
+  margin-top: 24rpx;
+  padding: 34rpx 28rpx;
+  border-radius: 32rpx;
+  background: #fffdf8;
+  box-shadow: 0 14rpx 34rpx rgba(77, 62, 38, 0.08);
+}
+
+.route-empty-kicker {
+  display: inline-block;
+  max-width: 100%;
+  padding: 8rpx 15rpx;
+  border-radius: 999rpx;
+  background: rgba(98, 98, 71, 0.1);
+  color: #626247;
+  font-size: 21rpx;
+  line-height: 1.25;
+}
+
+.route-empty-copy {
+  margin-top: 16rpx;
+  color: #746b5f;
+  font-size: 25rpx;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
 .route-time-item {
   flex: 1;
   padding-top: 18rpx;

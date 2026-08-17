@@ -459,6 +459,30 @@
   font-weight: 650;
 }
 
+.sensory-task {
+  margin-top: 24rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 22rpx;
+  background: rgba(98, 98, 71, 0.08);
+  box-shadow: inset 0 0 0 1rpx rgba(98, 98, 71, 0.12);
+  box-sizing: border-box;
+}
+
+.sensory-task-label {
+  color: #626247;
+  font-size: 21rpx;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.sensory-task-text {
+  margin-top: 8rpx;
+  color: #3a332b;
+  font-size: 26rpx;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
 .mission-info,
 .mission-safety {
   padding: 20rpx 22rpx;

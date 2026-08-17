@@ -1,3 +1,4 @@
+const app = getApp();
 const { createWalk, getWalkDetail, publishWalkShare, deleteWalk } = require('../../services/walk');
 const { requestUpload } = require('../../services/api');
 const { batchResolveCloudFileIds, isCloudFileId } = require('../../services/asset');
@@ -390,6 +391,26 @@ function getMapCenter(routePoints, fallbackLocation = {}) {
   };
 }
 
+function buildRoutePolyline(routePoints) {
+  const points = (Array.isArray(routePoints) ? routePoints : [])
+    .map((point) => ({
+      latitude: Number(point && point.latitude),
+      longitude: Number(point && point.longitude),
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+  if (points.length < 2) {
+    return [];
+  }
+  return [
+    {
+      points,
+      color: '#626247',
+      width: 4,
+      dottedLine: false,
+    },
+  ];
+}
+
 function hasCardGenerationMaterial(assets) {
   const noteText = String((assets && assets.noteText) || '').trim();
   const photoList = Array.isArray(assets && assets.photoList) ? assets.photoList.filter(Boolean) : [];
@@ -453,6 +474,7 @@ Page({
       imageSrc: '',
     },
     isDeletingWalk: false,
+    routePolyline: [],
     mapCenterLatitude: 39.908823,
     mapCenterLongitude: 116.39747,
     privacyPopup: createDefaultPrivacyPopup(),
@@ -508,16 +530,24 @@ Page({
     this.setData({ loading: true });
     try {
       const result = await getWalkDetail({ id });
-      const baseMissionItems = result.walk ? buildMissionItems(result.walk) : [];
+      let rawWalk = result && result.walk ? result.walk : null;
+      if (rawWalk && rawWalk.status === 'active') {
+        const localDraft = app.getWalkDraft(rawWalk.id || rawWalk._id);
+        const localRoutePoints = Array.isArray(localDraft && localDraft.routePoints) ? localDraft.routePoints : [];
+        if (localRoutePoints.length) {
+          rawWalk = { ...rawWalk, routePoints: localRoutePoints };
+        }
+      }
+      const baseMissionItems = rawWalk ? buildMissionItems(rawWalk) : [];
       const missionItems = await hydrateMissionItemsAudio(baseMissionItems);
-      const walk = result.walk
+      const walk = rawWalk
         ? {
-            ...result.walk,
-            createdAtLabel: formatDate(result.walk.createdAt),
+            ...rawWalk,
+            createdAtLabel: formatDate(rawWalk.createdAt),
             missionItems,
-            detailMetrics: buildDetailMetrics(result.walk, missionItems),
-            canDelete: queryCanDelete(result.walk, this.data.source),
-            canShare: queryCanShare(result.walk, this.data.source),
+            detailMetrics: buildDetailMetrics(rawWalk, missionItems),
+            canDelete: queryCanDelete(rawWalk, this.data.source),
+            canShare: queryCanShare(rawWalk, this.data.source),
           }
         : null;
       const mapCenter = getMapCenter(walk && walk.routePoints, walk);
@@ -525,6 +555,7 @@ Page({
         walk,
         canResume: !!(walk && walk.status === 'active'),
         activeMission: walk && walk.missionItems && walk.missionItems.length ? walk.missionItems[0].mission : '',
+        routePolyline: buildRoutePolyline(walk && walk.routePoints),
         mapCenterLatitude: mapCenter.latitude,
         mapCenterLongitude: mapCenter.longitude,
       }, () => {

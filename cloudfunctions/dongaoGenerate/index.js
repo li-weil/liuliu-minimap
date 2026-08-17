@@ -1,6 +1,6 @@
 const cloud = require('wx-server-sdk');
 const https = require('https');
-const fileConfig = require('./config');
+const fileConfig = require('./config.ai.json');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -60,8 +60,8 @@ async function chatJson(systemPrompt, userPrompt) {
 
   const requestBody = {
     model: config.model,
-    temperature: 0.9,
-    response_format: { type: 'json_object' },
+    temperature: 0.5,
+    max_tokens: 2048,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -297,7 +297,7 @@ exports.main = async (event) => {
   const visitorRules = typeof guideText === 'string' ? guideText.slice(0, 600) : '';
 
   // 2. Build prompt
-  const systemPrompt = '你是遛遛小程序东澳岛模式的漫步任务助手。只返回合法 JSON，不要输出解释。语气温暖、活泼、像一位体贴的好友。';
+  const systemPrompt = '你是遛遛小程序东澳岛模式的漫步任务助手。只返回合法 JSON，不要输出解释。语气温暖、活泼、像一位体贴的好友。直接给出简洁结果，不要犹豫、不要自我检查、不要多余说明。';
 
   const userPrompt = `为东澳岛景点"${mapName}"生成一条漫步任务和贴心小提示。
 

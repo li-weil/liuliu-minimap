@@ -62,7 +62,7 @@
         </view>
       </view>
 
-      <view class="route-panel">
+      <view wx:if="{{walk.detailMetrics.hasRoute}}" class="route-panel">
         <view class="panel-head">
           <view>
             <view class="panel-kicker">路线回看</view>
@@ -78,6 +78,7 @@
             latitude="{{mapCenterLatitude}}"
             scale="15"
             show-location
+            polyline="{{routePolyline}}"
           />
         </view>
 
@@ -95,6 +96,11 @@
             <view class="route-time-value">{{walk.detailMetrics.routePointCount}}</view>
           </view>
         </view>
+      </view>
+
+      <view wx:else class="route-empty-panel">
+        <view class="route-empty-kicker">路线回看</view>
+        <view class="route-empty-copy">这次漫步没有开启位置记录，暂无路线可回看。</view>
       </view>
 
       <view class="mission-archive">

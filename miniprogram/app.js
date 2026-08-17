@@ -55,6 +55,7 @@ App({
       wx.cloud.init({
         env: cloudEnvId,
         traceUser: true,
+        timeout: 60000,
       });
     } else if (!apiBaseUrl && !wx.cloud) {
       console.error('wx.cloud is not available in current base library');
