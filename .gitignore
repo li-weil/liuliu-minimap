@@ -5,9 +5,17 @@ dist/
 *.log
 private/
 feature-worklog/
+.tmp/
+.cloudbase/credentials*.env
+cloudbaserc.json
+Temp/
+~$*
+__pycache__/
+*.pyc
 
 .playwright-mcp/
 .codegraph/
 .claude/
 CLAUDE.md
 superpowers/
+.cloudbase
