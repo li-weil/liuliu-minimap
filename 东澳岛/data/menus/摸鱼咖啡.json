@@ -1,0 +1,130 @@
+{
+  "shop": "摸鱼咖啡",
+  "kind": "packages",
+  "sources": [
+    "餐厅菜单/摸鱼咖啡/1.pdf",
+    "餐厅菜单/摸鱼咖啡/2.pdf"
+  ],
+  "packages": [
+    {
+      "name": "店长推荐甜品单人餐",
+      "price": 59,
+      "groups": [
+        {
+          "group": "饮品（4选1，不可重复选）",
+          "items": [
+            {
+              "name": "美式",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "拿铁",
+              "qty": "1份",
+              "unitPrice": 32
+            },
+            {
+              "name": "黑加仑气泡水",
+              "qty": "1份",
+              "unitPrice": 32
+            },
+            {
+              "name": "东澳冰椰奶",
+              "qty": "1份",
+              "unitPrice": 32
+            }
+          ]
+        },
+        {
+          "group": "甜品（3选1，不可重复选）",
+          "items": [
+            {
+              "name": "皇家丝滑黑巧克力慕斯",
+              "qty": "1份",
+              "unitPrice": 25
+            },
+            {
+              "name": "芒果慕斯",
+              "qty": "1份",
+              "unitPrice": 25
+            },
+            {
+              "name": "提拉米苏乳酪蛋糕",
+              "qty": "1份",
+              "unitPrice": 25
+            }
+          ]
+        }
+      ],
+      "notes": "商品不可重复选"
+    },
+    {
+      "name": "西式双人下午茶套餐",
+      "price": 82,
+      "groups": [
+        {
+          "group": "西式双人下午茶",
+          "items": [
+            {
+              "name": "2杯拿铁（冷/热自选）+2块蛋糕（口味自选）",
+              "qty": "",
+              "unitPrice": 82
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "美式",
+      "price": 28,
+      "unit": "杯",
+      "category": "饮品"
+    },
+    {
+      "name": "拿铁",
+      "price": 32,
+      "unit": "杯",
+      "category": "饮品"
+    },
+    {
+      "name": "黑加仑气泡水",
+      "price": 32,
+      "unit": "杯",
+      "category": "饮品"
+    },
+    {
+      "name": "东澳冰椰奶",
+      "price": 32,
+      "unit": "杯",
+      "category": "饮品"
+    },
+    {
+      "name": "皇家丝滑黑巧克力慕斯",
+      "price": 25,
+      "unit": "份",
+      "category": "甜品"
+    },
+    {
+      "name": "芒果慕斯",
+      "price": 25,
+      "unit": "份",
+      "category": "甜品"
+    },
+    {
+      "name": "提拉米苏乳酪蛋糕",
+      "price": 25,
+      "unit": "份",
+      "category": "甜品"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "摸鱼咖啡_2.jpg",
+      "text": "2杯拿铁（冷/热自选）+2块蛋糕（口味自选）",
+      "reason": "该套餐只有一条组合说明，未拆成单品；组合项本身标价 82 元（等于套餐价）"
+    }
+  ]
+}

@@ -1,0 +1,992 @@
+{
+  "shop": "万觅餐吧",
+  "kind": "packages",
+  "sources": [
+    "餐厅菜单/万觅餐吧/1.pdf",
+    "餐厅菜单/万觅餐吧/2.pdf",
+    "餐厅菜单/万觅餐吧/3.pdf",
+    "餐厅菜单/万觅餐吧/4.pdf",
+    "餐厅菜单/万觅餐吧/5.pdf",
+    "餐厅菜单/万觅餐吧/6.pdf",
+    "餐厅菜单/万觅餐吧/7.pdf",
+    "餐厅菜单/万觅餐吧/8.pdf",
+    "餐厅菜单/万觅餐吧/9.pdf",
+    "餐厅菜单/万觅餐吧/10.pdf",
+    "餐厅菜单/万觅餐吧/11.pdf",
+    "餐厅菜单/万觅餐吧/12.pdf"
+  ],
+  "packages": [
+    {
+      "name": "KTV大包+小食套餐-精酿啤酒",
+      "price": 795,
+      "groups": [
+        {
+          "group": "小吃",
+          "items": [
+            {
+              "name": "轰炸鸡小食拼盘",
+              "qty": "1份",
+              "unitPrice": 68
+            },
+            {
+              "name": "水果拼盘",
+              "qty": "1份",
+              "unitPrice": 68
+            },
+            {
+              "name": "淮盐花生",
+              "qty": "1份",
+              "unitPrice": 30
+            },
+            {
+              "name": "日式青瓜条",
+              "qty": "1份",
+              "unitPrice": 28
+            }
+          ]
+        },
+        {
+          "group": "酒类",
+          "items": [
+            {
+              "name": "杀马特陈皮小麦",
+              "qty": "30瓶",
+              "unitPrice": 870
+            }
+          ]
+        }
+      ],
+      "notes": "备注：KTV大包房可选时间段：11:00-到17点或18点到00.30，容纳人数15人到17人左右。因只有两个房间，麻烦KTV订台时备注一下大房小房，并与门店预约具体核销时间，看有无空房"
+    },
+    {
+      "name": "精酿啤酒-KTV中包+小食套餐（免房费）",
+      "price": 595,
+      "groups": [
+        {
+          "group": "小吃",
+          "items": [
+            {
+              "name": "熊猫小吃篮",
+              "qty": "1份",
+              "unitPrice": 68
+            },
+            {
+              "name": "淮盐花生",
+              "qty": "1份",
+              "unitPrice": 30
+            },
+            {
+              "name": "日式青瓜条",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "大包纸巾",
+              "qty": "1份",
+              "unitPrice": 8
+            }
+          ]
+        },
+        {
+          "group": "酒类",
+          "items": [
+            {
+              "name": "杀马特陈皮小麦",
+              "qty": "20瓶",
+              "unitPrice": 580
+            }
+          ]
+        }
+      ],
+      "notes": "活动包场（最大容纳人数：70人）备注：KTV中包房可选时间段:11:00--17:00，17点到24点容纳人数10-12，因只有两个房间，麻烦KTV订台时备注一下，并与门店预约具体核销时间有无空房"
+    },
+    {
+      "name": "?",
+      "price": 294,
+      "groups": [
+        {
+          "group": "海鲜汤",
+          "items": [
+            {
+              "name": "沙白冬瓜汤",
+              "qty": "1份（标准）",
+              "unitPrice": 68
+            }
+          ]
+        },
+        {
+          "group": "鲜活海鲜",
+          "items": [
+            {
+              "name": "鲜活海虾（白灼大虾）",
+              "qty": "1份",
+              "unitPrice": 88
+            },
+            {
+              "name": "清蒸海鱼",
+              "qty": "1份（标准）",
+              "unitPrice": 118
+            }
+          ]
+        },
+        {
+          "group": "荤素搭配2选1",
+          "items": [
+            {
+              "name": "青椒炒蛋",
+              "qty": "1份（标准）",
+              "unitPrice": 38
+            },
+            {
+              "name": "番茄炒蛋",
+              "qty": "1份（标准）",
+              "unitPrice": 38
+            }
+          ]
+        },
+        {
+          "group": "时蔬",
+          "items": [
+            {
+              "name": "清炒时蔬",
+              "qty": "1份（标准）",
+              "unitPrice": 28
+            }
+          ]
+        },
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "米饭",
+              "qty": "4碗（标准）",
+              "unitPrice": 12
+            }
+          ]
+        },
+        {
+          "group": "饮品",
+          "items": [
+            {
+              "name": "大壶柠檬水",
+              "qty": "1壶（标准）",
+              "unitPrice": 18
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "精酿烧烤套餐",
+      "price": 195,
+      "groups": [
+        {
+          "group": "精酿啤酒",
+          "items": [
+            {
+              "name": "杀马特陈皮小麦",
+              "qty": "1份/升",
+              "unitPrice": 92
+            },
+            {
+              "name": "暖男熊生姜金色艾尔",
+              "qty": "1瓶",
+              "unitPrice": 29
+            },
+            {
+              "name": "拉盖环-陈皮小麦",
+              "qty": "1瓶",
+              "unitPrice": 29
+            }
+          ]
+        },
+        {
+          "group": "烧烤",
+          "items": [
+            {
+              "name": "五花肉10串",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "烤玉米串（10串）",
+              "qty": "1份",
+              "unitPrice": 18
+            },
+            {
+              "name": "鸡肉串10串",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "烈火牛肉10串",
+              "qty": "1份",
+              "unitPrice": 30
+            }
+          ]
+        },
+        {
+          "group": "小食",
+          "items": [
+            {
+              "name": "淮盐花生",
+              "qty": "1份",
+              "unitPrice": 18
+            },
+            {
+              "name": "日式青瓜条",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "海盐细薯",
+              "qty": "1份",
+              "unitPrice": 28
+            }
+          ]
+        }
+      ],
+      "notes": "海鲜加工（白灼、清蒸1.5斤以内）"
+    },
+    {
+      "name": "?",
+      "price": 194,
+      "groups": [
+        {
+          "group": "主菜",
+          "items": [
+            {
+              "name": "黑椒牛扒",
+              "qty": "1份（标准）",
+              "unitPrice": 88
+            },
+            {
+              "name": "黑椒鸡扒",
+              "qty": "1份（标准）",
+              "unitPrice": 68
+            }
+          ]
+        },
+        {
+          "group": "沙拉",
+          "items": [
+            {
+              "name": "什锦蔬菜沙拉",
+              "qty": "1份（标准）",
+              "unitPrice": 32
+            }
+          ]
+        },
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "黑椒牛柳意粉",
+              "qty": "1份（标准）",
+              "unitPrice": 48
+            }
+          ]
+        },
+        {
+          "group": "饮品4选2（不可重复选）",
+          "items": [
+            {
+              "name": "咸柠七",
+              "qty": "1杯（标准）",
+              "unitPrice": 18
+            },
+            {
+              "name": "百香果柠檬茶",
+              "qty": "1份（标准）",
+              "unitPrice": 28
+            },
+            {
+              "name": "咸柠乐",
+              "qty": "1杯（标准）",
+              "unitPrice": 18
+            },
+            {
+              "name": "香水柠茶",
+              "qty": "1份（标准）",
+              "unitPrice": 26
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "咖啡简餐2-3人餐",
+      "price": 144,
+      "groups": [
+        {
+          "group": "主菜2选1",
+          "items": [
+            {
+              "name": "梅干菜扣肉",
+              "qty": "1份",
+              "unitPrice": 68
+            },
+            {
+              "name": "虾仁滑蛋",
+              "qty": "1份",
+              "unitPrice": 58
+            }
+          ]
+        },
+        {
+          "group": "主食4选2（可重复选）",
+          "items": [
+            {
+              "name": "XO酱海鲜炒饭",
+              "qty": "1份",
+              "unitPrice": 48
+            },
+            {
+              "name": "生炒牛肉饭",
+              "qty": "1份",
+              "unitPrice": 48
+            },
+            {
+              "name": "番茄海鲜意粉",
+              "qty": "1份",
+              "unitPrice": 48
+            },
+            {
+              "name": "黑椒牛柳意粉",
+              "qty": "1份",
+              "unitPrice": 48
+            }
+          ]
+        },
+        {
+          "group": "清炒时蔬",
+          "items": [
+            {
+              "name": "炒时蔬",
+              "qty": "1份",
+              "unitPrice": 28
+            }
+          ]
+        },
+        {
+          "group": "饮品4选2（可重复选）",
+          "items": [
+            {
+              "name": "茉莉清茶",
+              "qty": "1份",
+              "unitPrice": 8
+            },
+            {
+              "name": "康师傅冰红茶",
+              "qty": "1份",
+              "unitPrice": 8
+            },
+            {
+              "name": "维他柠茶瓶装",
+              "qty": "1份",
+              "unitPrice": 8
+            },
+            {
+              "name": "统一阿萨姆奶茶",
+              "qty": "1份",
+              "unitPrice": 10
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "浪漫鸡尾酒双人套餐",
+      "price": 104,
+      "groups": [
+        {
+          "group": "浪漫鸡尾酒双人餐10选2（可重复选）",
+          "items": [
+            {
+              "name": "冰与火之歌",
+              "qty": "1份",
+              "unitPrice": 58
+            },
+            {
+              "name": "晴天",
+              "qty": "1杯",
+              "unitPrice": 58
+            },
+            {
+              "name": "梦香桃境",
+              "qty": "1份",
+              "unitPrice": 58
+            },
+            {
+              "name": "椰子海",
+              "qty": "1份",
+              "unitPrice": 58
+            },
+            {
+              "name": "绿野仙踪",
+              "qty": "1份",
+              "unitPrice": 68
+            },
+            {
+              "name": "宫崎骏的夏天",
+              "qty": "1份",
+              "unitPrice": 58
+            },
+            {
+              "name": "紫罗兰之心",
+              "qty": "1份",
+              "unitPrice": 58
+            },
+            {
+              "name": "晚风",
+              "qty": "1份",
+              "unitPrice": 58
+            },
+            {
+              "name": "环游世界",
+              "qty": "1份",
+              "unitPrice": 68
+            },
+            {
+              "name": "白月光",
+              "qty": "1份",
+              "unitPrice": 48
+            }
+          ]
+        },
+        {
+          "group": "小吃",
+          "items": [
+            {
+              "name": "日式青瓜条",
+              "qty": "1份",
+              "unitPrice": 28
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "种草打卡双人精酿",
+      "price": 99,
+      "groups": [
+        {
+          "group": "精酿",
+          "items": [
+            {
+              "name": "陈皮小麦",
+              "qty": "1升",
+              "unitPrice": 92
+            }
+          ]
+        },
+        {
+          "group": "凉菜",
+          "items": [
+            {
+              "name": "日式青瓜条",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "淮盐花生",
+              "qty": "1份",
+              "unitPrice": 30
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "2人夏日畅饮小食套餐",
+      "price": 88,
+      "groups": [
+        {
+          "group": "制调软软3选2（可重复选）",
+          "items": [
+            {
+              "name": "荔枝茉莉柠檬茶",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "百香果柠檬茶",
+              "qty": "1份",
+              "unitPrice": 28
+            },
+            {
+              "name": "香水柠茶",
+              "qty": "1份",
+              "unitPrice": 28
+            }
+          ]
+        },
+        {
+          "group": "小吃",
+          "items": [
+            {
+              "name": "熊猫小吃篮",
+              "qty": "1份",
+              "unitPrice": 68
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "精酿小酌双人餐",
+      "price": 68,
+      "groups": [
+        {
+          "group": "熊猫精酿小酌3选2（可重复选）",
+          "items": [
+            {
+              "name": "杀马特陈皮小麦",
+              "qty": "1标准杯",
+              "unitPrice": 32
+            },
+            {
+              "name": "巴适百香果小麦啤酒",
+              "qty": "1标准杯",
+              "unitPrice": 36
+            },
+            {
+              "name": "安逸比利时小麦",
+              "qty": "1标准杯330ml",
+              "unitPrice": 38
+            }
+          ]
+        },
+        {
+          "group": "小吃",
+          "items": [
+            {
+              "name": "淮盐花生",
+              "qty": "1份",
+              "unitPrice": 30
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "白灼海鲜加工（限白灼虾、螺）",
+      "price": 6.9,
+      "groups": [
+        {
+          "group": "套餐内容",
+          "items": [
+            {
+              "name": "海鲜加工（姜葱炒、辣炒1.5斤以内）",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "海岛单人餐",
+      "price": 58.8,
+      "groups": [
+        {
+          "group": "主食（二选一）",
+          "items": [
+            {
+              "name": "黑椒牛柳意粉",
+              "qty": "",
+              "unitPrice": 48
+            },
+            {
+              "name": "番茄海鲜意粉",
+              "qty": "",
+              "unitPrice": 48
+            }
+          ]
+        },
+        {
+          "group": "饮品（二选一）",
+          "items": [
+            {
+              "name": "香水柠檬茶",
+              "qty": "",
+              "unitPrice": 18
+            },
+            {
+              "name": "百香果柠檬茶",
+              "qty": "",
+              "unitPrice": 18
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "轰炸鸡小食拼盘",
+      "price": 68,
+      "unit": "份",
+      "category": "小吃"
+    },
+    {
+      "name": "水果拼盘",
+      "price": 68,
+      "unit": "份",
+      "category": "小吃"
+    },
+    {
+      "name": "淮盐花生",
+      "price": 30,
+      "unit": "份",
+      "category": "小吃"
+    },
+    {
+      "name": "日式青瓜条",
+      "price": 28,
+      "unit": "份",
+      "category": "凉菜"
+    },
+    {
+      "name": "熊猫小吃篮",
+      "price": 68,
+      "unit": "份",
+      "category": "小吃"
+    },
+    {
+      "name": "大包纸巾",
+      "price": 8,
+      "unit": "份",
+      "category": "小吃"
+    },
+    {
+      "name": "沙白冬瓜汤",
+      "price": 68,
+      "unit": "份",
+      "category": "海鲜汤"
+    },
+    {
+      "name": "鲜活海虾（白灼大虾）",
+      "price": 88,
+      "unit": "份",
+      "category": "鲜活海鲜"
+    },
+    {
+      "name": "清蒸海鱼",
+      "price": 118,
+      "unit": "份",
+      "category": "鲜活海鲜"
+    },
+    {
+      "name": "青椒炒蛋",
+      "price": 38,
+      "unit": "份",
+      "category": "荤素搭配"
+    },
+    {
+      "name": "番茄炒蛋",
+      "price": 38,
+      "unit": "份",
+      "category": "荤素搭配"
+    },
+    {
+      "name": "清炒时蔬",
+      "price": 28,
+      "unit": "份",
+      "category": "时蔬"
+    },
+    {
+      "name": "炒时蔬",
+      "price": 28,
+      "unit": "份",
+      "category": "时蔬"
+    },
+    {
+      "name": "米饭",
+      "price": 12,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "大壶柠檬水",
+      "price": 18,
+      "unit": "壶",
+      "category": "饮品"
+    },
+    {
+      "name": "杀马特陈皮小麦",
+      "price": 32,
+      "unit": "杯",
+      "category": "酒类"
+    },
+    {
+      "name": "暖男熊生姜金色艾尔",
+      "price": 29,
+      "unit": "瓶",
+      "category": "精酿啤酒"
+    },
+    {
+      "name": "拉盖环-陈皮小麦",
+      "price": 29,
+      "unit": "瓶",
+      "category": "精酿啤酒"
+    },
+    {
+      "name": "五花肉10串",
+      "price": 28,
+      "unit": "份",
+      "category": "烧烤"
+    },
+    {
+      "name": "烤玉米串（10串）",
+      "price": 18,
+      "unit": "份",
+      "category": "烧烤"
+    },
+    {
+      "name": "鸡肉串10串",
+      "price": 28,
+      "unit": "份",
+      "category": "烧烤"
+    },
+    {
+      "name": "烈火牛肉10串",
+      "price": 30,
+      "unit": "份",
+      "category": "烧烤"
+    },
+    {
+      "name": "海盐细薯",
+      "price": 28,
+      "unit": "份",
+      "category": "小食"
+    },
+    {
+      "name": "黑椒牛扒",
+      "price": 88,
+      "unit": "份",
+      "category": "主菜"
+    },
+    {
+      "name": "黑椒鸡扒",
+      "price": 68,
+      "unit": "份",
+      "category": "主菜"
+    },
+    {
+      "name": "什锦蔬菜沙拉",
+      "price": 32,
+      "unit": "份",
+      "category": "沙拉"
+    },
+    {
+      "name": "黑椒牛柳意粉",
+      "price": 48,
+      "unit": "份",
+      "category": "主食"
+    },
+    {
+      "name": "咸柠七",
+      "price": 18,
+      "unit": "杯",
+      "category": "饮品"
+    },
+    {
+      "name": "百香果柠檬茶",
+      "price": 28,
+      "unit": "份",
+      "category": "饮品"
+    },
+    {
+      "name": "咸柠乐",
+      "price": 18,
+      "unit": "杯",
+      "category": "饮品"
+    },
+    {
+      "name": "香水柠茶",
+      "price": 26,
+      "unit": "份",
+      "category": "饮品"
+    },
+    {
+      "name": "梅干菜扣肉",
+      "price": 68,
+      "unit": "份",
+      "category": "主菜"
+    },
+    {
+      "name": "虾仁滑蛋",
+      "price": 58,
+      "unit": "份",
+      "category": "主菜"
+    },
+    {
+      "name": "XO酱海鲜炒饭",
+      "price": 48,
+      "unit": "份",
+      "category": "主食"
+    },
+    {
+      "name": "生炒牛肉饭",
+      "price": 48,
+      "unit": "份",
+      "category": "主食"
+    },
+    {
+      "name": "番茄海鲜意粉",
+      "price": 48,
+      "unit": "份",
+      "category": "主食"
+    },
+    {
+      "name": "茉莉清茶",
+      "price": 8,
+      "unit": "份",
+      "category": "饮品"
+    },
+    {
+      "name": "康师傅冰红茶",
+      "price": 8,
+      "unit": "份",
+      "category": "饮品"
+    },
+    {
+      "name": "维他柠茶瓶装",
+      "price": 8,
+      "unit": "份",
+      "category": "饮品"
+    },
+    {
+      "name": "统一阿萨姆奶茶",
+      "price": 10,
+      "unit": "份",
+      "category": "饮品"
+    },
+    {
+      "name": "冰与火之歌",
+      "price": 58,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "晴天",
+      "price": 58,
+      "unit": "杯",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "梦香桃境",
+      "price": 58,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "椰子海",
+      "price": 58,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "绿野仙踪",
+      "price": 68,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "宫崎骏的夏天",
+      "price": 58,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "紫罗兰之心",
+      "price": 58,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "晚风",
+      "price": 58,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "环游世界",
+      "price": 68,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "白月光",
+      "price": 48,
+      "unit": "份",
+      "category": "鸡尾酒"
+    },
+    {
+      "name": "陈皮小麦",
+      "price": 92,
+      "unit": "升",
+      "category": "精酿"
+    },
+    {
+      "name": "荔枝茉莉柠檬茶",
+      "price": 28,
+      "unit": "份",
+      "category": "饮品"
+    },
+    {
+      "name": "巴适百香果小麦啤酒",
+      "price": 36,
+      "unit": "杯",
+      "category": "精酿"
+    },
+    {
+      "name": "安逸比利时小麦",
+      "price": 38,
+      "unit": "杯",
+      "category": "精酿"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "万觅餐吧_3.jpg",
+      "text": "套餐内容（缺标题）",
+      "reason": "截图从「套餐内容」开始，无套餐名与顶部价；底部「¥294 立即购买」是唯一价格，据此填 294"
+    },
+    {
+      "file": "万觅餐吧_5.jpg",
+      "text": "套餐内容（缺标题）",
+      "reason": "同上：无套餐名与顶部价，底部「¥194 立即购买」据此填 194"
+    },
+    {
+      "file": "万觅餐吧_3.jpg",
+      "text": "（1份标准）/（1份白灼大虾）",
+      "reason": "括号内为换行后的数量与规格，语义不完全确定"
+    },
+    {
+      "file": "万觅餐吧_2.jpg",
+      "text": "日式青瓜条(1份)28元 null",
+      "reason": "原图右侧单价列显示为 null，价格取行内 28 元"
+    },
+    {
+      "file": "万觅餐吧_9.jpg",
+      "text": "制调软软3选2（可重复选）",
+      "reason": "原文如此，疑为「调制软饮」，未擅自改写"
+    },
+    {
+      "file": "万觅餐吧_11.jpg",
+      "text": "¥6.9 / 海鲜加工（姜葱炒、辣炒1.5斤以内）",
+      "reason": "价格未标单位（疑为每斤加工费）；标题写白灼、内容写姜葱炒辣炒，原文自相矛盾"
+    }
+  ]
+}

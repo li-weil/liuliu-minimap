@@ -1,0 +1,268 @@
+{
+  "shop": "聚鲜楼",
+  "kind": "packages",
+  "sources": [
+    "餐厅菜单/聚鲜楼/1.pdf",
+    "餐厅菜单/聚鲜楼/2.pdf",
+    "餐厅菜单/聚鲜楼/3.pdf"
+  ],
+  "packages": [
+    {
+      "name": "2-4人套餐（7月）",
+      "price": 198,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "椒盐虾",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "九菜花炒花甲肉",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "炒青菜",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "杂鱼冬瓜汤",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "送饮料",
+          "items": [
+            {
+              "name": "柠檬水",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "白米饭",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": "商品每桌限用1张券"
+    },
+    {
+      "name": "3-4人套餐（7月）",
+      "price": 238,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "椒盐虾",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "九菜花炒肉片",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "回锅肉",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "炒青菜",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "杂鱼冬瓜汤",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "送饮料",
+          "items": [
+            {
+              "name": "柠檬水",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "白米饭",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": "商品每桌限用1张券"
+    },
+    {
+      "name": "4-6人套餐（7月）",
+      "price": 398,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "清蒸鱼",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "椒盐虾",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "九菜花炒花甲肉",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "蒸鱼干",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "鲍汁豆腐",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "凉拌海草",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "杂鱼冬瓜汤",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "送饮料",
+          "items": [
+            {
+              "name": "柠檬水",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "白米饭",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": "商品每桌限用1张券"
+    }
+  ],
+  "dishes": [
+    {
+      "name": "椒盐虾",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "九菜花炒花甲肉",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "炒青菜",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "杂鱼冬瓜汤",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "柠檬水",
+      "price": null,
+      "unit": "",
+      "category": "饮料"
+    },
+    {
+      "name": "白米饭",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "九菜花炒肉片",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "回锅肉",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "清蒸鱼",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "蒸鱼干",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "鲍汁豆腐",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "凉拌海草",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "聚鲜楼_1.jpg",
+      "text": "九菜花炒花甲肉 / 九菜花炒肉片",
+      "reason": "原文如此（「九菜花」应为「韭菜花」的错别字，未擅改）"
+    },
+    {
+      "file": "聚鲜楼_1.jpg",
+      "text": "分组「送饮料」下含白米饭",
+      "reason": "原图套餐分组名为「送饮料」，其下却含白米饭，疑为商家后台分组随意，按原样保留"
+    },
+    {
+      "file": "聚鲜楼_1.jpg",
+      "text": "杂鱼冬瓜汤 null / 白米饭 null",
+      "reason": "原图单价列显示 null，套餐内菜品无标价"
+    },
+    {
+      "file": "聚鲜楼_2.jpg",
+      "text": "3-4人套餐（7月）",
+      "reason": "套餐名中的「（7月）」可能是当月活动，按原样保留"
+    }
+  ]
+}

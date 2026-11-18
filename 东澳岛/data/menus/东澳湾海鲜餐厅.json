@@ -1,0 +1,584 @@
+{
+  "shop": "东澳湾海鲜餐厅",
+  "kind": "priceList",
+  "sources": [
+    "餐厅菜单/东澳湾海鲜餐厅/1.pdf",
+    "餐厅菜单/东澳湾海鲜餐厅/2.pdf",
+    "餐厅菜单/东澳湾海鲜餐厅/3.pdf",
+    "餐厅菜单/东澳湾海鲜餐厅/4.pdf",
+    "餐厅菜单/东澳湾海鲜餐厅/5.pdf"
+  ],
+  "packages": [],
+  "dishes": [
+    {
+      "name": "生蚝",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "鲍鱼",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "海虾",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "白蟹",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "三点蟹",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "沙蚬",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "圣子王",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "青口",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "花螺",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "钉螺",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "石磅鱼",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "斑鱼",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "剥皮鱼",
+      "price": null,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "鸡煲蟹",
+      "price": null,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "蒸各式咸鲜鱼",
+      "price": null,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "椒盐鱿鱼",
+      "price": 78,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "盐焗鸡翅",
+      "price": 78,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "蒜香排骨",
+      "price": 68,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "椒盐九吐鱼",
+      "price": 68,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "香脆墨鱼饼",
+      "price": 52,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "特色小炒皇",
+      "price": 58,
+      "unit": "",
+      "category": "特别推荐"
+    },
+    {
+      "name": "凉拌红油猪耳",
+      "price": 42,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌海草",
+      "price": 48,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌酱牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌青瓜",
+      "price": 38,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌皮蛋",
+      "price": 38,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌云耳",
+      "price": 38,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "红烧茄子煲",
+      "price": 48,
+      "unit": "",
+      "category": "煲仔"
+    },
+    {
+      "name": "咸骨芥菜煲",
+      "price": 45,
+      "unit": "",
+      "category": "煲仔"
+    },
+    {
+      "name": "啫啫鸡煲",
+      "price": 88,
+      "unit": "",
+      "category": "煲仔"
+    },
+    {
+      "name": "鱼香茄子煲",
+      "price": 48,
+      "unit": "",
+      "category": "煲仔"
+    },
+    {
+      "name": "虾米粉丝煲",
+      "price": 38,
+      "unit": "",
+      "category": "煲仔"
+    },
+    {
+      "name": "虾米杂菇煲",
+      "price": 58,
+      "unit": "",
+      "category": "煲仔"
+    },
+    {
+      "name": "手抓扇子骨",
+      "price": 78,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "脆皮猪手",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "沙姜炒鸡",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "番茄炒蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "酸菜炒大肠",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "酸菜五花腩",
+      "price": 42,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "凉瓜炒蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "家乡豆腐",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "笋尖炒五花腩",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "酸辣土豆丝",
+      "price": 35,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "红烧日本豆腐",
+      "price": 45,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "腰果玉米",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "姜葱炒鸡",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "黑椒牛仔骨",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "豆角烧茄子",
+      "price": 45,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "回锅肉",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "花菜炒腊味",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "农家小炒肉",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "酸辣藕带炒胃球",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "酸辣藕带炒牛肉",
+      "price": 58,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "榄菜肉松炒豆角",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "西芹百合炒腰果",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "水煮肉片",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "水煮牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "泡椒牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "凉瓜牛肉",
+      "price": 58,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒鲜鱿",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "花生焖猪手",
+      "price": 78,
+      "unit": "",
+      "category": "焖菜"
+    },
+    {
+      "name": "支竹焖牛腩",
+      "price": 68,
+      "unit": "",
+      "category": "焖菜"
+    },
+    {
+      "name": "支竹焖鸭",
+      "price": 58,
+      "unit": "",
+      "category": "焖菜"
+    },
+    {
+      "name": "虾米焖冬瓜",
+      "price": 48,
+      "unit": "",
+      "category": "焖菜"
+    },
+    {
+      "name": "土豆焖鸭",
+      "price": 58,
+      "unit": "",
+      "category": "焖菜"
+    },
+    {
+      "name": "时蔬杂鱼汤",
+      "price": 68,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "紫菜蛋花汤",
+      "price": 38,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "白贝冬瓜肉片汤",
+      "price": 48,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "咸蛋芥菜汤",
+      "price": 38,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "杂鱼西元豆腐汤",
+      "price": 68,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "西红柿鸡蛋汤",
+      "price": 38,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "海草肉片汤",
+      "price": 48,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "白灼时蔬",
+      "price": 32,
+      "unit": "",
+      "category": "时蔬"
+    },
+    {
+      "name": "上汤时蔬",
+      "price": 38,
+      "unit": "",
+      "category": "时蔬"
+    },
+    {
+      "name": "双色馒头",
+      "price": 35,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "绿茶饼",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "扬州炒饭",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "海胆炒饭",
+      "price": 68,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "牛肉炒粉/面",
+      "price": 48,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "腊肠炒饭",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "三丝炒粉/面",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "鸡蛋炒粉/面",
+      "price": 32,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "肉片炒粉/面",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "菜芯粒炒饭",
+      "price": 42,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "鸡蛋炒饭",
+      "price": 30,
+      "unit": "",
+      "category": "主食"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "东澳湾海鲜餐厅_1.jpg",
+      "text": "底部一行 3 张鱼图中有 2 个菜名被「扫描全能王」水印遮挡",
+      "reason": "水印覆盖导致读不出，未猜写（可辨认的仅「剥皮鱼 时价」）"
+    },
+    {
+      "file": "东澳湾海鲜餐厅_2.jpg",
+      "text": "左页底部第 1 个菜名被水印遮挡（价格 58 元可辨）",
+      "reason": "水印遮挡菜名，未猜写"
+    },
+    {
+      "file": "东澳湾海鲜餐厅_3.jpg",
+      "text": "左页底部 2 个菜名被水印遮挡",
+      "reason": "水印遮挡菜名，未猜写"
+    },
+    {
+      "file": "东澳湾海鲜餐厅_4.jpg",
+      "text": "「各式时蔬」下方 3 张图中有 2-3 个菜名被水印遮挡",
+      "reason": "水印遮挡菜名，仅收录可辨认的「白灼时蔬 32 元」「上汤时蔬 38 元」"
+    },
+    {
+      "file": "东澳湾海鲜餐厅_4.jpg",
+      "text": "汤类多标「38元起/48元起/68元起」",
+      "reason": "price 记录的是起价，未单列「起」字段"
+    },
+    {
+      "file": "东澳湾海鲜餐厅_1.jpg",
+      "text": "时价菜品（生蚝、鲍鱼等）",
+      "reason": "原图只标「时价」，price 记为 null"
+    },
+    {
+      "file": "东澳湾海鲜餐厅_3.jpg",
+      "text": "酸辣藕带炒胃球",
+      "reason": "原文字迹较糊，「胃球」二字把握不足（也许是「脆球」），价格 48 元清晰"
+    },
+    {
+      "file": "东澳湾海鲜餐厅_1.jpg",
+      "text": "全部 5 张图",
+      "reason": "均为「扫描全能王」扫描的纸质菜单照片，带半透明水印，个别小字被遮挡"
+    }
+  ]
+}

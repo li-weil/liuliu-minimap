@@ -1,11 +1,23 @@
 const cloud = require('wx-server-sdk');
 const https = require('https');
 const fileConfig = require('./config');
+const corpusLib = require('./corpus');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
 
 const REQUEST_TIMEOUT_MS = Number(process.env.AI_REQUEST_TIMEOUT_MS || fileConfig.timeoutMs || 15000);
+
+// === 语料库（MVP，并联新增；置 DONGAO_CORPUS_ENABLED=0 可整体回滚） ===
+const CORPUS_ENABLED = process.env.DONGAO_CORPUS_ENABLED !== '0';
+const CORPUS_CACHE_TTL_MS = 5 * 60 * 1000;
+const CLOUD_FILE_ROOT = 'cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/';
+let corpusIndexCache = null;
+const corpusSpotCache = Object.create(null);
+
+function isCacheFresh(entry) {
+  return !!entry && (Date.now() - entry.ts) < CORPUS_CACHE_TTL_MS;
+}
 
 // === AI call ===
 
@@ -54,6 +66,24 @@ function requestJson(urlString, body) {
   });
 }
 
+// 模型偶尔会在 JSON 前后多说一句话，直接 JSON.parse 会整条失败走兜底。
+// 先按原样解析，失败再截取第一个 { 到最后一个 } 之间的内容。
+function parseModelJson(text) {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+  const candidates = [raw];
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start >= 0 && end > start) candidates.push(raw.slice(start, end + 1));
+  for (let i = 0; i < candidates.length; i += 1) {
+    try {
+      const value = JSON.parse(candidates[i]);
+      if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+    } catch (e) { /* 尝试下一个候选 */ }
+  }
+  return null;
+}
+
 async function chatJson(systemPrompt, userPrompt) {
   const config = getAiConfig();
   if (!config.apiKey) throw new Error('missing_ai_api_key');
@@ -73,8 +103,10 @@ async function chatJson(systemPrompt, userPrompt) {
   );
   const text = payload?.choices?.[0]?.message?.content || '';
   const stripped = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+  const parsed = parseModelJson(stripped);
+  if (!parsed) throw new Error('invalid_model_json');
   return {
-    parsed: JSON.parse(stripped || '{}'),
+    parsed: parsed,
     rawText: text,
     strippedText: stripped,
     request: requestBody,
@@ -282,11 +314,32 @@ exports.main = async (event) => {
     }
   };
 
-  const [guideData, weatherData, tideData, guideText] = await Promise.all([
-    loadFile('cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/dongao-content/' + mapName + '.json'),
-    loadFile('cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/dongao-data/weather.json'),
-    loadFile('cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/dongao-data/tide.json'),
-    loadFile('cloud://cloud1-2gdui7md5af99e5c.636c-cloud1-2gdui7md5af99e5c-1418723303/dongao-data/guide.md'),
+  const loadCorpusIndex = async () => {
+    if (!CORPUS_ENABLED) return null;
+    if (isCacheFresh(corpusIndexCache)) return corpusIndexCache.data;
+    const data = await loadFile(CLOUD_FILE_ROOT + 'dongao-corpus/_index.json');
+    if (!data || typeof data !== 'object') return null;
+    corpusIndexCache = { data, ts: Date.now() };
+    return data;
+  };
+
+  const loadSpotCorpus = async (name) => {
+    if (!CORPUS_ENABLED || !name) return null;
+    const cached = corpusSpotCache[name];
+    if (isCacheFresh(cached)) return cached.data;
+    const data = await loadFile(CLOUD_FILE_ROOT + 'dongao-corpus/' + name + '.json');
+    if (!data || typeof data !== 'object') return null;
+    corpusSpotCache[name] = { data, ts: Date.now() };
+    return data;
+  };
+
+  const [guideData, weatherData, tideData, guideText, spotCorpus, corpusIndex] = await Promise.all([
+    loadFile(CLOUD_FILE_ROOT + 'dongao-content/' + mapName + '.json'),
+    loadFile(CLOUD_FILE_ROOT + 'dongao-data/weather.json'),
+    loadFile(CLOUD_FILE_ROOT + 'dongao-data/tide.json'),
+    loadFile(CLOUD_FILE_ROOT + 'dongao-data/guide.md'),
+    loadSpotCorpus(mapName),
+    loadCorpusIndex(),
   ]);
 
   const time = getTimeContext();
@@ -296,10 +349,21 @@ exports.main = async (event) => {
   const sensoryInspo = buildSensoryInspiration(guideData);
   const visitorRules = typeof guideText === 'string' ? guideText.slice(0, 600) : '';
 
-  // 2. Build prompt
-  const systemPrompt = '你是遛遛小程序东澳岛模式的漫步任务助手。只返回合法 JSON，不要输出解释。语气温暖、活泼、像一位体贴的好友。';
+  // 语料检索（L1 点位档案 → L2 片区 → L3 风格样本）；为空则走原 prompt
+  const preference = corpusLib.normalizePreference(event.preference);
+  const recentMissions = corpusLib.normalizeRecentMissions(event.recentMissions);
+  const corpusContext = corpusLib.buildCorpusContext({
+    mapName,
+    spot: spotCorpus,
+    index: corpusIndex,
+    preference,
+    recentMissions,
+  });
 
-  const userPrompt = `为东澳岛景点"${mapName}"生成一条漫步任务和贴心小提示。
+  // 2. Build prompt
+  let systemPrompt = '你是遛遛小程序东澳岛模式的漫步任务助手。只返回合法 JSON，不要输出解释。语气温暖、活泼、像一位体贴的好友。';
+
+  let userPrompt = `为东澳岛景点"${mapName}"生成一条漫步任务和贴心小提示。
 
 【景点信息】
 ${envContext || '暂无详细信息'}
@@ -327,6 +391,32 @@ ${visitorRules || '注意人身安全，遵守景区规定'}
   "safetyNote": "安全提醒"
 }`;
 
+  // 餐饮点位走「美食推荐」prompt：不生成观察任务，而是点单推荐
+  const isFoodMode = corpusContext.mode === 'food';
+  if (corpusContext.text) {
+    const promptV2 = isFoodMode
+      ? corpusLib.buildPromptFoodV2({
+        mapName,
+        corpusText: corpusContext.text,
+        weatherSummary,
+        time,
+        recentMissions,
+      })
+      : corpusLib.buildPromptV2({
+        mapName,
+        corpusText: corpusContext.text,
+        envContext,
+        sensoryInspo,
+        weatherSummary,
+        tideSummary,
+        visitorRules,
+        time,
+        recentMissions,
+      });
+    systemPrompt = promptV2.systemPrompt;
+    userPrompt = promptV2.userPrompt;
+  }
+
   // 3. Call AI with fallback
   let mission = '', tips = '', safetyNote = '';
   let rawModelText = '';
@@ -350,16 +440,39 @@ ${visitorRules || '注意人身安全，遵守景区规定'}
   } catch (err) {
     console.error('AI generation failed:', err.message);
     fallbackReason = err.message || 'unknown_error';
-    // Local fallback
-    mission = `在${mapName}停下来，看看周围最吸引你的是什么`;
-    tips = '放慢脚步，享受这一刻';
-    safetyNote = '注意脚下安全';
+    // Local fallback：餐饮点位只复述菜单菜名，不新增事实
+    if (isFoodMode) {
+      const foodFallback = corpusLib.buildFoodFallback({ mapName, picks: corpusContext.picks });
+      mission = foodFallback.mission;
+      tips = foodFallback.tips;
+      safetyNote = foodFallback.safetyNote;
+    } else {
+      mission = `在${mapName}停下来，看看周围最吸引你的是什么`;
+      tips = '放慢脚步，享受这一刻';
+      safetyNote = '注意脚下安全';
+    }
+  }
+
+  // 模型返回 200 但内容为空时也要兜底，避免卡片空白
+  if (!mission) {
+    fallbackReason = fallbackReason || 'empty_mission';
+    if (isFoodMode) {
+      const foodFallback = corpusLib.buildFoodFallback({ mapName, picks: corpusContext.picks });
+      mission = foodFallback.mission;
+      tips = tips || foodFallback.tips;
+      safetyNote = safetyNote || foodFallback.safetyNote;
+    } else {
+      mission = `在${mapName}停下来，看看周围最吸引你的是什么`;
+      tips = tips || '放慢脚步，享受这一刻';
+      safetyNote = safetyNote || '注意脚下安全';
+    }
   }
 
   // 4. Write to dongaoCards for history
   const cardRecord = {
     userId: wxContext.OPENID,
     spotName: mapName,
+    mode: isFoodMode ? 'food' : 'spot',
     mission,
     tips,
     safetyNote,
@@ -369,6 +482,8 @@ ${visitorRules || '注意人身安全，遵守景区规定'}
     debug: {
       modelInput: {
         model: getAiConfig().model,
+        mode: isFoodMode ? 'food' : 'spot',
+        corpus: corpusContext.stats,
         currentTime: time.currentTime,
         weatherSummary,
         tideSummary,
@@ -397,10 +512,15 @@ ${visitorRules || '注意人身安全，遵守景区规定'}
 
   const { debug, ...savedCardRecord } = cardRecord;
 
-  try {
-    await db.collection('dongaoCards').add({ data: savedCardRecord });
-  } catch (err) {
-    console.warn('Failed to save dongaoCard:', err.message);
+  // 控制台/CLI 调用没有 OPENID，写进去只会污染历史卡片，直接跳过。
+  if (wxContext.OPENID) {
+    try {
+      await db.collection('dongaoCards').add({ data: savedCardRecord });
+    } catch (err) {
+      console.warn('Failed to save dongaoCard:', err.message);
+    }
+  } else {
+    console.log('[CARD] skip history write: no OPENID (console/CLI invocation)');
   }
 
   return cardRecord;

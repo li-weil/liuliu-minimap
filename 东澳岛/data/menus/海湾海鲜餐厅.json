@@ -1,0 +1,597 @@
+{
+  "shop": "海湾海鲜餐厅",
+  "kind": "mixed",
+  "sources": [
+    "餐厅菜单/海湾海鲜餐厅/1.pdf",
+    "餐厅菜单/海湾海鲜餐厅/2.pdf",
+    "餐厅菜单/海湾海鲜餐厅/3.pdf",
+    "餐厅菜单/海湾海鲜餐厅/4.pdf"
+  ],
+  "packages": [
+    {
+      "name": "双人餐",
+      "price": 132,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "海草肉片汤",
+              "qty": "一份",
+              "unitPrice": null
+            },
+            {
+              "name": "炒时蔬",
+              "qty": "一份",
+              "unitPrice": null
+            },
+            {
+              "name": "金牌骨",
+              "qty": "一份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "餐桌用品",
+          "items": [
+            {
+              "name": "免茶位费",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "纸巾",
+              "qty": "一盒",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": "商品每桌限用1张券"
+    },
+    {
+      "name": "4-6人套餐",
+      "price": 368,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "杂鱼冬瓜汤",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "椒盐虾",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "尖椒炒鲜鱿",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "金牌骨",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "特色蒸水蛋",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "蒜蓉炒时蔬",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "金银馒头",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "一锅饭",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "饮料",
+          "items": [
+            {
+              "name": "大可乐",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "餐桌用品",
+          "items": [
+            {
+              "name": "一盒纸巾",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": "商品每桌限用1张券"
+    },
+    {
+      "name": "8-10人套餐",
+      "price": 638,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "杂鱼豆腐元西汤",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "特色海鲜煲",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "清蒸海鱼",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "椒盐九吐",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "爆炒花甲",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "蒜蓉蒸青口",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "姜葱炒鸡",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "特色凉拌海草",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "蒜蓉炒时蔬",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "干炒牛河",
+              "qty": "1份",
+              "unitPrice": null
+            },
+            {
+              "name": "一锅饭",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "饮料",
+          "items": [
+            {
+              "name": "大可乐",
+              "qty": "1份",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": "商品每桌限用1张券"
+    }
+  ],
+  "dishes": [
+    {
+      "name": "沙姜炒鸡",
+      "price": 78,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "豉油王焗咸虾",
+      "price": 88,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "青瓜炒虾",
+      "price": 65,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "青瓜炒鱿鱼",
+      "price": 55,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "青瓜肉片",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "青瓜炒蛋",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒肉卷",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒鱿鱼",
+      "price": 55,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒午餐肉",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "丝瓜炒肉片",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "丝瓜炒鱿鱼",
+      "price": 55,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "菜花炒腊味",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "菜花炒肉卷",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "菜花炒肉片",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "芥兰炒腊味",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "芥兰炒肉片",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "芥兰炒肉卷",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "洋葱炒肉片",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "洋葱炒五花肉",
+      "price": 40,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "五花肉炒豆芽",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "豆角炒鱿鱼",
+      "price": 55,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "凉瓜炒牛肉",
+      "price": 68,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "豆角炒虾",
+      "price": 65,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "豆角炒肉片",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "回锅肉",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "番茄炒蛋",
+      "price": 35,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "炒花甲",
+      "price": 45,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "炒时菜",
+      "price": 30,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "炒土豆丝",
+      "price": 30,
+      "unit": "例",
+      "category": "小炒"
+    },
+    {
+      "name": "炒粉",
+      "price": 30,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "炒面",
+      "price": 30,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "炒饭",
+      "price": 30,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "牛腩炒粉",
+      "price": 45,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "牛腩炒面",
+      "price": 45,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "牛腩炒饭",
+      "price": 45,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "海鲜炒饭",
+      "price": 45,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "海鲜炒粉",
+      "price": 45,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "海鲜炒面",
+      "price": 45,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "招牌海胆炒饭",
+      "price": 78,
+      "unit": "例",
+      "category": "主食"
+    },
+    {
+      "name": "蒜蓉蒸生蚝",
+      "price": 118,
+      "unit": "打",
+      "category": "蒸菜"
+    },
+    {
+      "name": "腊味蒸鱼干",
+      "price": 65,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "蒸鱼干",
+      "price": 55,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "五花腩蒸鱼干",
+      "price": 65,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "蒸鸡",
+      "price": 78,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "蒸水蛋",
+      "price": 30,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "海胆蒸水蛋",
+      "price": 78,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "虾子蒸水蛋",
+      "price": 55,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "蒸腊味",
+      "price": 60,
+      "unit": "例",
+      "category": "蒸菜"
+    },
+    {
+      "name": "招牌椒盐虾",
+      "price": 88,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "招牌椒盐杂鱼",
+      "price": 78,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "凉瓜焖鱼头",
+      "price": 78,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "招牌日式鱼",
+      "price": 78,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "招牌腐竹焖牛腩",
+      "price": 68,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "招牌酱香焖鸡",
+      "price": 158,
+      "unit": "煲",
+      "category": "招牌特色"
+    },
+    {
+      "name": "椒盐鸭舌",
+      "price": 78,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "酸菜炒猪肚",
+      "price": 78,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "胡椒猪肚",
+      "price": 88,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "特色蟹焖鸡",
+      "price": 198,
+      "unit": "煲",
+      "category": "招牌特色"
+    },
+    {
+      "name": "特色鲜虾烧豆腐",
+      "price": 55,
+      "unit": "例",
+      "category": "招牌特色"
+    },
+    {
+      "name": "水煮牛肉",
+      "price": 88,
+      "unit": "例",
+      "category": "招牌特色"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "海湾海鲜餐厅_4.jpg",
+      "text": "右侧列：/ 聚鲜蒸菜 / 招牌特色 / （底部略有遮挡，价格可辨识）",
+      "reason": "这些是图片内嵌的排版标注（原菜单为左右两栏、「聚鲜蒸菜」「招牌特色」为分区标题、另有一处遮挡说明），非菜品文字，已按标注理解结构"
+    },
+    {
+      "file": "海湾海鲜餐厅_4.jpg",
+      "text": "水煮牛肉：88元/例汤",
+      "reason": "原文单位写作「例汤」，按 88 元/例 处理"
+    },
+    {
+      "file": "海湾海鲜餐厅_4.jpg",
+      "text": "蒸腊味：60元/例",
+      "reason": "该行旁有标注「底部略有遮挡，价格可辨识」，价格按 60 元采信"
+    },
+    {
+      "file": "海湾海鲜餐厅_3.jpg",
+      "text": "杂鱼豆腐元西汤",
+      "reason": "原文如此（元西疑为芫茜）"
+    },
+    {
+      "file": "海湾海鲜餐厅_1.jpg",
+      "text": "金牌骨一份 null / 纸巾一盒 null",
+      "reason": "原图右侧单价列显示 null，套餐内菜品无单价"
+    },
+    {
+      "file": "海湾海鲜餐厅_1.jpg",
+      "text": "分组「主食」",
+      "reason": "原图套餐分组名为「主食」，其下却含汤/肉/海鲜，疑为商家后台分组错误，按原样保留"
+    }
+  ]
+}

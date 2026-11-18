@@ -35,6 +35,13 @@ const DEBUG_SPOTS = [
   { n:"东澳湾灯桩", c:"113.715989,22.020312" },{ n:"东澳岛蜜月山景区山海云道", c:"113.704251,22.020812" },
   { n:"万海平波", c:"113.716655,22.021730" },{ n:"观月台", c:"113.701011,22.019421" },
   { n:"东澳岛-铳城亭", c:"113.721045,22.024948" },{ n:"街心公园", c:"113.714679,22.019882" },
+  { n:"珠海东澳岛万豪度假酒店", c:"113.703981,22.025062" },{ n:"阿丽拉珠海东澳岛", c:"113.706530,22.009122" },
+  { n:"珠海东澳岛安麓酒店", c:"113.726610,22.020223" },{ n:"格力东澳大酒店", c:"113.703204,22.019507" },
+  { n:"珠海东澳岛可域度假村", c:"113.706252,22.015404" },{ n:"万觅餐吧", c:"113.714015,22.017014" },
+  { n:"东发海鲜酒家", c:"113.715075,22.020275" },{ n:"是旦有愉食堂", c:"113.714420,22.020122" },
+  { n:"是旦海鲜餐厅", c:"113.713932,22.018573" },{ n:"潮汐咖啡", c:"113.715475,22.020075" },
+  { n:"精致拾光", c:"113.714515,22.019481" },{ n:"聚鲜楼", c:"113.714792,22.019740" },
+  { n:"东澳岛游客服务中心", c:"113.715672,22.020272" },
 ];
 
 Page({
@@ -63,6 +70,7 @@ Page({
     generationProgress: 0,
     generationStepIndex: 0,
     generationSteps: GENERATION_STEPS,
+    preference: 'general',
   },
 
   onLoad() {
@@ -107,7 +115,7 @@ Page({
       console.error('startFlow error:', err);
       this.setData({
         phase: 'ready',
-        errorMsg: err.message || '请先部署云函数并初始化spots集合',
+        errorMsg: err.message || '网络开小差了，再点一次试试',
         showDevTools: true,
       });
       this.log('启动失败: ' + (err.message || '未知错误'));
@@ -136,10 +144,14 @@ Page({
   async generateAndShow(spot) {
     this._startGenerationLoading(spot);
     try {
-      const result = await generateMission(spot.map_name);
+      const result = await generateMission(spot.map_name, {
+        preference: this.data.preference || 'general',
+        recentMissions: this.data.historyCards.slice(0, 3).map((item) => item.mission),
+      });
       this._stopGenerationLoading();
       this._cacheModelDebug(result.debug);
       const card = {
+        mode: result.mode === 'food' ? 'food' : 'spot',
         mission: result.mission,
         tips: result.tips,
         safetyNote: result.safetyNote,
@@ -276,9 +288,10 @@ Page({
     const card = this.data.currentCard;
     if (!card || !card.mission || this.data.phase !== 'ready') return;
     const app = getApp();
+    const themeCategory = card.mode === 'food' ? '东澳岛美食' : '东澳岛景点';
     app.globalData.currentTheme = {
       title: card.spotName,
-      category: '东澳岛景点',
+      category: themeCategory,
       missions: [card.mission],
     };
     app.setWalkDraft({
@@ -287,7 +300,7 @@ Page({
       themeTitle: card.spotName,
       themeSnapshot: {
         title: card.spotName,
-        category: '东澳岛景点',
+        category: themeCategory,
         missions: [card.mission],
       },
       locationName: card.spotName,
@@ -502,7 +515,7 @@ Page({
         this.log('失败: 无景点数据');
         return;
       }
-      const result = await generateMission(spots[0].map_name);
+      const result = await generateMission(spots[0].map_name, { preference: this.data.preference || 'general' });
       wx.hideLoading();
       this._cacheModelDebug(result.debug);
       this.log(`${spots[0].map_name}: ${result.mission}`);

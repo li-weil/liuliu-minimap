@@ -1,0 +1,1525 @@
+{
+  "version": "2026-11-11",
+  "generatedAt": "2026-11-11",
+  "script": "scripts/build_dongao_corpus.py",
+  "commands": "python scripts/build_dongao_corpus.py",
+  "inputs": [
+    {
+      "file": "东澳岛景点 字段采集(2).xlsx",
+      "sheets": [
+        {
+          "sheet": "Sheet1",
+          "maxRow": 30,
+          "maxColumn": 13,
+          "nonEmptyRows": 30
+        },
+        {
+          "sheet": "Sheet2",
+          "maxRow": 1,
+          "maxColumn": 1,
+          "nonEmptyRows": 0
+        },
+        {
+          "sheet": "Sheet3",
+          "maxRow": 1,
+          "maxColumn": 1,
+          "nonEmptyRows": 0
+        }
+      ],
+      "headerRow": 1,
+      "usedRows": "2–30（29 行；A 列合并分组 forward-fill）"
+    },
+    {
+      "file": "东澳岛住宿字段采集.xlsx",
+      "sheets": [
+        {
+          "sheet": "住宿字段采集表",
+          "maxRow": 30,
+          "maxColumn": 16,
+          "nonEmptyRows": 30
+        }
+      ],
+      "headerRow": 1,
+      "usedRows": "2–30（29 行）"
+    },
+    {
+      "file": "东澳岛餐饮字段采集.xlsx",
+      "sheets": [
+        {
+          "sheet": "字段采集模板",
+          "maxRow": 39,
+          "maxColumn": 12,
+          "nonEmptyRows": 39
+        }
+      ],
+      "headerRow": 1,
+      "usedRows": "2–39（38 行）"
+    },
+    {
+      "file": "东澳岛购物+文创字段采集表 更正版.xlsx",
+      "sheets": [
+        {
+          "sheet": "Sheet1",
+          "maxRow": 170,
+          "maxColumn": 22,
+          "nonEmptyRows": 44
+        }
+      ],
+      "headerRow": 2,
+      "usedRows": "3–44（42 行；15–22 列空列丢弃）"
+    },
+    {
+      "file": "东澳岛亲子酒店字段收集（专门针对亲子客群.xlsx",
+      "sheets": [
+        {
+          "sheet": "Sheet1",
+          "maxRow": 12,
+          "maxColumn": 5,
+          "nonEmptyRows": 12
+        },
+        {
+          "sheet": "Sheet2",
+          "maxRow": 1,
+          "maxColumn": 1,
+          "nonEmptyRows": 0
+        },
+        {
+          "sheet": "Sheet3",
+          "maxRow": 1,
+          "maxColumn": 1,
+          "nonEmptyRows": 0
+        }
+      ],
+      "headerRow": 1,
+      "usedRows": "转置表：11 字段 × 4 家酒店"
+    },
+    {
+      "file": "东澳岛/data/menus/*.json",
+      "sheets": [],
+      "headerRow": "-",
+      "usedRows": "读取 7 个菜单文件，映射 7 个点位"
+    }
+  ],
+  "totals": {
+    "spotCount": 65,
+    "l1Count": 25,
+    "l1Coverage": "25/65 (38.5%)",
+    "newPointCount": 13,
+    "newPointsWithL1": 13,
+    "areaCount": 6,
+    "cleanRows": {
+      "spots": 29,
+      "stays": 29,
+      "foods": 38,
+      "shops_activities": 42,
+      "kids_hotels": 4,
+      "menus": 7
+    },
+    "playItems": 287,
+    "styleSamples": 27,
+    "quarantine": 4,
+    "menuStats": {
+      "files": 7,
+      "expectedPoints": 10,
+      "pointsWithJson": 7,
+      "pointsWithMenu": 6,
+      "pendingPoints": 4,
+      "warnings": []
+    },
+    "audiencePlayCounts": {
+      "couple": 217,
+      "family": 164,
+      "elder": 108,
+      "hardcore": 199
+    }
+  },
+  "matchedSpots": [
+    {
+      "mapName": "婚礼堂",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "miyue",
+      "areaName": "蜜月山片",
+      "source": "景点表#2",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "蜜月阁",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "miyue",
+      "areaName": "蜜月山片",
+      "source": "景点表#3",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "滨海栈道",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "nansha",
+      "areaName": "南沙湾片",
+      "source": "景点表#4",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "南沙湾沙滩",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "nansha",
+      "areaName": "南沙湾片",
+      "source": "景点表#5",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "月牙环",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "nansha",
+      "areaName": "南沙湾片",
+      "source": "景点表#6",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "风车山",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "fengche",
+      "areaName": "风车山片",
+      "source": "景点表#8",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "求子泉",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "景点表#9",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "万山海洋生物科普馆",
+      "confidence": "medium",
+      "matchedBy": "alias",
+      "category": "",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "景点表#26",
+      "mergedSources": [
+        "景点表#10"
+      ],
+      "aliases": [
+        "海洋科普馆(景点表#10)",
+        "万山海洋生物科普馆（博物馆类）(景点表#26)"
+      ],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "万觅书店",
+      "confidence": "medium",
+      "matchedBy": "alias",
+      "category": "",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "景点表#11",
+      "mergedSources": [
+        "购物活动表#5"
+      ],
+      "aliases": [
+        "万觅(景点表#11)",
+        "万觅书店（海上慢咖集）文创咖啡(购物活动表#5)"
+      ],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "铳城",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "",
+      "area": "beian",
+      "areaName": "北岸东片",
+      "source": "景点表#13",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "山海经书屋",
+      "confidence": "medium",
+      "matchedBy": "exact+alias",
+      "category": "",
+      "area": "beian",
+      "areaName": "北岸东片",
+      "source": "景点表#15",
+      "mergedSources": [
+        "餐饮表#5",
+        "购物活动表#6"
+      ],
+      "aliases": [
+        "山海经书屋文创(购物活动表#6)"
+      ],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "东澳岛海关遗址",
+      "confidence": "medium",
+      "matchedBy": "alias",
+      "category": "",
+      "area": "beian",
+      "areaName": "北岸东片",
+      "source": "景点表#27",
+      "mergedSources": [],
+      "aliases": [
+        "东澳海关遗址展览馆（博物馆类）(景点表#27)"
+      ],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "珠海东澳岛万豪度假酒店",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "stay",
+      "area": "nansha",
+      "areaName": "南沙湾片",
+      "source": "住宿表#2",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "阿丽拉珠海东澳岛",
+      "confidence": "medium",
+      "matchedBy": "alias:normalize",
+      "category": "stay",
+      "area": "nanya",
+      "areaName": "南岸片",
+      "source": "住宿表#3",
+      "mergedSources": [],
+      "aliases": [
+        "阿丽拉珠海东澳岛（ALILA）(住宿表#3)"
+      ],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "珠海东澳岛安麓酒店",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "stay",
+      "area": "beian",
+      "areaName": "北岸东片",
+      "source": "住宿表#4",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "格力东澳大酒店",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "stay",
+      "area": "nansha",
+      "areaName": "南沙湾片",
+      "source": "住宿表#5",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "珠海东澳岛可域度假村",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "stay",
+      "area": "nansha",
+      "areaName": "南沙湾片",
+      "source": "住宿表#6",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "聚鲜楼",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "food",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "餐饮表#7",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": true,
+      "menuCount": 13
+    },
+    {
+      "mapName": "万觅餐吧",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "food",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "餐饮表#13",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": true,
+      "menuCount": 14
+    },
+    {
+      "mapName": "是旦海鲜餐厅",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "food",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "餐饮表#18",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "精致拾光",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "food",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "餐饮表#21",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "东发海鲜酒家",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "food",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "餐饮表#23",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "是旦有愉食堂",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "food",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "餐饮表#25",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "潮汐咖啡",
+      "confidence": "high",
+      "matchedBy": "exact",
+      "category": "food",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "餐饮表#35",
+      "mergedSources": [],
+      "aliases": [],
+      "hasMenu": false,
+      "menuCount": 0
+    },
+    {
+      "mapName": "东澳岛游客服务中心",
+      "confidence": "medium",
+      "matchedBy": "alias",
+      "category": "shop",
+      "area": "matou",
+      "areaName": "东澳湾码头片",
+      "source": "购物活动表#7",
+      "mergedSources": [],
+      "aliases": [
+        "东澳岛游客服务中心官方文创(购物活动表#7)"
+      ],
+      "hasMenu": false,
+      "menuCount": 0
+    }
+  ],
+  "newPoints": [
+    {
+      "mapName": "珠海东澳岛万豪度假酒店",
+      "category": "stay",
+      "amapName": "珠海东澳岛万豪度假酒店",
+      "coords": "113.703981,22.025062",
+      "dataSource": "住宿表#2",
+      "hasL1": true,
+      "menuCount": 0
+    },
+    {
+      "mapName": "阿丽拉珠海东澳岛",
+      "category": "stay",
+      "amapName": "阿丽拉珠海东澳岛",
+      "coords": "113.706530,22.009122",
+      "dataSource": "住宿表#3",
+      "hasL1": true,
+      "menuCount": 0
+    },
+    {
+      "mapName": "珠海东澳岛安麓酒店",
+      "category": "stay",
+      "amapName": "珠海东澳岛安麓酒店",
+      "coords": "113.726610,22.020223",
+      "dataSource": "住宿表#4",
+      "hasL1": true,
+      "menuCount": 0
+    },
+    {
+      "mapName": "格力东澳大酒店",
+      "category": "stay",
+      "amapName": "格力东澳大酒店",
+      "coords": "113.703204,22.019507",
+      "dataSource": "住宿表#5",
+      "hasL1": true,
+      "menuCount": 0
+    },
+    {
+      "mapName": "珠海东澳岛可域度假村",
+      "category": "stay",
+      "amapName": "珠海东澳岛可域度假村",
+      "coords": "113.706252,22.015404",
+      "dataSource": "住宿表#6",
+      "hasL1": true,
+      "menuCount": 0
+    },
+    {
+      "mapName": "万觅餐吧",
+      "category": "food",
+      "amapName": "东澳湾万觅餐吧(东澳岛店)",
+      "coords": "113.714015,22.017014",
+      "dataSource": "餐饮表#13",
+      "hasL1": true,
+      "menuCount": 14
+    },
+    {
+      "mapName": "东发海鲜酒家",
+      "category": "food",
+      "amapName": "东发海鲜酒家",
+      "coords": "113.715075,22.020275",
+      "dataSource": "餐饮表#23",
+      "hasL1": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "是旦有愉食堂",
+      "category": "food",
+      "amapName": "是旦有愉食堂(东澳岛店)",
+      "coords": "113.714420,22.020122",
+      "dataSource": "餐饮表#25",
+      "hasL1": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "是旦海鲜餐厅",
+      "category": "food",
+      "amapName": "是旦海鲜餐厅总店",
+      "coords": "113.713932,22.018573",
+      "dataSource": "餐饮表#18",
+      "hasL1": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "潮汐咖啡",
+      "category": "food",
+      "amapName": "潮汐咖啡",
+      "coords": "113.715475,22.020075",
+      "dataSource": "餐饮表#35",
+      "hasL1": true,
+      "menuCount": 0
+    },
+    {
+      "mapName": "精致拾光",
+      "category": "food",
+      "amapName": "精致拾光",
+      "coords": "113.714515,22.019481",
+      "dataSource": "餐饮表#21",
+      "hasL1": true,
+      "menuCount": 12
+    },
+    {
+      "mapName": "聚鲜楼",
+      "category": "food",
+      "amapName": "聚鲜楼·东澳岛酒楼·海鲜加工",
+      "coords": "113.714792,22.019740",
+      "dataSource": "餐饮表#7",
+      "hasL1": true,
+      "menuCount": 13
+    },
+    {
+      "mapName": "东澳岛游客服务中心",
+      "category": "shop",
+      "amapName": "东澳岛游客服务中心",
+      "coords": "113.715672,22.020272",
+      "dataSource": "购物活动表#7",
+      "hasL1": true,
+      "menuCount": 0
+    }
+  ],
+  "notIncluded": [
+    {
+      "name": "东澳信汇海景酒店",
+      "kind": "stay",
+      "source": "住宿表#7",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "里苑·望海山居全海景民宿",
+      "kind": "stay",
+      "source": "住宿表#8",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "一念民宿（珠海东澳岛店）",
+      "kind": "stay",
+      "source": "住宿表#9",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "邻海别苑（东澳岛店）",
+      "kind": "stay",
+      "source": "住宿表#10",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "村上渔舍（东澳岛）",
+      "kind": "stay",
+      "source": "住宿表#11",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "依山泮海美宿（东澳岛店）",
+      "kind": "stay",
+      "source": "住宿表#12",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "东澳岛沐风民宿",
+      "kind": "stay",
+      "source": "住宿表#13",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "东澳岛碧海星辰精品客栈",
+      "kind": "stay",
+      "source": "住宿表#14",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "珠海同心客栈",
+      "kind": "stay",
+      "source": "住宿表#15",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "珠海东澳岛潮汐客栈",
+      "kind": "stay",
+      "source": "住宿表#16",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "珠海东澳岛岛上人家民宿",
+      "kind": "stay",
+      "source": "住宿表#17",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "东澳岛恰好客栈",
+      "kind": "stay",
+      "source": "住宿表#18",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "姐夫家民宿",
+      "kind": "stay",
+      "source": "住宿表#19",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "珠海悦馨客栈（东澳岛旅游度假区店）",
+      "kind": "stay",
+      "source": "住宿表#20",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "珠海东澳岛海天阁客栈",
+      "kind": "stay",
+      "source": "住宿表#21",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "珠海东澳岛暖屋客栈",
+      "kind": "stay",
+      "source": "住宿表#22",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "东澳岛与你同行民宿",
+      "kind": "stay",
+      "source": "住宿表#23",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "小岛渔家民宿（东澳岛店）",
+      "kind": "stay",
+      "source": "住宿表#24",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "邻海居客栈（珠海东澳岛店）",
+      "kind": "stay",
+      "source": "住宿表#25",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "东澳岛客栈（DongAo Island Inn）",
+      "kind": "stay",
+      "source": "住宿表#26",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "22度客栈（22°HOMESTAY）（经济型）",
+      "kind": "stay",
+      "source": "住宿表#27",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "梁记客栈（东澳岛店）",
+      "kind": "stay",
+      "source": "住宿表#28",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "珠海东澳岛海景度假屋",
+      "kind": "stay",
+      "source": "住宿表#29",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "春栖山林（东澳岛店）",
+      "kind": "stay",
+      "source": "住宿表#30",
+      "reason": "用户决定不进点位库（住宿表 24 家非点位住宿之一）；玩法仍作为 L2 片区语料"
+    },
+    {
+      "name": "东澳湾海鲜干货市集",
+      "kind": "shop",
+      "source": "购物活动表#3",
+      "reason": "购物段仅「东澳岛游客服务中心」进点位库；本店保留在 L2 片区语料，不单列点位"
+    },
+    {
+      "name": "海岛手信坊",
+      "kind": "shop",
+      "source": "购物活动表#4",
+      "reason": "购物段仅「东澳岛游客服务中心」进点位库；本店保留在 L2 片区语料，不单列点位"
+    },
+    {
+      "name": "洒哥海鲜餐厅",
+      "kind": "menu",
+      "source": "餐厅菜单/洒哥海鲜餐厅",
+      "reason": "高德查不到该点位（不在点位库），菜单不合并；转写结果保留在 东澳岛/data/menus/洒哥海鲜餐厅.json 供人工确认"
+    },
+    {
+      "name": "摸鱼咖啡",
+      "kind": "menu",
+      "source": "餐厅菜单/摸鱼咖啡",
+      "reason": "高德查不到该点位（不在点位库），菜单不合并；转写结果保留在 东澳岛/data/menus/摸鱼咖啡.json 供人工确认"
+    },
+    {
+      "name": "东澳湾海鲜餐厅",
+      "kind": "menu",
+      "source": "餐厅菜单/东澳湾海鲜餐厅",
+      "reason": "高德可查，但与采集表「海湾海鲜餐厅」是否同一家无法确认，用户决定两家都不入库、不进 L1；转写结果保留在 东澳岛/data/menus/东澳湾海鲜餐厅.json 供人工确认"
+    },
+    {
+      "name": "海湾海鲜餐厅",
+      "kind": "menu",
+      "source": "餐厅菜单/海湾海鲜餐厅",
+      "reason": "与「东澳湾海鲜餐厅」是否同一家无法确认，用户决定两家都不入库、不进 L1；转写结果保留在 东澳岛/data/menus/海湾海鲜餐厅.json 供人工确认"
+    },
+    {
+      "name": "格力东澳大酒店-蓝色海岸餐厅",
+      "kind": "food",
+      "source": "餐厅菜单/格力东澳大酒店-蓝色海岸餐厅",
+      "reason": "菜单 JSON 已转写，但本轮只收餐饮目录（MENU_SCOPE_CATEGORIES），未并入「格力东澳大酒店」的 L1；下一轮改配置即可合入"
+    },
+    {
+      "name": "珠海东澳岛安麓酒店-安心全日餐厅",
+      "kind": "food",
+      "source": "餐厅菜单/珠海东澳岛安麓酒店-安心全日餐厅",
+      "reason": "菜单 JSON 已转写，但本轮只收餐饮目录（MENU_SCOPE_CATEGORIES），未并入「珠海东澳岛安麓酒店」的 L1；下一轮改配置即可合入"
+    },
+    {
+      "name": "珠海东澳岛安麓酒店-安麓书院",
+      "kind": "food",
+      "source": "餐厅菜单/珠海东澳岛安麓酒店-安麓书院",
+      "reason": "菜单 JSON 已转写，但本轮只收餐饮目录（MENU_SCOPE_CATEGORIES），未并入「珠海东澳岛安麓酒店」的 L1；下一轮改配置即可合入"
+    },
+    {
+      "name": "珠海东澳岛安麓酒店-麓中餐厅",
+      "kind": "food",
+      "source": "餐厅菜单/珠海东澳岛安麓酒店-麓中餐厅",
+      "reason": "菜单 JSON 已转写，但本轮只收餐饮目录（MENU_SCOPE_CATEGORIES），未并入「珠海东澳岛安麓酒店」的 L1；下一轮改配置即可合入"
+    }
+  ],
+  "menuPending": [
+    {
+      "mapName": "潮汐咖啡",
+      "category": "food",
+      "sourceDirs": [
+        "潮汐咖啡"
+      ],
+      "reason": "菜单 JSON 已到，但过滤后无可用 dishes/packages（可能只有扫码海报/饮品，需人工补充）"
+    },
+    {
+      "mapName": "山海经书屋",
+      "category": "spot",
+      "sourceDirs": [
+        "山海经书屋"
+      ],
+      "reason": "酒店/书屋菜单另属下一轮增量（本轮不纳入 L1）"
+    },
+    {
+      "mapName": "格力东澳大酒店",
+      "category": "stay",
+      "sourceDirs": [
+        "格力东澳大酒店-蓝色海岸餐厅"
+      ],
+      "reason": "酒店/书屋菜单另属下一轮增量（本轮不纳入 L1）"
+    },
+    {
+      "mapName": "珠海东澳岛安麓酒店",
+      "category": "stay",
+      "sourceDirs": [
+        "珠海东澳岛安麓酒店-安心全日餐厅",
+        "珠海东澳岛安麓酒店-安麓书院",
+        "珠海东澳岛安麓酒店-麓中餐厅"
+      ],
+      "reason": "酒店/书屋菜单另属下一轮增量（本轮不纳入 L1）"
+    }
+  ],
+  "menuStats": {
+    "files": 7,
+    "expectedPoints": 10,
+    "pointsWithJson": 7,
+    "pointsWithMenu": 6,
+    "pendingPoints": 4,
+    "warnings": []
+  },
+  "unmatchedSpots": [
+    {
+      "mapName": "小竹湾沙滩",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "月伴湾（大竹湾沙滩）",
+      "area": "nansha",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "听涛步道",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "灵犀台",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "仙鹊桥",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "将军石林",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "烽火台",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "摩崖石刻",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "水手房遗址",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "映月滩",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳湾",
+      "area": "matou",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "森林栈道",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "心心相印",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "斜行电梯",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "观海亭",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "观月亭",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳湾沙滩",
+      "area": "matou",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "音乐阶梯",
+      "area": "matou",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "大王庙",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "揽海台",
+      "area": "nanya",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "开心石",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "罗刀湾石滩",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "飞鹰驿站",
+      "area": "nanya",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "叠石",
+      "area": "nanya",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "夕阳驿站",
+      "area": "nansha",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛旅游度假区",
+      "area": "matou",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛蜜月山风景区",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛-观海平台",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛-海龙泉",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛-风荡石",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛-石景长廊",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛-双豚出海",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛-自在佛",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "钻石银滩(南沙湾)",
+      "area": "nansha",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳湾灯桩",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛蜜月山景区山海云道",
+      "area": "nansha",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "万海平波",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "观月台",
+      "area": "miyue",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "东澳岛-铳城亭",
+      "area": "beian",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    },
+    {
+      "mapName": "街心公园",
+      "area": "fengche",
+      "fallback": "L2 片区玩法 + L3 风格样本"
+    }
+  ],
+  "unmatchedRows": [
+    {
+      "name": "东澳顶",
+      "category": "景点",
+      "source": "景点表#7",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "fengche",
+      "areaName": "风车山片"
+    },
+    {
+      "name": "观海长廊",
+      "category": "景点",
+      "source": "景点表#12",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "nanya",
+      "areaName": "南岸片"
+    },
+    {
+      "name": "倚山揽海路",
+      "category": "景点",
+      "source": "景点表#14",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "beian",
+      "areaName": "北岸东片"
+    },
+    {
+      "name": "东澳顶线（徒步路线）",
+      "category": "路线",
+      "source": "景点表#17",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "fengche",
+      "areaName": "风车山片"
+    },
+    {
+      "name": "庙湾线（徒步路线）",
+      "category": "路线",
+      "source": "景点表#18",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "beian",
+      "areaName": "北岸东片"
+    },
+    {
+      "name": "倚山揽海路（摆渡车路线）",
+      "category": "路线",
+      "source": "景点表#19",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "matou",
+      "areaName": "东澳湾码头片"
+    },
+    {
+      "name": "观光线路4（摆渡车路线）",
+      "category": "路线",
+      "source": "景点表#20",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "matou",
+      "areaName": "东澳湾码头片"
+    },
+    {
+      "name": "日出路线（摆渡车路线）",
+      "category": "路线",
+      "source": "景点表#23",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "matou",
+      "areaName": "东澳湾码头片"
+    },
+    {
+      "name": "夜间玩法",
+      "category": "玩法",
+      "source": "景点表#24",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "fengche",
+      "areaName": "风车山片"
+    },
+    {
+      "name": "团建",
+      "category": "玩法",
+      "source": "景点表#25",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "miyue",
+      "areaName": "蜜月山片"
+    },
+    {
+      "name": "海防文化研学游（研学线路类）",
+      "category": "玩法",
+      "source": "景点表#28",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "beian",
+      "areaName": "北岸东片"
+    },
+    {
+      "name": "水上体验",
+      "category": "玩法",
+      "source": "景点表#29",
+      "reason": "名称不在 65 个 map_name（含已知别名）内，只进 L2 片区，不生成 L1",
+      "area": "nansha",
+      "areaName": "南沙湾片"
+    }
+  ],
+  "quarantine": [
+    {
+      "name": "华发安麓酒店",
+      "kind": "spot",
+      "source": "景点表#16",
+      "reason": "住宿类混入景点表（分类错位）；其住宿信息在住宿表/亲子表已有覆盖"
+    },
+    {
+      "name": "黛绿",
+      "kind": "spot",
+      "source": "景点表#21",
+      "reason": "疑似线路/站点名，非独立景点；核心地点「待实采确认」，无法定位"
+    },
+    {
+      "name": "馨漫",
+      "kind": "spot",
+      "source": "景点表#22",
+      "reason": "疑似线路/站点名，非独立景点；核心地点「待实采确认」，无法定位"
+    },
+    {
+      "name": "海钓点",
+      "kind": "spot",
+      "source": "景点表#30",
+      "reason": "核心地点「待实采确认」，无法确定所属片区"
+    }
+  ],
+  "entityAliases": [
+    {
+      "canonical": "山海经书屋",
+      "members": [
+        "景点表#15",
+        "餐饮表#5",
+        "购物活动表#6"
+      ],
+      "rule": "以景点表为主档；餐饮/文创只并玩法、客群、营业时间与菜单",
+      "applied": true
+    },
+    {
+      "canonical": "万觅书店",
+      "members": [
+        "景点表#11",
+        "购物活动表#5"
+      ],
+      "rule": "以景点表为主档；「万觅」与「万觅书店文创」映射到该点位（万觅餐吧已单独成为点位）",
+      "applied": true
+    },
+    {
+      "canonical": "",
+      "members": [
+        "餐饮表#27（东澳湾海鲜餐厅）",
+        "餐饮表#6（海湾海鲜餐厅）"
+      ],
+      "rule": "高德上「东澳湾海鲜餐厅」在玲玎海岸渔港一楼卡4，但采集表「海湾海鲜餐厅」是否同一家无法确认；用户 2026-11-11 决定两家都不入点位库、不合并菜单",
+      "applied": false
+    },
+    {
+      "canonical": "阿丽拉珠海东澳岛",
+      "members": [
+        "住宿表#3（阿丽拉珠海东澳岛（ALILA））"
+      ],
+      "rule": "去掉尾部英文括号后缀（只匹配 ASCII，不影响「（博物馆类）」）",
+      "applied": true
+    },
+    {
+      "canonical": "万山海洋生物科普馆",
+      "members": [
+        "景点表#26",
+        "景点表#10（海洋科普馆）"
+      ],
+      "rule": "去类型后缀 + 别名合并；玩法取并集",
+      "applied": true
+    },
+    {
+      "canonical": "东澳岛海关遗址",
+      "members": [
+        "景点表#27（东澳海关遗址展览馆）"
+      ],
+      "rule": "别名映射到 52 点位「东澳岛海关遗址」",
+      "applied": true
+    },
+    {
+      "canonical": "渔·日落海景餐厅",
+      "members": [
+        "餐饮表#36（原表序号35）",
+        "餐饮表#19（原表序号18 渔海鲜餐厅）"
+      ],
+      "rule": "同址（绿岛路7号）+ 名称高度相似，保留信息更全的一条进 L2",
+      "applied": true
+    }
+  ],
+  "suggestedAliases": [
+    {
+      "from": "观海长廊",
+      "to": "滨海栈道 / 听涛步道",
+      "reason": "名称不在 52 点位内，疑似与现有步道重复，待人工确认",
+      "applied": false
+    },
+    {
+      "from": "聚鲜海鲜坊餐厅",
+      "to": "聚鲜海鲜餐厅",
+      "reason": "同品牌、地址不同（格力/万豪附近 vs 旅游度假区东侧），台账疑似同一家，待实采",
+      "applied": false
+    },
+    {
+      "from": "梁记客栈（东澳岛店）",
+      "to": "邻海别苑（东澳岛店）",
+      "reason": "住宿表原文：登记地址「绿岛路50号2栋2单元」与邻海别苑重复，需到店确认",
+      "applied": false
+    },
+    {
+      "from": "珠海东澳岛碧海星辰精品客栈",
+      "to": "珠海同心客栈",
+      "reason": "住宿表原文：原一行合填两家，电话/价格归属待实采区分",
+      "applied": false
+    },
+    {
+      "from": "22度客栈（22°HOMESTAY）",
+      "to": "东澳岛与你同行民宿",
+      "reason": "两店完全同址（绿岛路50号5栋4单元），需核实在营/同一物业",
+      "applied": false
+    },
+    {
+      "from": "倚山揽海路",
+      "to": "倚山揽海路（摆渡车路线）",
+      "reason": "同一线路的景点口径与摆渡车口径，L2 玩法已按文本去重",
+      "applied": false
+    }
+  ],
+  "areaCoverage": [
+    {
+      "id": "miyue",
+      "name": "蜜月山片",
+      "spots": 10,
+      "l1": 2,
+      "l1Names": [
+        "婚礼堂",
+        "蜜月阁"
+      ],
+      "plays": 15,
+      "food": 2,
+      "stay": 0,
+      "activities": 2,
+      "playsTruncated": 0
+    },
+    {
+      "id": "nansha",
+      "name": "南沙湾片",
+      "spots": 10,
+      "l1": 6,
+      "l1Names": [
+        "滨海栈道",
+        "南沙湾沙滩",
+        "月牙环",
+        "珠海东澳岛万豪度假酒店",
+        "格力东澳大酒店",
+        "珠海东澳岛可域度假村"
+      ],
+      "plays": 25,
+      "food": 17,
+      "stay": 3,
+      "activities": 25,
+      "playsTruncated": 0
+    },
+    {
+      "id": "matou",
+      "name": "东澳湾码头片",
+      "spots": 15,
+      "l1": 11,
+      "l1Names": [
+        "万觅书店",
+        "万山海洋生物科普馆",
+        "求子泉",
+        "万觅餐吧",
+        "东发海鲜酒家",
+        "是旦有愉食堂",
+        "是旦海鲜餐厅",
+        "潮汐咖啡",
+        "精致拾光",
+        "聚鲜楼",
+        "东澳岛游客服务中心"
+      ],
+      "plays": 40,
+      "food": 17,
+      "stay": 21,
+      "activities": 4,
+      "playsTruncated": 4
+    },
+    {
+      "id": "fengche",
+      "name": "风车山片",
+      "spots": 10,
+      "l1": 1,
+      "l1Names": [
+        "风车山"
+      ],
+      "plays": 14,
+      "food": 0,
+      "stay": 3,
+      "activities": 5,
+      "playsTruncated": 0
+    },
+    {
+      "id": "nanya",
+      "name": "南岸片",
+      "spots": 4,
+      "l1": 1,
+      "l1Names": [
+        "阿丽拉珠海东澳岛"
+      ],
+      "plays": 9,
+      "food": 0,
+      "stay": 1,
+      "activities": 0,
+      "playsTruncated": 0
+    },
+    {
+      "id": "beian",
+      "name": "北岸东片",
+      "spots": 16,
+      "l1": 4,
+      "l1Names": [
+        "铳城",
+        "东澳岛海关遗址",
+        "山海经书屋",
+        "珠海东澳岛安麓酒店"
+      ],
+      "plays": 19,
+      "food": 1,
+      "stay": 1,
+      "activities": 1,
+      "playsTruncated": 0
+    }
+  ],
+  "dataIssues": [
+    {
+      "id": "no-coordinates",
+      "severity": "P0（已知限制）",
+      "issue": "5 份 xlsx 没有经纬度列；二期新增点位的坐标来自 initDongaoSpots 的 SPOTS_DATA（高德 POI）",
+      "rule": "L1/L2 不输出 GPS/坐标；坐标只用于 coverage 报告的新增点位核对表",
+      "result": "语料按 map_name 挂到 65 个点位，未新增 POI"
+    },
+    {
+      "id": "spot-table-mixed-entities",
+      "severity": "P1",
+      "issue": "景点表混入 1 条酒店（华发安麓酒店）与 2 条疑似线路名（黛绿/馨漫）",
+      "rule": "分类错位进 quarantine，不生成 L1",
+      "result": "quarantine 共 4 条"
+    },
+    {
+      "id": "shop-sheet-offset",
+      "severity": "P2",
+      "issue": "购物表表头在第 2 行、max_row=170（有效仅到 44 行）、15–22 列为空列、序号在活动段重置且购物段缺 #5",
+      "rule": "固定 header=1，只取第 3–44 行与 14 个有效列，重建全局序号 1–42",
+      "result": "shops_activities.csv 42 行（购物 5 / 活动 37）"
+    },
+    {
+      "id": "kids-transposed",
+      "severity": "P2",
+      "issue": "亲子表是转置表（字段为行、4 家酒店为列），且 4 家与住宿表重复，预算口径不一致",
+      "rule": "转置后按酒店名合并进住宿，只取亲子标签/设施写 stay note，不改住宿预算原文",
+      "result": "kids_hotels.csv 4 行；4 家住宿补充亲子标签"
+    },
+    {
+      "id": "audience-aliases",
+      "severity": "P1",
+      "issue": "客群一级标签有 8 种写法（Z世代/情侣、情侣客群、亲子、银发/休闲…）",
+      "rule": "脚本 CONST 别名表归一为 couple/family/elder/hardcore",
+      "result": "全部归一；未知写法会打印 warning"
+    },
+    {
+      "id": "separator",
+      "severity": "P2",
+      "issue": "餐饮标签用全角「；」，其余表用「、」；标签内部含「/」",
+      "rule": "按「；」「、」拆（括号内不拆），绝不按「/」拆",
+      "result": "拆分安全，Z世代/情侣 保持整体"
+    },
+    {
+      "id": "fullwidth-colon",
+      "severity": "P2",
+      "issue": "时段字段大量使用全角冒号（14：00-18：30）",
+      "rule": "统一转半角后再输出",
+      "result": "clean/corpus 中时段均为半角冒号"
+    },
+    {
+      "id": "placeholder-open-hours",
+      "severity": "P1",
+      "issue": "餐饮营业时间有 6 条占位值（营业时间未设置 ×5、未知 ×1）",
+      "rule": "视为缺失，不写 open_hours、不注入 prompt",
+      "result": "缺失条目不输出"
+    },
+    {
+      "id": "duplicate-entities",
+      "severity": "P1",
+      "issue": "山海经书屋跨 3 表、万觅系列跨表、海湾海鲜餐厅/东澳湾海鲜餐厅身份无法确认（用户决定两家都不入库）、渔海鲜餐厅与渔·日落海景餐厅同址，住宿多组地址/电话归属冲突",
+      "rule": "建 entityAliases（景点优先）；住宿冲突不合并，列入建议人工复核",
+      "result": "7 组别名合并；6 组待人工确认"
+    },
+    {
+      "id": "price-text",
+      "severity": "P2",
+      "issue": "价格/人均是混写文本（100-116/人、115-120r/人、¥300-500/晚…）",
+      "rule": "保留原文，不转数值，不做排序筛选",
+      "result": "budget/avg_price 均为原文"
+    },
+    {
+      "id": "booking-no-phone",
+      "severity": "P1",
+      "issue": "餐饮 35 条写「电话预约」但全表 0 个电话号码",
+      "rule": "不输出、不注入电话；booking 保留原文",
+      "result": "prompt 事实纪律已约束不得编造电话"
+    },
+    {
+      "id": "pending-verification",
+      "severity": "P1",
+      "issue": "景点表存在「待实采确认」字段（海洋科普馆、黛绿、馨漫、海钓点等）",
+      "rule": "L1 source.verified=待实采；待实采措辞不得当成确定事实",
+      "result": "25 份 L1：20 份待实采 + 5 份已验证"
+    },
+    {
+      "id": "unmatched-rows",
+      "severity": "P1（如实记录）",
+      "issue": "景点表 29 行中只有 13 行能映射到点位（其余是路线/玩法/待实采行）",
+      "rule": "其余只进 L2 片区，不硬塞 L1",
+      "result": "L1 覆盖 25/65；12 行进 unmatchedRows"
+    },
+    {
+      "id": "phase2-new-points",
+      "severity": "P0（二期范围）",
+      "issue": "二期在 52 个景点基础上新增 13 个点位（5 住宿 + 7 餐饮 + 1 游客服务中心），点位总数变为 65",
+      "rule": "新增点位由 area-map/SPOTS_DATA 提供坐标与分类；L1 从住宿/餐饮/购物表对应行生成",
+      "result": "新增点位 L1 13/13；spotCategories 写入 _index.json"
+    },
+    {
+      "id": "menu-corpus",
+      "severity": "P1（并行输入）",
+      "issue": "菜单语料来自并行转写（东澳岛/data/menus/*.json），可能缺文件或解析失败",
+      "rule": "只使用菜单 JSON；缺失或无法映射记入 coverage 的菜单待补/告警，不阻断构建",
+      "result": "读取 7 个菜单文件；6/10 个预期点位有菜单；4 个待补"
+    },
+    {
+      "id": "stay-not-in-points",
+      "severity": "P1",
+      "issue": "住宿表 29 家中 24 家民宿/客栈/非点名酒店按用户决定不进点位库",
+      "rule": "只保留玩法到 L2 片区语料，不生成 L1；5 家酒店作为二期新点位",
+      "result": "未纳入清单见 report「未纳入清单」一节"
+    }
+  ],
+  "selfCheck": {
+    "jsonParsed": true,
+    "utf8NoBom": true,
+    "spotCount": 65,
+    "areasCoverAll": true,
+    "l1Count": 25,
+    "newPointCount": 13,
+    "newPointL1Ok": true,
+    "excludedNoL1": true,
+    "menuJsonPoints": 7,
+    "menuPoints": 6,
+    "menuPending": 4,
+    "l1NamesValid": true,
+    "requiredFieldsOk": true,
+    "maxL1Chars": 242,
+    "maxEstimatedInjection": 362,
+    "maxEstimatedInjectionSpot": "格力东澳大酒店",
+    "l1Under600": true,
+    "injectionUnder1200": true,
+    "warnings": [
+      "L1 潮汐咖啡 是餐饮点位，菜单 JSON 已到但无可用条目",
+      "菜单待补 4 个点位：潮汐咖啡、山海经书屋、格力东澳大酒店、珠海东澳岛安麓酒店；其中 潮汐咖啡 有 JSON 但无可用条目"
+    ],
+    "problems": []
+  }
+}

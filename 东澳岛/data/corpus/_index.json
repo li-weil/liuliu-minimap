@@ -1,0 +1,7380 @@
+{
+  "version": "2026-11-11",
+  "audiences": [
+    "couple",
+    "family",
+    "elder",
+    "hardcore"
+  ],
+  "areas": [
+    {
+      "id": "miyue",
+      "name": "蜜月山片",
+      "spots": [
+        "小竹湾沙滩",
+        "婚礼堂",
+        "蜜月阁",
+        "森林栈道",
+        "心心相印",
+        "斜行电梯",
+        "观海亭",
+        "观月亭",
+        "东澳岛蜜月山风景区",
+        "观月台"
+      ],
+      "plays": [
+        {
+          "text": "白色婚礼堂拍照",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "仪式感"
+          ],
+          "source": "景点表#2"
+        },
+        {
+          "text": "婚礼堂打卡",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "仪式感"
+          ],
+          "source": "景点表#2"
+        },
+        {
+          "text": "海岛求婚",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "仪式感"
+          ],
+          "source": "景点表#2"
+        },
+        {
+          "text": "纪念日旅行",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "仪式感"
+          ],
+          "source": "景点表#2"
+        },
+        {
+          "text": "情侣写真",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "仪式感"
+          ],
+          "source": "景点表#2"
+        },
+        {
+          "text": "日落合照",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "仪式感"
+          ],
+          "source": "景点表#2"
+        },
+        {
+          "text": "蜜月阁俯瞰",
+          "audiences": [
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "参与/互动"
+          ],
+          "source": "景点表#3"
+        },
+        {
+          "text": "蜜月阁看海",
+          "audiences": [
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "参与/互动"
+          ],
+          "source": "景点表#3"
+        },
+        {
+          "text": "亲子徒步登高",
+          "audiences": [
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "参与/互动"
+          ],
+          "source": "景点表#3"
+        },
+        {
+          "text": "徒步运动",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#17"
+        },
+        {
+          "text": "环岛徒步",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#17"
+        },
+        {
+          "text": "海岛探秘",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#17"
+        },
+        {
+          "text": "沙滩玩沙戏水",
+          "audiences": [
+            "family",
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "参与/互动",
+            "社交互动",
+            "挑战",
+            "省心"
+          ],
+          "source": "景点表#25"
+        },
+        {
+          "text": "赶海体验",
+          "audiences": [
+            "family",
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "参与/互动",
+            "社交互动",
+            "挑战",
+            "省心"
+          ],
+          "source": "景点表#25"
+        },
+        {
+          "text": "露营体验",
+          "audiences": [
+            "family",
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "参与/互动",
+            "社交互动",
+            "挑战",
+            "省心"
+          ],
+          "source": "景点表#25"
+        }
+      ],
+      "food": [
+        {
+          "name": "山上云下·HillMist音乐餐吧",
+          "note": "临海音乐餐吧，人均约27元",
+          "source": "餐饮表#3"
+        },
+        {
+          "name": "illy蜜月山咖啡",
+          "note": "临海咖啡店，人均约25-70元",
+          "source": "餐饮表#29"
+        }
+      ],
+      "stay": [],
+      "activities": [
+        {
+          "text": "蜜月飞车",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#40"
+        },
+        {
+          "text": "蜜月电梯",
+          "audiences": [
+            "couple",
+            "elder",
+            "hardcore"
+          ],
+          "source": "购物活动表#41"
+        }
+      ]
+    },
+    {
+      "id": "nansha",
+      "name": "南沙湾片",
+      "spots": [
+        "月伴湾（大竹湾沙滩）",
+        "滨海栈道",
+        "南沙湾沙滩",
+        "月牙环",
+        "夕阳驿站",
+        "钻石银滩(南沙湾)",
+        "东澳岛蜜月山景区山海云道",
+        "珠海东澳岛万豪度假酒店",
+        "格力东澳大酒店",
+        "珠海东澳岛可域度假村"
+      ],
+      "plays": [
+        {
+          "text": "滨海栈道慢行",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "安全",
+            "出片"
+          ],
+          "source": "景点表#4"
+        },
+        {
+          "text": "听涛步道",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "安全",
+            "出片"
+          ],
+          "source": "景点表#4"
+        },
+        {
+          "text": "环岛观光（徒步/电瓶车）",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "安全",
+            "出片"
+          ],
+          "source": "景点表#4"
+        },
+        {
+          "text": "沙滩玩沙戏水",
+          "audiences": [
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "参与/互动",
+            "出片",
+            "慢节奏/放松"
+          ],
+          "source": "景点表#5"
+        },
+        {
+          "text": "南沙湾海边写真",
+          "audiences": [
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "参与/互动",
+            "出片",
+            "慢节奏/放松"
+          ],
+          "source": "景点表#5"
+        },
+        {
+          "text": "沙滩发呆",
+          "audiences": [
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "参与/互动",
+            "出片",
+            "慢节奏/放松"
+          ],
+          "source": "景点表#5"
+        },
+        {
+          "text": "赶海体验",
+          "audiences": [
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "参与/互动",
+            "出片",
+            "慢节奏/放松"
+          ],
+          "source": "景点表#5"
+        },
+        {
+          "text": "月牙环剪影",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫"
+          ],
+          "source": "景点表#6"
+        },
+        {
+          "text": "日落合照",
+          "audiences": [
+            "couple"
+          ],
+          "needs": [
+            "出片",
+            "浪漫"
+          ],
+          "source": "景点表#6"
+        },
+        {
+          "text": "徒步运动",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#17"
+        },
+        {
+          "text": "环岛徒步",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#17"
+        },
+        {
+          "text": "海岛探秘",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#17"
+        },
+        {
+          "text": "亲子徒步登高",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#17"
+        },
+        {
+          "text": "人文遗迹寻踪",
+          "audiences": [
+            "hardcore",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "修行",
+            "人文历史",
+            "深度探索",
+            "教育/科普/研学"
+          ],
+          "source": "景点表#18"
+        },
+        {
+          "text": "历史人文游览",
+          "audiences": [
+            "hardcore",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "修行",
+            "人文历史",
+            "深度探索",
+            "教育/科普/研学"
+          ],
+          "source": "景点表#18"
+        },
+        {
+          "text": "观光车环岛轻松游",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "环岛观光线",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "万觅书店文艺照",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "森林栈道山海照",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "摩托艇出海",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "治愈",
+            "专业",
+            "参与/互动"
+          ],
+          "source": "景点表#29"
+        },
+        {
+          "text": "浆板体验",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "治愈",
+            "专业",
+            "参与/互动"
+          ],
+          "source": "景点表#29"
+        },
+        {
+          "text": "浮潜",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "治愈",
+            "专业",
+            "参与/互动"
+          ],
+          "source": "景点表#29"
+        },
+        {
+          "text": "水肺深潜",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "治愈",
+            "专业",
+            "参与/互动"
+          ],
+          "source": "景点表#29"
+        },
+        {
+          "text": "游艇出海",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "治愈",
+            "专业",
+            "参与/互动"
+          ],
+          "source": "景点表#29"
+        },
+        {
+          "text": "海上观光",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "治愈",
+            "专业",
+            "参与/互动"
+          ],
+          "source": "景点表#29"
+        }
+      ],
+      "food": [
+        {
+          "name": "岛咖时光",
+          "note": "临海咖啡店，人均约25元",
+          "source": "餐饮表#4"
+        },
+        {
+          "name": "聚鲜海鲜坊餐厅",
+          "note": "海鲜餐厅，人均约115元",
+          "source": "餐饮表#8"
+        },
+        {
+          "name": "珠海东澳岛安麓酒店-安心全日餐厅",
+          "note": "临海自助/全日餐厅，人均约184元",
+          "source": "餐饮表#9"
+        },
+        {
+          "name": "珠海东澳岛安麓酒店-麓中餐厅",
+          "note": "临海中餐厅，人均约232元",
+          "source": "餐饮表#10"
+        },
+        {
+          "name": "珠海东澳岛安麓酒店-安麓书院",
+          "note": "临海书吧/轻食，人均约145元",
+          "source": "餐饮表#11"
+        },
+        {
+          "name": "格力东澳大酒店-蓝色海岸餐厅",
+          "note": "海景餐厅，人均约131元",
+          "source": "餐饮表#12"
+        },
+        {
+          "name": "海盐餐厅（阿丽拉珠海东澳岛）",
+          "note": "海景餐厅，人均约353元",
+          "source": "餐饮表#16"
+        },
+        {
+          "name": "万豪中餐厅-东澳岛万豪度假酒店",
+          "note": "临海中餐厅，人均约204元",
+          "source": "餐饮表#17"
+        },
+        {
+          "name": "臻厨全日餐厅-东澳岛万豪度假酒店",
+          "note": "临海自助/全日餐厅，人均约220元",
+          "source": "餐饮表#20"
+        },
+        {
+          "name": "海堂中餐厅（阿丽拉珠海东澳岛）",
+          "note": "临海中餐厅，人均约499元",
+          "source": "餐饮表#22"
+        },
+        {
+          "name": "格力东澳大酒店-海星餐厅",
+          "note": "海景餐厅，人均约117元",
+          "source": "餐饮表#26"
+        },
+        {
+          "name": "浪吧-意大利餐厅",
+          "note": "海景餐厅，人均约70-100元",
+          "source": "餐饮表#28"
+        },
+        {
+          "name": "醇酒吧",
+          "note": "临海酒吧，人均约88-488元",
+          "source": "餐饮表#31"
+        },
+        {
+          "name": "大堂酒廊-东澳岛万豪度假酒店",
+          "note": "临海酒廊，人均约47元",
+          "source": "餐饮表#33"
+        },
+        {
+          "name": "格力东澳大酒店-东澳仔仔咖啡厅",
+          "note": "临海咖啡店，人均约40元",
+          "source": "餐饮表#34"
+        },
+        {
+          "name": "渔·日落海景餐厅",
+          "note": "海景餐厅，人均约110元",
+          "source": "餐饮表#36"
+        },
+        {
+          "name": "格力东澳大酒店-沙滩吧",
+          "note": "临海餐饮，人均约46元",
+          "source": "餐饮表#37"
+        }
+      ],
+      "stay": [
+        {
+          "name": "珠海东澳岛万豪度假酒店",
+          "note": "顶奢五星度假，亲子友好（主题度假），房价¥1000-2500/晚",
+          "source": "住宿表#2"
+        },
+        {
+          "name": "格力东澳大酒店",
+          "note": "顶奢五星度假，亲子友好（大众亲子），房价¥800-2000/晚",
+          "source": "住宿表#5"
+        },
+        {
+          "name": "珠海东澳岛可域度假村",
+          "note": "度假酒店/度假村，房价¥400-1400/晚（园景约400-600，海景约800-1400）",
+          "source": "住宿表#6"
+        }
+      ],
+      "activities": [
+        {
+          "text": "格旅·东澳环岛跑",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "source": "购物活动表#9"
+        },
+        {
+          "text": "东澳环岛休闲骑行活动",
+          "audiences": [
+            "hardcore"
+          ],
+          "source": "购物活动表#10"
+        },
+        {
+          "text": "暑期海岛文化季惠民演出",
+          "audiences": [
+            "family",
+            "elder",
+            "hardcore"
+          ],
+          "source": "购物活动表#11"
+        },
+        {
+          "text": "国庆非遗艺术荟",
+          "audiences": [
+            "hardcore",
+            "elder",
+            "family"
+          ],
+          "source": "购物活动表#12"
+        },
+        {
+          "text": "团建沙滩音乐派对",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#13"
+        },
+        {
+          "text": "沙滩电音篝火派对",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#15"
+        },
+        {
+          "text": "游艇出海",
+          "audiences": [
+            "hardcore",
+            "couple"
+          ],
+          "source": "购物活动表#19"
+        },
+        {
+          "text": "格旅浪趣营·海上超跑/拖拽船/水陆两栖车",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "source": "购物活动表#20"
+        },
+        {
+          "text": "安麓·贝壳风铃DIY",
+          "audiences": [
+            "family",
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#21"
+        },
+        {
+          "text": "安麓·手绘纸鸢/儿童沙画/海岛帽DIY",
+          "audiences": [
+            "family",
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#22"
+        },
+        {
+          "text": "安麓·寻找漂流瓶",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "source": "购物活动表#23"
+        },
+        {
+          "text": "安麓·植物果壳铃制作",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "family"
+          ],
+          "source": "购物活动表#24"
+        },
+        {
+          "text": "安麓·非遗手工/新民乐演出/麓戏台",
+          "audiences": [
+            "hardcore",
+            "elder"
+          ],
+          "source": "购物活动表#25"
+        },
+        {
+          "text": "安麓·香道静心/艾草槌手工",
+          "audiences": [
+            "hardcore",
+            "elder"
+          ],
+          "source": "购物活动表#26"
+        },
+        {
+          "text": "阿丽拉·晨间瑜伽与冥想",
+          "audiences": [
+            "hardcore",
+            "elder"
+          ],
+          "source": "购物活动表#27"
+        },
+        {
+          "text": "阿丽拉·颂钵音疗/水晶疗愈",
+          "audiences": [
+            "elder",
+            "hardcore"
+          ],
+          "source": "购物活动表#28"
+        },
+        {
+          "text": "阿丽拉·海岛植物拓印/贝壳拓印",
+          "audiences": [
+            "family",
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#29"
+        },
+        {
+          "text": "阿丽拉·植物扎染",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "source": "购物活动表#30"
+        },
+        {
+          "text": "阿丽拉·本地向导古村探访/渔歌表演",
+          "audiences": [
+            "hardcore",
+            "elder"
+          ],
+          "source": "购物活动表#31"
+        },
+        {
+          "text": "格力东澳·草裙舞快闪派对",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "source": "购物活动表#32"
+        },
+        {
+          "text": "格力东澳·沙滩篝火晚会",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "family"
+          ],
+          "source": "购物活动表#33"
+        },
+        {
+          "text": "格力东澳·趣味水上篮球",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "source": "购物活动表#34"
+        },
+        {
+          "text": "格力东澳·DIY植物拓印",
+          "audiences": [
+            "family",
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#35"
+        },
+        {
+          "text": "格力东澳·射箭/瑜伽/球类运动",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "source": "购物活动表#36"
+        },
+        {
+          "text": "沙滩运动会（飞盘/排球/筑沙）",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "source": "购物活动表#39"
+        }
+      ]
+    },
+    {
+      "id": "matou",
+      "name": "东澳湾码头片",
+      "spots": [
+        "东澳湾",
+        "东澳湾沙滩",
+        "音乐阶梯",
+        "万觅书店",
+        "万山海洋生物科普馆",
+        "求子泉",
+        "东澳岛旅游度假区",
+        "万觅餐吧",
+        "东发海鲜酒家",
+        "是旦有愉食堂",
+        "是旦海鲜餐厅",
+        "潮汐咖啡",
+        "精致拾光",
+        "聚鲜楼",
+        "东澳岛游客服务中心"
+      ],
+      "plays": [
+        {
+          "text": "人文遗迹寻踪",
+          "audiences": [
+            "family",
+            "elder"
+          ],
+          "needs": [
+            "人文历史",
+            "参与/互动",
+            "慢节奏/松弛感/低体力友好"
+          ],
+          "source": "景点表#9"
+        },
+        {
+          "text": "海岛探秘",
+          "audiences": [
+            "family",
+            "elder"
+          ],
+          "needs": [
+            "人文历史",
+            "参与/互动",
+            "慢节奏/松弛感/低体力友好"
+          ],
+          "source": "景点表#9"
+        },
+        {
+          "text": "环岛观光（徒步/电瓶车）",
+          "audiences": [
+            "family",
+            "elder"
+          ],
+          "needs": [
+            "人文历史",
+            "参与/互动",
+            "慢节奏/松弛感/低体力友好"
+          ],
+          "source": "景点表#9"
+        },
+        {
+          "text": "海洋科普",
+          "audiences": [
+            "family",
+            "elder"
+          ],
+          "needs": [
+            "教育/科普/研学",
+            "安全",
+            "人文历史"
+          ],
+          "source": "景点表#10"
+        },
+        {
+          "text": "自然研学",
+          "audiences": [
+            "family",
+            "elder"
+          ],
+          "needs": [
+            "教育/科普/研学",
+            "安全",
+            "人文历史"
+          ],
+          "source": "景点表#10"
+        },
+        {
+          "text": "历史人文游览",
+          "audiences": [
+            "family",
+            "elder"
+          ],
+          "needs": [
+            "教育/科普/研学",
+            "安全",
+            "人文历史"
+          ],
+          "source": "景点表#10"
+        },
+        {
+          "text": "万觅书店文艺照",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动"
+          ],
+          "source": "景点表#11"
+        },
+        {
+          "text": "喝咖啡闲聊",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动"
+          ],
+          "source": "景点表#11"
+        },
+        {
+          "text": "阅读",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动"
+          ],
+          "source": "景点表#11"
+        },
+        {
+          "text": "海岛阅读",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动"
+          ],
+          "source": "景点表#11"
+        },
+        {
+          "text": "环岛徒步",
+          "audiences": [
+            "hardcore",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "修行",
+            "人文历史",
+            "深度探索",
+            "教育/科普/研学"
+          ],
+          "source": "景点表#18"
+        },
+        {
+          "text": "观光车环岛轻松游",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "环岛观光线",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "森林栈道山海照",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "环岛观光（电瓶车）",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/低体力友好",
+            "安全",
+            "省心",
+            "舒适",
+            "性价比"
+          ],
+          "source": "景点表#20"
+        },
+        {
+          "text": "3号线游览",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/低体力友好",
+            "安全",
+            "省心",
+            "舒适",
+            "性价比"
+          ],
+          "source": "景点表#20"
+        },
+        {
+          "text": "一日游",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/低体力友好",
+            "安全",
+            "省心",
+            "舒适",
+            "性价比"
+          ],
+          "source": "景点表#20"
+        },
+        {
+          "text": "观日出日落",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "修行",
+            "浪漫",
+            "出片",
+            "慢节奏/低体力友好"
+          ],
+          "source": "景点表#23"
+        },
+        {
+          "text": "海边看日落",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "修行",
+            "浪漫",
+            "出片",
+            "慢节奏/低体力友好"
+          ],
+          "source": "景点表#23"
+        },
+        {
+          "text": "月牙环剪影",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "修行",
+            "浪漫",
+            "出片",
+            "慢节奏/低体力友好"
+          ],
+          "source": "景点表#23"
+        },
+        {
+          "text": "晨练/日出观赏",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "修行",
+            "浪漫",
+            "出片",
+            "慢节奏/低体力友好"
+          ],
+          "source": "景点表#23"
+        },
+        {
+          "text": "探索水下世界",
+          "audiences": [
+            "family",
+            "elder",
+            "hardcore"
+          ],
+          "needs": [
+            "教育/科普/研学",
+            "安全",
+            "省心",
+            "舒适",
+            "深度探索"
+          ],
+          "source": "景点表#26"
+        },
+        {
+          "text": "买鱿鱼干/鲍鱼干/海参/鱼干虾干",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "在地烟火",
+            "海味特产",
+            "性价比",
+            "市井文化",
+            "新鲜"
+          ],
+          "source": "购物活动表#3"
+        },
+        {
+          "text": "东澳三宝（将军帽、狗爪螺、海胆）",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "在地烟火",
+            "海味特产",
+            "性价比",
+            "市井文化",
+            "新鲜"
+          ],
+          "source": "购物活动表#3"
+        },
+        {
+          "text": "伶仃紫菜",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "在地烟火",
+            "海味特产",
+            "性价比",
+            "市井文化",
+            "新鲜"
+          ],
+          "source": "购物活动表#3"
+        },
+        {
+          "text": "白花胶",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "在地烟火",
+            "海味特产",
+            "性价比",
+            "市井文化",
+            "新鲜"
+          ],
+          "source": "购物活动表#3"
+        },
+        {
+          "text": "看渔民作业",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "在地烟火",
+            "海味特产",
+            "性价比",
+            "市井文化",
+            "新鲜"
+          ],
+          "source": "购物活动表#3"
+        },
+        {
+          "text": "鲜活海鲜加工",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "family"
+          ],
+          "needs": [
+            "在地烟火",
+            "海味特产",
+            "性价比",
+            "市井文化",
+            "新鲜"
+          ],
+          "source": "购物活动表#3"
+        },
+        {
+          "text": "买钥匙扣/冰箱贴/明信片/帆布包",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "文创伴手礼",
+            "海味特产",
+            "出片",
+            "省心"
+          ],
+          "source": "购物活动表#4"
+        },
+        {
+          "text": "鱿鱼干/鲍鱼干/海参海味干货",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "文创伴手礼",
+            "海味特产",
+            "出片",
+            "省心"
+          ],
+          "source": "购物活动表#4"
+        },
+        {
+          "text": "活珠子蛋等岛民特产",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "文创伴手礼",
+            "海味特产",
+            "出片",
+            "省心"
+          ],
+          "source": "购物活动表#4"
+        },
+        {
+          "text": "《这是我的岛》海岛人文展区",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "文创伴手礼",
+            "咖啡"
+          ],
+          "source": "购物活动表#5"
+        },
+        {
+          "text": "海岛文创",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "文创伴手礼",
+            "咖啡"
+          ],
+          "source": "购物活动表#5"
+        },
+        {
+          "text": "喝咖啡看海",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "文创伴手礼",
+            "咖啡"
+          ],
+          "source": "购物活动表#5"
+        },
+        {
+          "text": "婚纱摄影打卡",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "文创伴手礼",
+            "咖啡"
+          ],
+          "source": "购物活动表#5"
+        },
+        {
+          "text": "图书7折",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "文创伴手礼",
+            "咖啡"
+          ],
+          "source": "购物活动表#5"
+        },
+        {
+          "text": "买日历",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "needs": [
+            "文创伴手礼",
+            "官方正品",
+            "省心",
+            "出片"
+          ],
+          "source": "购物活动表#7"
+        },
+        {
+          "text": "冰箱贴",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "needs": [
+            "文创伴手礼",
+            "官方正品",
+            "省心",
+            "出片"
+          ],
+          "source": "购物活动表#7"
+        },
+        {
+          "text": "卡通胶囊伞",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "needs": [
+            "文创伴手礼",
+            "官方正品",
+            "省心",
+            "出片"
+          ],
+          "source": "购物活动表#7"
+        },
+        {
+          "text": "盲盒（2款）",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "needs": [
+            "文创伴手礼",
+            "官方正品",
+            "省心",
+            "出片"
+          ],
+          "source": "购物活动表#7"
+        }
+      ],
+      "food": [
+        {
+          "name": "摸鱼咖啡",
+          "note": "临海咖啡店，人均约41元",
+          "source": "餐饮表#2"
+        },
+        {
+          "name": "海湾海鲜餐厅",
+          "note": "海鲜餐厅，人均约100-116元",
+          "source": "餐饮表#6"
+        },
+        {
+          "name": "聚鲜楼",
+          "note": "海鲜餐厅，人均约100-120元",
+          "source": "餐饮表#7"
+        },
+        {
+          "name": "万觅餐吧",
+          "note": "临海音乐餐吧，人均约90元",
+          "source": "餐饮表#13"
+        },
+        {
+          "name": "一杯咖啡",
+          "note": "临海咖啡店，人均约36-42元",
+          "source": "餐饮表#14"
+        },
+        {
+          "name": "东澳沣味餐厅",
+          "note": "海鲜餐厅，人均约76-100元",
+          "source": "餐饮表#15"
+        },
+        {
+          "name": "是旦海鲜餐厅",
+          "note": "海鲜餐厅，人均约109元",
+          "source": "餐饮表#18"
+        },
+        {
+          "name": "精致拾光",
+          "note": "临海咖啡店，人均约35元",
+          "source": "餐饮表#21"
+        },
+        {
+          "name": "东发海鲜酒家",
+          "note": "海鲜餐厅，人均约84元",
+          "source": "餐饮表#23"
+        },
+        {
+          "name": "洒哥海鲜餐厅",
+          "note": "海鲜餐厅，人均约115-120元",
+          "source": "餐饮表#24"
+        },
+        {
+          "name": "是旦有愉食堂",
+          "note": "本地小吃/简餐，人均约38元",
+          "source": "餐饮表#25"
+        },
+        {
+          "name": "东澳湾海鲜餐厅",
+          "note": "海鲜餐厅，人均约119元",
+          "source": "餐饮表#27"
+        },
+        {
+          "name": "悦湘汇",
+          "note": "海鲜餐厅，人均约65元",
+          "source": "餐饮表#30"
+        },
+        {
+          "name": "聚鲜海鲜餐厅",
+          "note": "海鲜餐厅，人均约89元",
+          "source": "餐饮表#32"
+        },
+        {
+          "name": "潮汐咖啡",
+          "note": "临海咖啡店，人均约30元",
+          "source": "餐饮表#35"
+        },
+        {
+          "name": "悦味面馆",
+          "note": "本地小吃/简餐，人均约30元",
+          "source": "餐饮表#38"
+        },
+        {
+          "name": "东澳汤粉面",
+          "note": "本地小吃/简餐，人均约25-30元",
+          "source": "餐饮表#39"
+        }
+      ],
+      "stay": [
+        {
+          "name": "东澳信汇海景酒店",
+          "note": "度假酒店/度假村，房价¥300-700/晚",
+          "source": "住宿表#7"
+        },
+        {
+          "name": "一念民宿（珠海东澳岛店）",
+          "note": "精品海景民宿，房价¥200-500/晚",
+          "source": "住宿表#9"
+        },
+        {
+          "name": "邻海别苑（东澳岛店）",
+          "note": "精品海景民宿，房价¥250-600/晚",
+          "source": "住宿表#10"
+        },
+        {
+          "name": "村上渔舍（东澳岛）",
+          "note": "精品海景民宿，房价¥300-500/晚（携程约USD54起，约¥390）",
+          "source": "住宿表#11"
+        },
+        {
+          "name": "东澳岛沐风民宿",
+          "note": "精品海景民宿，房价¥200-300/晚",
+          "source": "住宿表#13"
+        },
+        {
+          "name": "东澳岛碧海星辰精品客栈",
+          "note": "精品海景民宿，房价¥200-400/晚（308起）",
+          "source": "住宿表#14"
+        },
+        {
+          "name": "珠海同心客栈",
+          "note": "精品海景民宿，房价¥200-400/晚（308起）",
+          "source": "住宿表#15"
+        },
+        {
+          "name": "珠海东澳岛潮汐客栈",
+          "note": "精品海景民宿，房价¥160-500/晚",
+          "source": "住宿表#16"
+        },
+        {
+          "name": "珠海东澳岛岛上人家民宿",
+          "note": "码头经济客栈，房价¥300-700/晚（待确认:580起）",
+          "source": "住宿表#17"
+        },
+        {
+          "name": "东澳岛恰好客栈",
+          "note": "码头经济客栈，房价¥200-500/晚",
+          "source": "住宿表#18"
+        },
+        {
+          "name": "姐夫家民宿",
+          "note": "码头经济客栈，房价216起",
+          "source": "住宿表#19"
+        },
+        {
+          "name": "珠海悦馨客栈（东澳岛旅游度假区店）",
+          "note": "码头经济客栈，房价¥186-500/晚（“玩转万山”小程序186元起，携程300-500）",
+          "source": "住宿表#20"
+        },
+        {
+          "name": "珠海东澳岛海天阁客栈",
+          "note": "码头经济客栈，预算经济（约¥250–500/晚，待实采）",
+          "source": "住宿表#21"
+        },
+        {
+          "name": "珠海东澳岛暖屋客栈",
+          "note": "码头经济客栈，房价¥150-400/晚（参考同片区码头民宿价位）",
+          "source": "住宿表#22"
+        },
+        {
+          "name": "东澳岛与你同行民宿",
+          "note": "码头经济客栈，房价¥200-500/晚",
+          "source": "住宿表#23"
+        },
+        {
+          "name": "小岛渔家民宿（东澳岛店）",
+          "note": "码头经济客栈，房价¥200-500/晚",
+          "source": "住宿表#24"
+        },
+        {
+          "name": "邻海居客栈（珠海东澳岛店）",
+          "note": "码头经济客栈，预算经济（约¥200–450/晚，待实采）",
+          "source": "住宿表#25"
+        },
+        {
+          "name": "东澳岛客栈（DongAo Island Inn）",
+          "note": "码头经济客栈，预算经济（约¥150–400/晚，待实采）",
+          "source": "住宿表#26"
+        },
+        {
+          "name": "22度客栈（22°HOMESTAY）（经济型）",
+          "note": "码头经济客栈，房价¥200-500/晚",
+          "source": "住宿表#27"
+        },
+        {
+          "name": "梁记客栈（东澳岛店）",
+          "note": "码头经济客栈，房价¥200-550/晚",
+          "source": "住宿表#28"
+        },
+        {
+          "name": "珠海东澳岛海景度假屋",
+          "note": "精品海景民宿，房价¥200-500/晚",
+          "source": "住宿表#29"
+        }
+      ],
+      "activities": [
+        {
+          "text": "日出放映厅/沙滩露天电影",
+          "audiences": [
+            "couple",
+            "hardcore",
+            "family"
+          ],
+          "source": "购物活动表#16"
+        },
+        {
+          "text": "蓝眼泪夜间观赏",
+          "audiences": [
+            "hardcore",
+            "couple"
+          ],
+          "source": "购物活动表#17"
+        },
+        {
+          "text": "赶海体验",
+          "audiences": [
+            "family",
+            "hardcore",
+            "couple"
+          ],
+          "source": "购物活动表#18"
+        },
+        {
+          "text": "东澳湾露营地（拎包入住+露天电影）",
+          "audiences": [
+            "couple",
+            "family",
+            "hardcore"
+          ],
+          "source": "购物活动表#37"
+        }
+      ]
+    },
+    {
+      "id": "fengche",
+      "name": "风车山片",
+      "spots": [
+        "摩崖石刻",
+        "大王庙",
+        "风车山",
+        "东澳岛-海龙泉",
+        "东澳岛-风荡石",
+        "东澳岛-石景长廊",
+        "东澳岛-双豚出海",
+        "东澳湾灯桩",
+        "万海平波",
+        "街心公园"
+      ],
+      "plays": [
+        {
+          "text": "徒步运动",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#7"
+        },
+        {
+          "text": "环岛徒步",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#7"
+        },
+        {
+          "text": "海岛探秘",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#7"
+        },
+        {
+          "text": "亲子徒步登高",
+          "audiences": [
+            "hardcore",
+            "family"
+          ],
+          "needs": [
+            "挑战",
+            "层次感",
+            "沉浸式",
+            "参与/互动"
+          ],
+          "source": "景点表#7"
+        },
+        {
+          "text": "无人机航拍",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "出片",
+            "深度探索",
+            "小众"
+          ],
+          "source": "景点表#8"
+        },
+        {
+          "text": "冷门海岸线",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "出片",
+            "深度探索",
+            "小众"
+          ],
+          "source": "景点表#8"
+        },
+        {
+          "text": "风车山",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "出片",
+            "深度探索",
+            "小众"
+          ],
+          "source": "景点表#8"
+        },
+        {
+          "text": "夜潜追蓝眼泪",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "浪漫",
+            "沉浸式",
+            "深度探索",
+            "修行"
+          ],
+          "source": "景点表#24"
+        },
+        {
+          "text": "观星",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "浪漫",
+            "沉浸式",
+            "深度探索",
+            "修行"
+          ],
+          "source": "景点表#24"
+        },
+        {
+          "text": "沙滩露营",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "浪漫",
+            "沉浸式",
+            "深度探索",
+            "修行"
+          ],
+          "source": "景点表#24"
+        },
+        {
+          "text": "银河观看/拍摄",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "浪漫",
+            "沉浸式",
+            "深度探索",
+            "修行"
+          ],
+          "source": "景点表#24"
+        },
+        {
+          "text": "夜钓",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "needs": [
+            "浪漫",
+            "沉浸式",
+            "深度探索",
+            "修行"
+          ],
+          "source": "景点表#24"
+        },
+        {
+          "text": "历史人文游览",
+          "audiences": [
+            "family",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "教育/科普/研学",
+            "沉浸式",
+            "深度探索",
+            "层次感"
+          ],
+          "source": "景点表#28"
+        },
+        {
+          "text": "穿越海岸线",
+          "audiences": [
+            "family",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "教育/科普/研学",
+            "沉浸式",
+            "深度探索",
+            "层次感"
+          ],
+          "source": "景点表#28"
+        }
+      ],
+      "food": [],
+      "stay": [
+        {
+          "name": "里苑·望海山居全海景民宿",
+          "note": "精品海景民宿，房价¥400-1000/晚",
+          "source": "住宿表#8"
+        },
+        {
+          "name": "依山泮海美宿（东澳岛店）",
+          "note": "精品海景民宿，预算中高端（约¥700–1200/晚，待实采）",
+          "source": "住宿表#12"
+        },
+        {
+          "name": "春栖山林（东澳岛店）",
+          "note": "度假酒店/度假村，房价¥200-450/晚",
+          "source": "住宿表#30"
+        }
+      ],
+      "activities": [
+        {
+          "text": "东澳岛大王宝诞庆典",
+          "audiences": [
+            "hardcore",
+            "elder",
+            "family"
+          ],
+          "source": "购物活动表#8"
+        },
+        {
+          "text": "趣东澳夜市",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#14"
+        },
+        {
+          "text": "风车山顶露营野餐",
+          "audiences": [
+            "couple",
+            "hardcore"
+          ],
+          "source": "购物活动表#38"
+        },
+        {
+          "text": "风车山/婚礼堂看日落",
+          "audiences": [
+            "hardcore",
+            "couple"
+          ],
+          "source": "购物活动表#43"
+        },
+        {
+          "text": "风车山观星",
+          "audiences": [
+            "hardcore",
+            "couple"
+          ],
+          "source": "购物活动表#44"
+        }
+      ]
+    },
+    {
+      "id": "nanya",
+      "name": "南岸片",
+      "spots": [
+        "揽海台",
+        "飞鹰驿站",
+        "叠石",
+        "阿丽拉珠海东澳岛"
+      ],
+      "plays": [
+        {
+          "text": "海边栈道拍照",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "慢节奏/放松",
+            "安全",
+            "舒适"
+          ],
+          "source": "景点表#12"
+        },
+        {
+          "text": "情侣海边散步",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "慢节奏/放松",
+            "安全",
+            "舒适"
+          ],
+          "source": "景点表#12"
+        },
+        {
+          "text": "一起吹海风",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "慢节奏/放松",
+            "安全",
+            "舒适"
+          ],
+          "source": "景点表#12"
+        },
+        {
+          "text": "沙滩踏浪",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "慢节奏/放松",
+            "安全",
+            "舒适"
+          ],
+          "source": "景点表#12"
+        },
+        {
+          "text": "滨海栈道慢行",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "出片",
+            "浪漫",
+            "慢节奏/放松",
+            "安全",
+            "舒适"
+          ],
+          "source": "景点表#12"
+        },
+        {
+          "text": "观光车环岛轻松游",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "环岛观光线",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "万觅书店文艺照",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "森林栈道山海照",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        }
+      ],
+      "food": [],
+      "stay": [
+        {
+          "name": "阿丽拉珠海东澳岛（ALILA）",
+          "note": "顶奢五星度假，亲子友好（精致成长），房价¥2500-6000+/晚",
+          "source": "住宿表#3"
+        }
+      ],
+      "activities": []
+    },
+    {
+      "id": "beian",
+      "name": "北岸东片",
+      "spots": [
+        "听涛步道",
+        "灵犀台",
+        "仙鹊桥",
+        "将军石林",
+        "铳城",
+        "烽火台",
+        "东澳岛海关遗址",
+        "水手房遗址",
+        "映月滩",
+        "开心石",
+        "罗刀湾石滩",
+        "山海经书屋",
+        "东澳岛-观海平台",
+        "东澳岛-自在佛",
+        "东澳岛-铳城亭",
+        "珠海东澳岛安麓酒店"
+      ],
+      "plays": [
+        {
+          "text": "铳城遗址探访",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "小众",
+            "人文历史",
+            "教育/科普/研学",
+            "安全"
+          ],
+          "source": "景点表#13"
+        },
+        {
+          "text": "人文遗迹寻踪",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "小众",
+            "人文历史",
+            "教育/科普/研学",
+            "安全"
+          ],
+          "source": "景点表#13"
+        },
+        {
+          "text": "历史人文游览",
+          "audiences": [
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "小众",
+            "人文历史",
+            "教育/科普/研学",
+            "安全"
+          ],
+          "source": "景点表#13"
+        },
+        {
+          "text": "环岛徒步",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "层次感",
+            "沉浸式",
+            "出片",
+            "浪漫",
+            "慢节奏/松弛感",
+            "低体力友好",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#14"
+        },
+        {
+          "text": "海岛探秘",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "层次感",
+            "沉浸式",
+            "出片",
+            "浪漫",
+            "慢节奏/松弛感",
+            "低体力友好",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#14"
+        },
+        {
+          "text": "森林栈道山海照",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "层次感",
+            "沉浸式",
+            "出片",
+            "浪漫",
+            "慢节奏/松弛感",
+            "低体力友好",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#14"
+        },
+        {
+          "text": "海边骑行",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "层次感",
+            "沉浸式",
+            "出片",
+            "浪漫",
+            "慢节奏/松弛感",
+            "低体力友好",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#14"
+        },
+        {
+          "text": "观光车环岛轻松游",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "层次感",
+            "沉浸式",
+            "出片",
+            "浪漫",
+            "慢节奏/松弛感",
+            "低体力友好",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#14"
+        },
+        {
+          "text": "环岛观光线",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "层次感",
+            "沉浸式",
+            "出片",
+            "浪漫",
+            "慢节奏/松弛感",
+            "低体力友好",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#14"
+        },
+        {
+          "text": "滨海栈道慢行",
+          "audiences": [
+            "hardcore",
+            "couple",
+            "elder",
+            "family"
+          ],
+          "needs": [
+            "层次感",
+            "沉浸式",
+            "出片",
+            "浪漫",
+            "慢节奏/松弛感",
+            "低体力友好",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#14"
+        },
+        {
+          "text": "拍照出片",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#15"
+        },
+        {
+          "text": "喝咖啡闲聊",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#15"
+        },
+        {
+          "text": "参加“山海对话”活动",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#15"
+        },
+        {
+          "text": "阅读",
+          "audiences": [
+            "couple",
+            "elder"
+          ],
+          "needs": [
+            "出片",
+            "慢节奏/放松",
+            "人文历史",
+            "社交互动",
+            "安全",
+            "省心",
+            "舒适"
+          ],
+          "source": "景点表#15"
+        },
+        {
+          "text": "万觅书店文艺照",
+          "audiences": [
+            "elder",
+            "family",
+            "couple"
+          ],
+          "needs": [
+            "慢节奏/松弛感/低体力友好",
+            "省心",
+            "舒适",
+            "出片"
+          ],
+          "source": "景点表#19"
+        },
+        {
+          "text": "铳城遗址",
+          "audiences": [
+            "couple",
+            "family",
+            "elder",
+            "hardcore"
+          ],
+          "needs": [
+            "人文历史",
+            "小众",
+            "教育/科普/研学",
+            "深度探索"
+          ],
+          "source": "景点表#27"
+        },
+        {
+          "text": "穿越海岸线",
+          "audiences": [
+            "family",
+            "hardcore",
+            "elder"
+          ],
+          "needs": [
+            "教育/科普/研学",
+            "沉浸式",
+            "深度探索",
+            "层次感"
+          ],
+          "source": "景点表#28"
+        },
+        {
+          "text": "买帆布袋/笔记本/扇子/明信片/钥匙扣（万山群岛系列文创）",
+          "audiences": [
+            "hardcore",
+            "elder",
+            "couple"
+          ],
+          "needs": [
+            "人文历史",
+            "文创伴手礼",
+            "慢节奏",
+            "出片"
+          ],
+          "source": "购物活动表#6"
+        },
+        {
+          "text": "《我在岛屿读书》第二季取景地打卡",
+          "audiences": [
+            "hardcore",
+            "elder",
+            "couple"
+          ],
+          "needs": [
+            "人文历史",
+            "文创伴手礼",
+            "慢节奏",
+            "出片"
+          ],
+          "source": "购物活动表#6"
+        }
+      ],
+      "food": [
+        {
+          "name": "山海经书屋",
+          "note": "临海书吧/轻食，人均约30-40元",
+          "source": "餐饮表#5"
+        }
+      ],
+      "stay": [
+        {
+          "name": "珠海东澳岛安麓酒店",
+          "note": "顶奢五星度假，亲子友好（文化沉浸·设施精简），房价¥1700-8000+/晚（团购套餐1688起，套房8000起，别墅20000起）",
+          "source": "住宿表#4"
+        }
+      ],
+      "activities": [
+        {
+          "text": "蜜月阁/烽火台看日出",
+          "audiences": [
+            "hardcore",
+            "couple"
+          ],
+          "source": "购物活动表#42"
+        }
+      ]
+    }
+  ],
+  "playItems": [
+    {
+      "spot": "婚礼堂",
+      "text": "白色婚礼堂拍照",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感"
+      ],
+      "source": "景点表#2"
+    },
+    {
+      "spot": "婚礼堂",
+      "text": "婚礼堂打卡",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感"
+      ],
+      "source": "景点表#2"
+    },
+    {
+      "spot": "婚礼堂",
+      "text": "海岛求婚",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感"
+      ],
+      "source": "景点表#2"
+    },
+    {
+      "spot": "婚礼堂",
+      "text": "纪念日旅行",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感"
+      ],
+      "source": "景点表#2"
+    },
+    {
+      "spot": "婚礼堂",
+      "text": "情侣写真",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感"
+      ],
+      "source": "景点表#2"
+    },
+    {
+      "spot": "婚礼堂",
+      "text": "日落合照",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感"
+      ],
+      "source": "景点表#2"
+    },
+    {
+      "spot": "蜜月阁",
+      "text": "蜜月阁俯瞰",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "参与/互动"
+      ],
+      "source": "景点表#3"
+    },
+    {
+      "spot": "蜜月阁",
+      "text": "蜜月阁看海",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "参与/互动"
+      ],
+      "source": "景点表#3"
+    },
+    {
+      "spot": "蜜月阁",
+      "text": "亲子徒步登高",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "参与/互动"
+      ],
+      "source": "景点表#3"
+    },
+    {
+      "spot": "滨海栈道",
+      "text": "滨海栈道慢行",
+      "audiences": [
+        "elder",
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/松弛感/低体力友好",
+        "安全",
+        "出片"
+      ],
+      "source": "景点表#4"
+    },
+    {
+      "spot": "滨海栈道",
+      "text": "听涛步道",
+      "audiences": [
+        "elder",
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/松弛感/低体力友好",
+        "安全",
+        "出片"
+      ],
+      "source": "景点表#4"
+    },
+    {
+      "spot": "滨海栈道",
+      "text": "环岛观光（徒步/电瓶车）",
+      "audiences": [
+        "elder",
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/松弛感/低体力友好",
+        "安全",
+        "出片"
+      ],
+      "source": "景点表#4"
+    },
+    {
+      "spot": "南沙湾沙滩",
+      "text": "沙滩玩沙戏水",
+      "audiences": [
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "参与/互动",
+        "出片",
+        "慢节奏/放松"
+      ],
+      "source": "景点表#5"
+    },
+    {
+      "spot": "南沙湾沙滩",
+      "text": "南沙湾海边写真",
+      "audiences": [
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "参与/互动",
+        "出片",
+        "慢节奏/放松"
+      ],
+      "source": "景点表#5"
+    },
+    {
+      "spot": "南沙湾沙滩",
+      "text": "沙滩发呆",
+      "audiences": [
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "参与/互动",
+        "出片",
+        "慢节奏/放松"
+      ],
+      "source": "景点表#5"
+    },
+    {
+      "spot": "南沙湾沙滩",
+      "text": "赶海体验",
+      "audiences": [
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "参与/互动",
+        "出片",
+        "慢节奏/放松"
+      ],
+      "source": "景点表#5"
+    },
+    {
+      "spot": "月牙环",
+      "text": "月牙环剪影",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "浪漫"
+      ],
+      "source": "景点表#6"
+    },
+    {
+      "spot": "东澳顶",
+      "text": "徒步运动",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "层次感",
+        "沉浸式",
+        "参与/互动"
+      ],
+      "source": "景点表#7"
+    },
+    {
+      "spot": "东澳顶",
+      "text": "环岛徒步",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "层次感",
+        "沉浸式",
+        "参与/互动"
+      ],
+      "source": "景点表#7"
+    },
+    {
+      "spot": "东澳顶",
+      "text": "海岛探秘",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "层次感",
+        "沉浸式",
+        "参与/互动"
+      ],
+      "source": "景点表#7"
+    },
+    {
+      "spot": "风车山",
+      "text": "无人机航拍",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "出片",
+        "深度探索",
+        "小众"
+      ],
+      "source": "景点表#8"
+    },
+    {
+      "spot": "风车山",
+      "text": "冷门海岸线",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "出片",
+        "深度探索",
+        "小众"
+      ],
+      "source": "景点表#8"
+    },
+    {
+      "spot": "风车山",
+      "text": "风车山",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "出片",
+        "深度探索",
+        "小众"
+      ],
+      "source": "景点表#8"
+    },
+    {
+      "spot": "求子泉",
+      "text": "人文遗迹寻踪",
+      "audiences": [
+        "family",
+        "elder"
+      ],
+      "needs": [
+        "人文历史",
+        "参与/互动",
+        "慢节奏/松弛感/低体力友好"
+      ],
+      "source": "景点表#9"
+    },
+    {
+      "spot": "万山海洋生物科普馆",
+      "text": "海洋科普",
+      "audiences": [
+        "family",
+        "elder"
+      ],
+      "needs": [
+        "教育/科普/研学",
+        "安全",
+        "人文历史"
+      ],
+      "source": "景点表#10"
+    },
+    {
+      "spot": "万山海洋生物科普馆",
+      "text": "自然研学",
+      "audiences": [
+        "family",
+        "elder"
+      ],
+      "needs": [
+        "教育/科普/研学",
+        "安全",
+        "人文历史"
+      ],
+      "source": "景点表#10"
+    },
+    {
+      "spot": "万山海洋生物科普馆",
+      "text": "历史人文游览",
+      "audiences": [
+        "family",
+        "elder"
+      ],
+      "needs": [
+        "教育/科普/研学",
+        "安全",
+        "人文历史"
+      ],
+      "source": "景点表#10"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "万觅书店文艺照",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动"
+      ],
+      "source": "景点表#11"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "喝咖啡闲聊",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动"
+      ],
+      "source": "景点表#11"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "阅读",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动"
+      ],
+      "source": "景点表#11"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "海岛阅读",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动"
+      ],
+      "source": "景点表#11"
+    },
+    {
+      "spot": "观海长廊",
+      "text": "海边栈道拍照",
+      "audiences": [
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "慢节奏/放松",
+        "安全",
+        "舒适"
+      ],
+      "source": "景点表#12"
+    },
+    {
+      "spot": "观海长廊",
+      "text": "情侣海边散步",
+      "audiences": [
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "慢节奏/放松",
+        "安全",
+        "舒适"
+      ],
+      "source": "景点表#12"
+    },
+    {
+      "spot": "观海长廊",
+      "text": "一起吹海风",
+      "audiences": [
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "慢节奏/放松",
+        "安全",
+        "舒适"
+      ],
+      "source": "景点表#12"
+    },
+    {
+      "spot": "观海长廊",
+      "text": "沙滩踏浪",
+      "audiences": [
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "慢节奏/放松",
+        "安全",
+        "舒适"
+      ],
+      "source": "景点表#12"
+    },
+    {
+      "spot": "铳城",
+      "text": "铳城遗址探访",
+      "audiences": [
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "小众",
+        "人文历史",
+        "教育/科普/研学",
+        "安全"
+      ],
+      "source": "景点表#13"
+    },
+    {
+      "spot": "倚山揽海路",
+      "text": "森林栈道山海照",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "层次感",
+        "沉浸式",
+        "出片",
+        "浪漫",
+        "慢节奏/松弛感",
+        "低体力友好",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "景点表#14"
+    },
+    {
+      "spot": "倚山揽海路",
+      "text": "海边骑行",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "层次感",
+        "沉浸式",
+        "出片",
+        "浪漫",
+        "慢节奏/松弛感",
+        "低体力友好",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "景点表#14"
+    },
+    {
+      "spot": "倚山揽海路",
+      "text": "观光车环岛轻松游",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "层次感",
+        "沉浸式",
+        "出片",
+        "浪漫",
+        "慢节奏/松弛感",
+        "低体力友好",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "景点表#14"
+    },
+    {
+      "spot": "倚山揽海路",
+      "text": "环岛观光线",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "层次感",
+        "沉浸式",
+        "出片",
+        "浪漫",
+        "慢节奏/松弛感",
+        "低体力友好",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "景点表#14"
+    },
+    {
+      "spot": "山海经书屋",
+      "text": "拍照出片",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "景点表#15"
+    },
+    {
+      "spot": "山海经书屋",
+      "text": "参加“山海对话”活动",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "景点表#15"
+    },
+    {
+      "spot": "观光线路4（摆渡车路线）",
+      "text": "环岛观光（电瓶车）",
+      "audiences": [
+        "elder",
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/低体力友好",
+        "安全",
+        "省心",
+        "舒适",
+        "性价比"
+      ],
+      "source": "景点表#20"
+    },
+    {
+      "spot": "观光线路4（摆渡车路线）",
+      "text": "3号线游览",
+      "audiences": [
+        "elder",
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/低体力友好",
+        "安全",
+        "省心",
+        "舒适",
+        "性价比"
+      ],
+      "source": "景点表#20"
+    },
+    {
+      "spot": "观光线路4（摆渡车路线）",
+      "text": "一日游",
+      "audiences": [
+        "elder",
+        "family",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/低体力友好",
+        "安全",
+        "省心",
+        "舒适",
+        "性价比"
+      ],
+      "source": "景点表#20"
+    },
+    {
+      "spot": "日出路线（摆渡车路线）",
+      "text": "观日出日落",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "修行",
+        "浪漫",
+        "出片",
+        "慢节奏/低体力友好"
+      ],
+      "source": "景点表#23"
+    },
+    {
+      "spot": "日出路线（摆渡车路线）",
+      "text": "海边看日落",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "修行",
+        "浪漫",
+        "出片",
+        "慢节奏/低体力友好"
+      ],
+      "source": "景点表#23"
+    },
+    {
+      "spot": "日出路线（摆渡车路线）",
+      "text": "晨练/日出观赏",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "修行",
+        "浪漫",
+        "出片",
+        "慢节奏/低体力友好"
+      ],
+      "source": "景点表#23"
+    },
+    {
+      "spot": "夜间玩法",
+      "text": "夜潜追蓝眼泪",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "浪漫",
+        "沉浸式",
+        "深度探索",
+        "修行"
+      ],
+      "source": "景点表#24"
+    },
+    {
+      "spot": "夜间玩法",
+      "text": "观星",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "浪漫",
+        "沉浸式",
+        "深度探索",
+        "修行"
+      ],
+      "source": "景点表#24"
+    },
+    {
+      "spot": "夜间玩法",
+      "text": "沙滩露营",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "浪漫",
+        "沉浸式",
+        "深度探索",
+        "修行"
+      ],
+      "source": "景点表#24"
+    },
+    {
+      "spot": "夜间玩法",
+      "text": "银河观看/拍摄",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "浪漫",
+        "沉浸式",
+        "深度探索",
+        "修行"
+      ],
+      "source": "景点表#24"
+    },
+    {
+      "spot": "夜间玩法",
+      "text": "夜钓",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "浪漫",
+        "沉浸式",
+        "深度探索",
+        "修行"
+      ],
+      "source": "景点表#24"
+    },
+    {
+      "spot": "团建",
+      "text": "露营体验",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "参与/互动",
+        "社交互动",
+        "挑战",
+        "省心"
+      ],
+      "source": "景点表#25"
+    },
+    {
+      "spot": "万山海洋生物科普馆",
+      "text": "探索水下世界",
+      "audiences": [
+        "family",
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "教育/科普/研学",
+        "安全",
+        "省心",
+        "舒适",
+        "深度探索"
+      ],
+      "source": "景点表#26"
+    },
+    {
+      "spot": "东澳岛海关遗址",
+      "text": "铳城遗址",
+      "audiences": [
+        "couple",
+        "family",
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "人文历史",
+        "小众",
+        "教育/科普/研学",
+        "深度探索"
+      ],
+      "source": "景点表#27"
+    },
+    {
+      "spot": "海防文化研学游（研学线路类）",
+      "text": "穿越海岸线",
+      "audiences": [
+        "family",
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "教育/科普/研学",
+        "沉浸式",
+        "深度探索",
+        "层次感"
+      ],
+      "source": "景点表#28"
+    },
+    {
+      "spot": "水上体验",
+      "text": "摩托艇出海",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "治愈",
+        "专业",
+        "参与/互动"
+      ],
+      "source": "景点表#29"
+    },
+    {
+      "spot": "水上体验",
+      "text": "浆板体验",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "治愈",
+        "专业",
+        "参与/互动"
+      ],
+      "source": "景点表#29"
+    },
+    {
+      "spot": "水上体验",
+      "text": "浮潜",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "治愈",
+        "专业",
+        "参与/互动"
+      ],
+      "source": "景点表#29"
+    },
+    {
+      "spot": "水上体验",
+      "text": "水肺深潜",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "治愈",
+        "专业",
+        "参与/互动"
+      ],
+      "source": "景点表#29"
+    },
+    {
+      "spot": "水上体验",
+      "text": "游艇出海",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "治愈",
+        "专业",
+        "参与/互动"
+      ],
+      "source": "景点表#29"
+    },
+    {
+      "spot": "水上体验",
+      "text": "海上观光",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "挑战",
+        "治愈",
+        "专业",
+        "参与/互动"
+      ],
+      "source": "景点表#29"
+    },
+    {
+      "spot": "摸鱼咖啡",
+      "text": "咖啡看海",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#2"
+    },
+    {
+      "spot": "摸鱼咖啡",
+      "text": "书店看海",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "社交互动",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#2"
+    },
+    {
+      "spot": "山上云下·HillMist音乐餐吧",
+      "text": "双人海景晚餐",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "慢节奏/放松",
+        "私密性/个性化"
+      ],
+      "source": "餐饮表#3"
+    },
+    {
+      "spot": "山上云下·HillMist音乐餐吧",
+      "text": "海景酒店旅拍",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "慢节奏/放松",
+        "私密性/个性化"
+      ],
+      "source": "餐饮表#3"
+    },
+    {
+      "spot": "海湾海鲜餐厅",
+      "text": "海鲜市场自选加工",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "美食体验",
+        "参与/互动",
+        "性价比",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#6"
+    },
+    {
+      "spot": "海湾海鲜餐厅",
+      "text": "本地海鲜餐厅",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "美食体验",
+        "参与/互动",
+        "性价比",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#6"
+    },
+    {
+      "spot": "海湾海鲜餐厅",
+      "text": "亲子海鲜采购+加工体验",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "美食体验",
+        "参与/互动",
+        "性价比",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#6"
+    },
+    {
+      "spot": "海湾海鲜餐厅",
+      "text": "平价海鲜",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "美食体验",
+        "参与/互动",
+        "性价比",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#6"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店-安心全日餐厅",
+      "text": "亲子住宿（酒店/民宿）",
+      "audiences": [
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "浪漫",
+        "仪式感",
+        "美食体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#9"
+    },
+    {
+      "spot": "是旦有愉食堂",
+      "text": "本地小吃/简餐",
+      "audiences": [
+        "couple",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "美食体验",
+        "性价比",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "餐饮表#25"
+    },
+    {
+      "spot": "珠海东澳岛万豪度假酒店",
+      "text": "酒店躺平",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "层次感",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#2"
+    },
+    {
+      "spot": "珠海东澳岛万豪度假酒店",
+      "text": "傍晚海边散步",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "层次感",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#2"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "悬崖海景旅拍",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "酒店旅拍/蜜月体验",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "悬崖观日出日落/观星",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "设计建筑拍照",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "童聚阿丽拉儿童俱乐部（0-6岁·球池/快乐厨房/手工）",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "户外无动力乐园",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "每日亲子手作",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "阿丽拉珠海东澳岛",
+      "text": "亲子环岛游（儿童半价）",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "浪漫",
+        "仪式感",
+        "小众",
+        "私密性/个性化",
+        "修行",
+        "治愈/疗愈",
+        "沉浸式",
+        "寓教于乐",
+        "安全省心"
+      ],
+      "source": "住宿表#3"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "高端海景住宿",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "园林慢享",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "航海探险家亲子套房",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "滑梯上下铺家庭复式套房",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "安麓书院阅读/非遗手作",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "麓戏台",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "无边泳池儿童戏水区",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "珠海东澳岛安麓酒店",
+      "text": "室内恒温泳池",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "私密性/个性化",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "沉浸式",
+        "文化体验",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#4"
+    },
+    {
+      "spot": "格力东澳大酒店",
+      "text": "无边泳池",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "层次感",
+        "趣味娱乐",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#5"
+    },
+    {
+      "spot": "格力东澳大酒店",
+      "text": "儿童游乐场",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "层次感",
+        "趣味娱乐",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#5"
+    },
+    {
+      "spot": "格力东澳大酒店",
+      "text": "东澳仔仔亲子房/机长房",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "层次感",
+        "趣味娱乐",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#5"
+    },
+    {
+      "spot": "格力东澳大酒店",
+      "text": "亲子水上运动（帆船/摩托艇/皮划艇）",
+      "audiences": [
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "层次感",
+        "趣味娱乐",
+        "安全",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#5"
+    },
+    {
+      "spot": "珠海东澳岛可域度假村",
+      "text": "北欧风建筑拍照",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "性价比",
+        "层次感"
+      ],
+      "source": "住宿表#6"
+    },
+    {
+      "spot": "珠海东澳岛可域度假村",
+      "text": "看海发呆",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "性价比",
+        "层次感"
+      ],
+      "source": "住宿表#6"
+    },
+    {
+      "spot": "珠海东澳岛可域度假村",
+      "text": "近南沙湾沙滩",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "性价比",
+        "层次感"
+      ],
+      "source": "住宿表#6"
+    },
+    {
+      "spot": "东澳信汇海景酒店",
+      "text": "海景房看海发呆",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "治愈/疗愈",
+        "出片",
+        "性价比"
+      ],
+      "source": "住宿表#7"
+    },
+    {
+      "spot": "里苑·望海山居全海景民宿",
+      "text": "全海景房拍照",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "小众",
+        "人文历史",
+        "治愈/疗愈",
+        "修行"
+      ],
+      "source": "住宿表#8"
+    },
+    {
+      "spot": "里苑·望海山居全海景民宿",
+      "text": "看海阅读发呆",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "小众",
+        "人文历史",
+        "治愈/疗愈",
+        "修行"
+      ],
+      "source": "住宿表#8"
+    },
+    {
+      "spot": "里苑·望海山居全海景民宿",
+      "text": "半山观海",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "小众",
+        "人文历史",
+        "治愈/疗愈",
+        "修行"
+      ],
+      "source": "住宿表#8"
+    },
+    {
+      "spot": "里苑·望海山居全海景民宿",
+      "text": "网红民宿打卡",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "小众",
+        "人文历史",
+        "治愈/疗愈",
+        "修行"
+      ],
+      "source": "住宿表#8"
+    },
+    {
+      "spot": "一念民宿（珠海东澳岛店）",
+      "text": "海景房",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "浪漫",
+        "治愈/疗愈"
+      ],
+      "source": "住宿表#9"
+    },
+    {
+      "spot": "邻海别苑（东澳岛店）",
+      "text": "海鲜市场自选加工/本地海鲜餐厅",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "美食体验",
+        "性价比",
+        "慢节奏/放松",
+        "社交互动"
+      ],
+      "source": "住宿表#10"
+    },
+    {
+      "spot": "邻海别苑（东澳岛店）",
+      "text": "码头区平价住宿",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "美食体验",
+        "性价比",
+        "慢节奏/放松",
+        "社交互动"
+      ],
+      "source": "住宿表#10"
+    },
+    {
+      "spot": "邻海别苑（东澳岛店）",
+      "text": "吃完海边散步",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "美食体验",
+        "性价比",
+        "慢节奏/放松",
+        "社交互动"
+      ],
+      "source": "住宿表#10"
+    },
+    {
+      "spot": "村上渔舍（东澳岛）",
+      "text": "渔村探访",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/松弛感/低体力友好",
+        "治愈/疗愈",
+        "人文历史",
+        "沉浸式",
+        "深度探索"
+      ],
+      "source": "住宿表#11"
+    },
+    {
+      "spot": "村上渔舍（东澳岛）",
+      "text": "小住慢生活",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/松弛感/低体力友好",
+        "治愈/疗愈",
+        "人文历史",
+        "沉浸式",
+        "深度探索"
+      ],
+      "source": "住宿表#11"
+    },
+    {
+      "spot": "村上渔舍（东澳岛）",
+      "text": "本地海鲜",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/松弛感/低体力友好",
+        "治愈/疗愈",
+        "人文历史",
+        "沉浸式",
+        "深度探索"
+      ],
+      "source": "住宿表#11"
+    },
+    {
+      "spot": "村上渔舍（东澳岛）",
+      "text": "海景民宿发呆",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "慢节奏/松弛感/低体力友好",
+        "治愈/疗愈",
+        "人文历史",
+        "沉浸式",
+        "深度探索"
+      ],
+      "source": "住宿表#11"
+    },
+    {
+      "spot": "依山泮海美宿（东澳岛店）",
+      "text": "半山海景拍照",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "小众",
+        "慢节奏/放松",
+        "私密性/个性化",
+        "修行"
+      ],
+      "source": "住宿表#12"
+    },
+    {
+      "spot": "依山泮海美宿（东澳岛店）",
+      "text": "半山观日出",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "小众",
+        "慢节奏/放松",
+        "私密性/个性化",
+        "修行"
+      ],
+      "source": "住宿表#12"
+    },
+    {
+      "spot": "东澳岛沐风民宿",
+      "text": "看海拍照",
+      "audiences": [
+        "couple"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "治愈/疗愈"
+      ],
+      "source": "住宿表#13"
+    },
+    {
+      "spot": "珠海东澳岛潮汐客栈",
+      "text": "网红打卡拍照",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "出片",
+        "治愈/疗愈",
+        "社交互动"
+      ],
+      "source": "住宿表#16"
+    },
+    {
+      "spot": "姐夫家民宿",
+      "text": "渔村民宿生活气",
+      "audiences": [
+        "elder"
+      ],
+      "needs": [
+        "人文历史",
+        "治愈/疗愈",
+        "社交互动",
+        "沉浸式"
+      ],
+      "source": "住宿表#19"
+    },
+    {
+      "spot": "珠海悦馨客栈（东澳岛旅游度假区店）",
+      "text": "亲子住宿",
+      "audiences": [
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "性价比",
+        "省心",
+        "舒适"
+      ],
+      "source": "住宿表#20"
+    },
+    {
+      "spot": "东澳岛与你同行民宿",
+      "text": "近2号线风车山/铳城人文线",
+      "audiences": [
+        "couple",
+        "elder"
+      ],
+      "needs": [
+        "性价比",
+        "慢节奏/放松",
+        "层次感",
+        "人文历史"
+      ],
+      "source": "住宿表#23"
+    },
+    {
+      "spot": "春栖山林（东澳岛店）",
+      "text": "南村半山山林住宿",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "性价比",
+        "省心"
+      ],
+      "source": "住宿表#30"
+    },
+    {
+      "spot": "春栖山林（东澳岛店）",
+      "text": "近石景长廊",
+      "audiences": [
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "性价比",
+        "省心"
+      ],
+      "source": "住宿表#30"
+    },
+    {
+      "spot": "东澳湾海鲜干货市集",
+      "text": "买鱿鱼干/鲍鱼干/海参/鱼干虾干",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "在地烟火",
+        "海味特产",
+        "性价比",
+        "市井文化",
+        "新鲜"
+      ],
+      "source": "购物活动表#3"
+    },
+    {
+      "spot": "东澳湾海鲜干货市集",
+      "text": "东澳三宝（将军帽、狗爪螺、海胆）",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "在地烟火",
+        "海味特产",
+        "性价比",
+        "市井文化",
+        "新鲜"
+      ],
+      "source": "购物活动表#3"
+    },
+    {
+      "spot": "东澳湾海鲜干货市集",
+      "text": "伶仃紫菜",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "在地烟火",
+        "海味特产",
+        "性价比",
+        "市井文化",
+        "新鲜"
+      ],
+      "source": "购物活动表#3"
+    },
+    {
+      "spot": "东澳湾海鲜干货市集",
+      "text": "白花胶",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "在地烟火",
+        "海味特产",
+        "性价比",
+        "市井文化",
+        "新鲜"
+      ],
+      "source": "购物活动表#3"
+    },
+    {
+      "spot": "东澳湾海鲜干货市集",
+      "text": "看渔民作业",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "在地烟火",
+        "海味特产",
+        "性价比",
+        "市井文化",
+        "新鲜"
+      ],
+      "source": "购物活动表#3"
+    },
+    {
+      "spot": "东澳湾海鲜干货市集",
+      "text": "鲜活海鲜加工",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "在地烟火",
+        "海味特产",
+        "性价比",
+        "市井文化",
+        "新鲜"
+      ],
+      "source": "购物活动表#3"
+    },
+    {
+      "spot": "海岛手信坊",
+      "text": "买钥匙扣/冰箱贴/明信片/帆布包",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "海味特产",
+        "出片",
+        "省心"
+      ],
+      "source": "购物活动表#4"
+    },
+    {
+      "spot": "海岛手信坊",
+      "text": "鱿鱼干/鲍鱼干/海参海味干货",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "海味特产",
+        "出片",
+        "省心"
+      ],
+      "source": "购物活动表#4"
+    },
+    {
+      "spot": "海岛手信坊",
+      "text": "活珠子蛋等岛民特产",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "海味特产",
+        "出片",
+        "省心"
+      ],
+      "source": "购物活动表#4"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "《这是我的岛》海岛人文展区",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "文创伴手礼",
+        "咖啡"
+      ],
+      "source": "购物活动表#5"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "海岛文创",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "文创伴手礼",
+        "咖啡"
+      ],
+      "source": "购物活动表#5"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "喝咖啡看海",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "文创伴手礼",
+        "咖啡"
+      ],
+      "source": "购物活动表#5"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "婚纱摄影打卡",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "文创伴手礼",
+        "咖啡"
+      ],
+      "source": "购物活动表#5"
+    },
+    {
+      "spot": "万觅书店",
+      "text": "图书7折",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "出片",
+        "慢节奏/放松",
+        "人文历史",
+        "文创伴手礼",
+        "咖啡"
+      ],
+      "source": "购物活动表#5"
+    },
+    {
+      "spot": "山海经书屋",
+      "text": "买帆布袋/笔记本/扇子/明信片/钥匙扣（万山群岛系列文创）",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "人文历史",
+        "文创伴手礼",
+        "慢节奏",
+        "出片"
+      ],
+      "source": "购物活动表#6"
+    },
+    {
+      "spot": "山海经书屋",
+      "text": "《我在岛屿读书》第二季取景地打卡",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "couple"
+      ],
+      "needs": [
+        "人文历史",
+        "文创伴手礼",
+        "慢节奏",
+        "出片"
+      ],
+      "source": "购物活动表#6"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "买日历",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "冰箱贴",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "卡通胶囊伞",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "盲盒（2款）",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "明信片",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "陶瓷杯垫",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "香薰片挂件",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛游客服务中心",
+      "text": "折叠灯",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "文创伴手礼",
+        "官方正品",
+        "省心",
+        "出片"
+      ],
+      "source": "购物活动表#7"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "醒狮",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "舞龙巡游",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "鱼灯舞与鱼灯车",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "非遗打铁花",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "变脸",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "古筝",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "粤剧",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "黄梅戏",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "百围慈善晚宴义捐竞拍",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "泥人",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "糖画",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "糖葫芦手作",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "东澳岛大王宝诞庆典",
+      "text": "大王庙祈福",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "人文历史",
+        "非遗民俗",
+        "节事活动",
+        "在地信仰",
+        "社交互动"
+      ],
+      "source": "购物活动表#8"
+    },
+    {
+      "spot": "格旅·东澳环岛跑",
+      "text": "24KM环岛越野（途经蜜月阁、风车山、铳城、山海经书屋）",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "赛事竞技",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#9"
+    },
+    {
+      "spot": "格旅·东澳环岛跑",
+      "text": "10KM个人组/亲子组",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "赛事竞技",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#9"
+    },
+    {
+      "spot": "格旅·东澳环岛跑",
+      "text": "专属奖牌与物资",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "赛事竞技",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#9"
+    },
+    {
+      "spot": "格旅·东澳环岛跑",
+      "text": "精英选手同场",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "赛事竞技",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#9"
+    },
+    {
+      "spot": "东澳环岛休闲骑行活动",
+      "text": "12公里环岛骑行",
+      "audiences": [
+        "hardcore"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "慢节奏",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#10"
+    },
+    {
+      "spot": "东澳环岛休闲骑行活动",
+      "text": "海内外选手同场",
+      "audiences": [
+        "hardcore"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "慢节奏",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#10"
+    },
+    {
+      "spot": "东澳环岛休闲骑行活动",
+      "text": "奖牌与纪念品",
+      "audiences": [
+        "hardcore"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "慢节奏",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#10"
+    },
+    {
+      "spot": "东澳环岛休闲骑行活动",
+      "text": "沿海岸线观海",
+      "audiences": [
+        "hardcore"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "慢节奏",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#10"
+    },
+    {
+      "spot": "暑期海岛文化季惠民演出",
+      "text": "相声/魔术/杂技/粤剧惠民演出",
+      "audiences": [
+        "family",
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "节事活动",
+        "人文历史",
+        "社交互动",
+        "慢节奏",
+        "惠民"
+      ],
+      "source": "购物活动表#11"
+    },
+    {
+      "spot": "暑期海岛文化季惠民演出",
+      "text": "粤剧雅集",
+      "audiences": [
+        "family",
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "节事活动",
+        "人文历史",
+        "社交互动",
+        "慢节奏",
+        "惠民"
+      ],
+      "source": "购物活动表#11"
+    },
+    {
+      "spot": "暑期海岛文化季惠民演出",
+      "text": "暑期专场演出",
+      "audiences": [
+        "family",
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "节事活动",
+        "人文历史",
+        "社交互动",
+        "慢节奏",
+        "惠民"
+      ],
+      "source": "购物活动表#11"
+    },
+    {
+      "spot": "国庆非遗艺术荟",
+      "text": "三灶鹤舞",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "节事活动",
+        "非遗民俗",
+        "人文历史",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#12"
+    },
+    {
+      "spot": "国庆非遗艺术荟",
+      "text": "前山凤鸡舞",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "节事活动",
+        "非遗民俗",
+        "人文历史",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#12"
+    },
+    {
+      "spot": "国庆非遗艺术荟",
+      "text": "沙田民歌（《水上婚嫁祭龙王》《龙舟说唱》）",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "节事活动",
+        "非遗民俗",
+        "人文历史",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#12"
+    },
+    {
+      "spot": "国庆非遗艺术荟",
+      "text": "粤剧（《梦回太湖》等）",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "节事活动",
+        "非遗民俗",
+        "人文历史",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#12"
+    },
+    {
+      "spot": "国庆非遗艺术荟",
+      "text": "古风舞蹈",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "节事活动",
+        "非遗民俗",
+        "人文历史",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#12"
+    },
+    {
+      "spot": "国庆非遗艺术荟",
+      "text": "魔术杂技",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "节事活动",
+        "非遗民俗",
+        "人文历史",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#12"
+    },
+    {
+      "spot": "国庆非遗艺术荟",
+      "text": "与传承人互动学唱",
+      "audiences": [
+        "hardcore",
+        "elder",
+        "family"
+      ],
+      "needs": [
+        "节事活动",
+        "非遗民俗",
+        "人文历史",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#12"
+    },
+    {
+      "spot": "团建沙滩音乐派对",
+      "text": "沙滩音乐派对",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#13"
+    },
+    {
+      "spot": "团建沙滩音乐派对",
+      "text": "篝火晚会",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#13"
+    },
+    {
+      "spot": "团建沙滩音乐派对",
+      "text": "露天烧烤BBQ",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#13"
+    },
+    {
+      "spot": "团建沙滩音乐派对",
+      "text": "外籍歌手现场表演",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#13"
+    },
+    {
+      "spot": "团建沙滩音乐派对",
+      "text": "乐队liveshow",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#13"
+    },
+    {
+      "spot": "团建沙滩音乐派对",
+      "text": "音乐快闪派对",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#13"
+    },
+    {
+      "spot": "趣东澳夜市",
+      "text": "大王庙广场撸串（烤翅/烤鱿鱼/烤虾/烤鱼/烤串）",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#14"
+    },
+    {
+      "spot": "趣东澳夜市",
+      "text": "海岸夜市烧烤",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#14"
+    },
+    {
+      "spot": "趣东澳夜市",
+      "text": "驻唱民谣轻弹浅唱",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "美食",
+        "出片",
+        "氛围"
+      ],
+      "source": "购物活动表#14"
+    },
+    {
+      "spot": "沙滩电音篝火派对",
+      "text": "沙滩电音",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "出片",
+        "氛围",
+        "浪漫"
+      ],
+      "source": "购物活动表#15"
+    },
+    {
+      "spot": "沙滩电音篝火派对",
+      "text": "户外泳池泡泡秀",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "出片",
+        "氛围",
+        "浪漫"
+      ],
+      "source": "购物活动表#15"
+    },
+    {
+      "spot": "沙滩电音篝火派对",
+      "text": "舞狮贺华诞入夜仪式",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "出片",
+        "氛围",
+        "浪漫"
+      ],
+      "source": "购物活动表#15"
+    },
+    {
+      "spot": "日出放映厅/沙滩露天电影",
+      "text": "日出放映厅露天电影",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "夜间玩法",
+        "慢节奏",
+        "社交互动",
+        "浪漫",
+        "出片"
+      ],
+      "source": "购物活动表#16"
+    },
+    {
+      "spot": "日出放映厅/沙滩露天电影",
+      "text": "海岛故事会",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "夜间玩法",
+        "慢节奏",
+        "社交互动",
+        "浪漫",
+        "出片"
+      ],
+      "source": "购物活动表#16"
+    },
+    {
+      "spot": "日出放映厅/沙滩露天电影",
+      "text": "沙滩露天电影（东澳湾露营地）",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "夜间玩法",
+        "慢节奏",
+        "社交互动",
+        "浪漫",
+        "出片"
+      ],
+      "source": "购物活动表#16"
+    },
+    {
+      "spot": "蓝眼泪夜间观赏",
+      "text": "码头夜光浮游生物（蓝眼泪）观测",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然奇观",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#17"
+    },
+    {
+      "spot": "蓝眼泪夜间观赏",
+      "text": "长曝光摄影",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然奇观",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#17"
+    },
+    {
+      "spot": "蓝眼泪夜间观赏",
+      "text": "夜间海岸徒步",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然奇观",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#17"
+    },
+    {
+      "spot": "赶海体验",
+      "text": "退潮时捡贝壳",
+      "audiences": [
+        "family",
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#18"
+    },
+    {
+      "spot": "赶海体验",
+      "text": "抓寄居蟹/小螃蟹/小海螺",
+      "audiences": [
+        "family",
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#18"
+    },
+    {
+      "spot": "赶海体验",
+      "text": "观察潮间带生物",
+      "audiences": [
+        "family",
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#18"
+    },
+    {
+      "spot": "赶海体验",
+      "text": "挖沙蟹",
+      "audiences": [
+        "family",
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#18"
+    },
+    {
+      "spot": "赶海体验",
+      "text": "海星发现（3号观景台附近）",
+      "audiences": [
+        "family",
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#18"
+    },
+    {
+      "spot": "游艇出海",
+      "text": "38英尺/50英尺等多款游艇包艇出海",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "水上体验",
+        "高端",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#19"
+    },
+    {
+      "spot": "游艇出海",
+      "text": "独享碧海",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "水上体验",
+        "高端",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#19"
+    },
+    {
+      "spot": "游艇出海",
+      "text": "游艇上KTV/桨板",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "水上体验",
+        "高端",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#19"
+    },
+    {
+      "spot": "游艇出海",
+      "text": "春节包艇9折优惠",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "水上体验",
+        "高端",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#19"
+    },
+    {
+      "spot": "格旅浪趣营·海上超跑/拖拽船/水陆两栖车",
+      "text": "海上超跑",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "水上体验",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#20"
+    },
+    {
+      "spot": "格旅浪趣营·海上超跑/拖拽船/水陆两栖车",
+      "text": "拖拽充气船",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "水上体验",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#20"
+    },
+    {
+      "spot": "格旅浪趣营·海上超跑/拖拽船/水陆两栖车",
+      "text": "水陆两栖车",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "水上体验",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#20"
+    },
+    {
+      "spot": "格旅浪趣营·海上超跑/拖拽船/水陆两栖车",
+      "text": "沙滩挖掘机",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "水上体验",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#20"
+    },
+    {
+      "spot": "格旅浪趣营·海上超跑/拖拽船/水陆两栖车",
+      "text": "摩托艇",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "水上体验",
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#20"
+    },
+    {
+      "spot": "安麓·贝壳风铃DIY",
+      "text": "专业老师指导把贝壳穿成风铃",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "文创"
+      ],
+      "source": "购物活动表#21"
+    },
+    {
+      "spot": "安麓·贝壳风铃DIY",
+      "text": "搭配彩珠",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "文创"
+      ],
+      "source": "购物活动表#21"
+    },
+    {
+      "spot": "安麓·贝壳风铃DIY",
+      "text": "制作专属海洋风铃纪念品",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "文创"
+      ],
+      "source": "购物活动表#21"
+    },
+    {
+      "spot": "安麓·手绘纸鸢/儿童沙画/海岛帽DIY",
+      "text": "手绘纸鸢",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "亲子"
+      ],
+      "source": "购物活动表#22"
+    },
+    {
+      "spot": "安麓·手绘纸鸢/儿童沙画/海岛帽DIY",
+      "text": "儿童沙画",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "亲子"
+      ],
+      "source": "购物活动表#22"
+    },
+    {
+      "spot": "安麓·手绘纸鸢/儿童沙画/海岛帽DIY",
+      "text": "海岛帽DIY轮番上演，在海风里制作专属海岛纪念",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "亲子"
+      ],
+      "source": "购物活动表#22"
+    },
+    {
+      "spot": "安麓·植物果壳铃制作",
+      "text": "用海岛植物果壳制作手工铃铛，天然材质创作专属纪念品",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "文创"
+      ],
+      "source": "购物活动表#24"
+    },
+    {
+      "spot": "安麓·非遗手工/新民乐演出/麓戏台",
+      "text": "非遗手工课程",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "人文历史",
+        "非遗",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#25"
+    },
+    {
+      "spot": "安麓·非遗手工/新民乐演出/麓戏台",
+      "text": "秋季下午茶",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "人文历史",
+        "非遗",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#25"
+    },
+    {
+      "spot": "安麓·非遗手工/新民乐演出/麓戏台",
+      "text": "新民乐演出",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "人文历史",
+        "非遗",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#25"
+    },
+    {
+      "spot": "安麓·非遗手工/新民乐演出/麓戏台",
+      "text": "团圆宴",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "人文历史",
+        "非遗",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#25"
+    },
+    {
+      "spot": "安麓·非遗手工/新民乐演出/麓戏台",
+      "text": "麓戏台听歌",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "人文历史",
+        "非遗",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#25"
+    },
+    {
+      "spot": "安麓·非遗手工/新民乐演出/麓戏台",
+      "text": "入夜仪式",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "人文历史",
+        "非遗",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#25"
+    },
+    {
+      "spot": "安麓·香道静心/艾草槌手工",
+      "text": "香道静心体验",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端",
+        "非遗"
+      ],
+      "source": "购物活动表#26"
+    },
+    {
+      "spot": "安麓·香道静心/艾草槌手工",
+      "text": "艾草槌手工课程（端午限定）",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端",
+        "非遗"
+      ],
+      "source": "购物活动表#26"
+    },
+    {
+      "spot": "安麓·香道静心/艾草槌手工",
+      "text": "中式午宴",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端",
+        "非遗"
+      ],
+      "source": "购物活动表#26"
+    },
+    {
+      "spot": "安麓·香道静心/艾草槌手工",
+      "text": "山楂甜菜头特饮",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端",
+        "非遗"
+      ],
+      "source": "购物活动表#26"
+    },
+    {
+      "spot": "阿丽拉·晨间瑜伽与冥想",
+      "text": "晨间瑜伽与冥想（7:30–8:30）",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端",
+        "安全"
+      ],
+      "source": "购物活动表#27"
+    },
+    {
+      "spot": "阿丽拉·晨间瑜伽与冥想",
+      "text": "拉伸放松",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端",
+        "安全"
+      ],
+      "source": "购物活动表#27"
+    },
+    {
+      "spot": "阿丽拉·晨间瑜伽与冥想",
+      "text": "面朝海景练习",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端",
+        "安全"
+      ],
+      "source": "购物活动表#27"
+    },
+    {
+      "spot": "阿丽拉·颂钵音疗/水晶疗愈",
+      "text": "西藏颂钵音疗（Tibetan Sound Bath）",
+      "audiences": [
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#28"
+    },
+    {
+      "spot": "阿丽拉·颂钵音疗/水晶疗愈",
+      "text": "水晶疗愈",
+      "audiences": [
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#28"
+    },
+    {
+      "spot": "阿丽拉·颂钵音疗/水晶疗愈",
+      "text": "正念冥想",
+      "audiences": [
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#28"
+    },
+    {
+      "spot": "阿丽拉·颂钵音疗/水晶疗愈",
+      "text": "晚间放松",
+      "audiences": [
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "康养",
+        "社交互动",
+        "高端"
+      ],
+      "source": "购物活动表#28"
+    },
+    {
+      "spot": "阿丽拉·海岛植物拓印/贝壳拓印",
+      "text": "专业老师带领亲子家庭走进海岛雨林收集植物",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "自然探索",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#29"
+    },
+    {
+      "spot": "阿丽拉·海岛植物拓印/贝壳拓印",
+      "text": "用天然植物纹理创作书签/明信片/装饰画",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "自然探索",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#29"
+    },
+    {
+      "spot": "阿丽拉·海岛植物拓印/贝壳拓印",
+      "text": "贝壳拓印",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "自然探索",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#29"
+    },
+    {
+      "spot": "阿丽拉·植物扎染",
+      "text": "每天下午贝壳拓印或植物扎染活动",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "文创"
+      ],
+      "source": "购物活动表#30"
+    },
+    {
+      "spot": "阿丽拉·植物扎染",
+      "text": "DIY海岛纪念品",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "文创"
+      ],
+      "source": "购物活动表#30"
+    },
+    {
+      "spot": "阿丽拉·植物扎染",
+      "text": "团队扎染衣服（团建）",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "慢节奏",
+        "社交互动",
+        "出片",
+        "文创"
+      ],
+      "source": "购物活动表#30"
+    },
+    {
+      "spot": "阿丽拉·本地向导古村探访/渔歌表演",
+      "text": "跟随本地向导探访千年古村",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "人文历史",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#31"
+    },
+    {
+      "spot": "阿丽拉·本地向导古村探访/渔歌表演",
+      "text": "聆听老渔民讲述海岛渔业传奇",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "人文历史",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#31"
+    },
+    {
+      "spot": "阿丽拉·本地向导古村探访/渔歌表演",
+      "text": "傍晚本地艺人渔歌表演",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "人文历史",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#31"
+    },
+    {
+      "spot": "阿丽拉·本地向导古村探访/渔歌表演",
+      "text": "大堂渔船模型与贝壳手工艺品陈列",
+      "audiences": [
+        "hardcore",
+        "elder"
+      ],
+      "needs": [
+        "人文历史",
+        "在地体验",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#31"
+    },
+    {
+      "spot": "格力东澳·草裙舞快闪派对",
+      "text": "草裙舞快闪派对",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "节事活动",
+        "社交互动",
+        "出片",
+        "慢节奏",
+        "亲子"
+      ],
+      "source": "购物活动表#32"
+    },
+    {
+      "spot": "格力东澳·草裙舞快闪派对",
+      "text": "热带海岛狂欢氛围互动",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "节事活动",
+        "社交互动",
+        "出片",
+        "慢节奏",
+        "亲子"
+      ],
+      "source": "购物活动表#32"
+    },
+    {
+      "spot": "格力东澳·沙滩篝火晚会",
+      "text": "沙滩篝火晚会",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "出片",
+        "氛围",
+        "浪漫"
+      ],
+      "source": "购物活动表#33"
+    },
+    {
+      "spot": "格力东澳·沙滩篝火晚会",
+      "text": "围炉互动",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "出片",
+        "氛围",
+        "浪漫"
+      ],
+      "source": "购物活动表#33"
+    },
+    {
+      "spot": "格力东澳·沙滩篝火晚会",
+      "text": "海边夜话",
+      "audiences": [
+        "couple",
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "夜间玩法",
+        "社交互动",
+        "出片",
+        "氛围",
+        "浪漫"
+      ],
+      "source": "购物活动表#33"
+    },
+    {
+      "spot": "格力东澳·趣味水上篮球",
+      "text": "水上篮球",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "水上体验",
+        "户外运动",
+        "社交互动",
+        "趣味",
+        "出片"
+      ],
+      "source": "购物活动表#34"
+    },
+    {
+      "spot": "格力东澳·趣味水上篮球",
+      "text": "泳池/浅滩趣味运动",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "水上体验",
+        "户外运动",
+        "社交互动",
+        "趣味",
+        "出片"
+      ],
+      "source": "购物活动表#34"
+    },
+    {
+      "spot": "格力东澳·DIY植物拓印",
+      "text": "DIY植物拓印",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "自然探索",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#35"
+    },
+    {
+      "spot": "格力东澳·DIY植物拓印",
+      "text": "用海岛植物创作专属纪念品",
+      "audiences": [
+        "family",
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "手作体验",
+        "自然探索",
+        "慢节奏",
+        "社交互动",
+        "出片"
+      ],
+      "source": "购物活动表#35"
+    },
+    {
+      "spot": "格力东澳·射箭/瑜伽/球类运动",
+      "text": "射箭",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "慢节奏",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#36"
+    },
+    {
+      "spot": "格力东澳·射箭/瑜伽/球类运动",
+      "text": "瑜伽",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "慢节奏",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#36"
+    },
+    {
+      "spot": "格力东澳·射箭/瑜伽/球类运动",
+      "text": "篮球",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "慢节奏",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#36"
+    },
+    {
+      "spot": "格力东澳·射箭/瑜伽/球类运动",
+      "text": "乒乓球",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "慢节奏",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#36"
+    },
+    {
+      "spot": "格力东澳·射箭/瑜伽/球类运动",
+      "text": "羽毛球",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "慢节奏",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#36"
+    },
+    {
+      "spot": "格力东澳·射箭/瑜伽/球类运动",
+      "text": "台球",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "慢节奏",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#36"
+    },
+    {
+      "spot": "格力东澳·射箭/瑜伽/球类运动",
+      "text": "沙滩排球/沙滩足球",
+      "audiences": [
+        "hardcore",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "慢节奏",
+        "社交互动",
+        "硬核",
+        "出片"
+      ],
+      "source": "购物活动表#36"
+    },
+    {
+      "spot": "东澳湾露营地（拎包入住+露天电影）",
+      "text": "专业露营设备拎包入住",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "社交互动",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#37"
+    },
+    {
+      "spot": "东澳湾露营地（拎包入住+露天电影）",
+      "text": "沙滩露天电影",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "社交互动",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#37"
+    },
+    {
+      "spot": "东澳湾露营地（拎包入住+露天电影）",
+      "text": "枕着海浪声入眠",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "社交互动",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#37"
+    },
+    {
+      "spot": "东澳湾露营地（拎包入住+露天电影）",
+      "text": "山谷帐篷听山风看星河",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "社交互动",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#37"
+    },
+    {
+      "spot": "东澳湾露营地（拎包入住+露天电影）",
+      "text": "自助烧烤",
+      "audiences": [
+        "couple",
+        "family",
+        "hardcore"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "社交互动",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#37"
+    },
+    {
+      "spot": "风车山顶露营野餐",
+      "text": "风车山顶超大风车下野餐",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "自然探索",
+        "社交互动",
+        "出片",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#38"
+    },
+    {
+      "spot": "风车山顶露营野餐",
+      "text": "360°山海全景",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "自然探索",
+        "社交互动",
+        "出片",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#38"
+    },
+    {
+      "spot": "风车山顶露营野餐",
+      "text": "团建野餐",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "自然探索",
+        "社交互动",
+        "出片",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#38"
+    },
+    {
+      "spot": "沙滩运动会（飞盘/排球/筑沙）",
+      "text": "飞盘",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "趣味",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#39"
+    },
+    {
+      "spot": "沙滩运动会（飞盘/排球/筑沙）",
+      "text": "沙滩排球",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "趣味",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#39"
+    },
+    {
+      "spot": "沙滩运动会（飞盘/排球/筑沙）",
+      "text": "筑沙",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "趣味",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#39"
+    },
+    {
+      "spot": "沙滩运动会（飞盘/排球/筑沙）",
+      "text": "沙滩运动会",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "趣味",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#39"
+    },
+    {
+      "spot": "沙滩运动会（飞盘/排球/筑沙）",
+      "text": "清凉大作战夏日派对",
+      "audiences": [
+        "hardcore",
+        "couple",
+        "family"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "趣味",
+        "出片",
+        "硬核"
+      ],
+      "source": "购物活动表#39"
+    },
+    {
+      "spot": "蜜月飞车",
+      "text": "1314米巅峰轨道飞车",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片",
+        "浪漫"
+      ],
+      "source": "购物活动表#40"
+    },
+    {
+      "spot": "蜜月飞车",
+      "text": "穿梭山林与碧海之间",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片",
+        "浪漫"
+      ],
+      "source": "购物活动表#40"
+    },
+    {
+      "spot": "蜜月飞车",
+      "text": "俯冲间将山海风光尽收眼底",
+      "audiences": [
+        "couple",
+        "hardcore"
+      ],
+      "needs": [
+        "户外运动",
+        "社交互动",
+        "硬核",
+        "出片",
+        "浪漫"
+      ],
+      "source": "购物活动表#40"
+    },
+    {
+      "spot": "蜜月电梯",
+      "text": "缓缓上升的轿厢将蓝天白云碧海青山一同框入视野",
+      "audiences": [
+        "couple",
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "出片",
+        "浪漫",
+        "省心",
+        "安全"
+      ],
+      "source": "购物活动表#41"
+    },
+    {
+      "spot": "蜜月电梯",
+      "text": "轻松登顶解锁无遮挡山海全景",
+      "audiences": [
+        "couple",
+        "elder",
+        "hardcore"
+      ],
+      "needs": [
+        "慢节奏/放松",
+        "出片",
+        "浪漫",
+        "省心",
+        "安全"
+      ],
+      "source": "购物活动表#41"
+    },
+    {
+      "spot": "蜜月阁/烽火台看日出",
+      "text": "蜜月阁（1008级台阶登顶，东澳岛最高点）看日出",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "出片",
+        "浪漫",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#42"
+    },
+    {
+      "spot": "蜜月阁/烽火台看日出",
+      "text": "烽火台看日出（古堡与朝霞）",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "出片",
+        "浪漫",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#42"
+    },
+    {
+      "spot": "蜜月阁/烽火台看日出",
+      "text": "远眺澳门氹仔大桥",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "出片",
+        "浪漫",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#42"
+    },
+    {
+      "spot": "风车山/婚礼堂看日落",
+      "text": "风车山巅等山海日落（2号风车背后最佳机位）",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "出片",
+        "浪漫",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#43"
+    },
+    {
+      "spot": "风车山/婚礼堂看日落",
+      "text": "婚礼堂海上日落",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "出片",
+        "浪漫",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#43"
+    },
+    {
+      "spot": "风车山/婚礼堂看日落",
+      "text": "环岛路风车公路旁日落",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "出片",
+        "浪漫",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#43"
+    },
+    {
+      "spot": "风车山/婚礼堂看日落",
+      "text": "南沙湾沙滩日落剪影",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "自然探索",
+        "出片",
+        "浪漫",
+        "慢节奏",
+        "硬核"
+      ],
+      "source": "购物活动表#43"
+    },
+    {
+      "spot": "风车山观星",
+      "text": "风车山巅数星辰",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#44"
+    },
+    {
+      "spot": "风车山观星",
+      "text": "珊瑚礁畔观星",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#44"
+    },
+    {
+      "spot": "风车山观星",
+      "text": "银河摄影",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#44"
+    },
+    {
+      "spot": "风车山观星",
+      "text": "星座识别",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#44"
+    },
+    {
+      "spot": "风车山观星",
+      "text": "《东澳岛观星指南》（规划发布）",
+      "audiences": [
+        "hardcore",
+        "couple"
+      ],
+      "needs": [
+        "夜间玩法",
+        "自然探索",
+        "出片",
+        "浪漫",
+        "硬核"
+      ],
+      "source": "购物活动表#44"
+    }
+  ],
+  "styleSamples": [
+    "1314 米滑道的速度与激情",
+    "山海间的书香约会",
+    "南沙湾的日落承诺",
+    "孩子有得玩、家长不操心",
+    "全家不累",
+    "带着娃也心里有底",
+    "不累、不赶、吃好",
+    "白色婚礼堂拍照",
+    "婚礼堂打卡",
+    "蜜月阁看海",
+    "滨海栈道慢行",
+    "沙滩玩沙戏水",
+    "南沙湾海边写真",
+    "月牙环剪影",
+    "海岛探秘",
+    "冷门海岸线",
+    "万觅书店文艺照",
+    "喝咖啡闲聊",
+    "海边栈道拍照",
+    "情侣海边散步",
+    "森林栈道山海照",
+    "海边骑行",
+    "观日出日落",
+    "海边看日落",
+    "夜潜追蓝眼泪",
+    "沙滩露营",
+    "穿越海岸线"
+  ],
+  "spotCategories": {
+    "珠海东澳岛万豪度假酒店": "stay",
+    "阿丽拉珠海东澳岛": "stay",
+    "珠海东澳岛安麓酒店": "stay",
+    "格力东澳大酒店": "stay",
+    "珠海东澳岛可域度假村": "stay",
+    "万觅餐吧": "food",
+    "东发海鲜酒家": "food",
+    "是旦有愉食堂": "food",
+    "是旦海鲜餐厅": "food",
+    "潮汐咖啡": "food",
+    "精致拾光": "food",
+    "聚鲜楼": "food",
+    "东澳岛游客服务中心": "shop"
+  }
+}

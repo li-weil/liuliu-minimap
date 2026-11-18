@@ -101,6 +101,7 @@ wx.cloud.callFunction({
 
 - [页面结构.md](D:/liuliu-minimap/docs/页面结构.md)
 - [AI主题任务内容全流程说明.md](D:/liuliu-minimap/docs/AI主题任务内容全流程说明.md)
+- [东澳岛AI生成改造说明.md](D:/liuliu-minimap/docs/东澳岛AI生成改造说明.md)
 - [地图功能接入说明.md](D:/liuliu-minimap/docs/地图功能接入说明.md)
 - [Web后端共用接口接入说明.md](D:/liuliu-minimap/docs/Web后端共用接口接入说明.md)
 - [云函数登录系统说明.md](D:/liuliu-minimap/docs/云函数登录系统说明.md)

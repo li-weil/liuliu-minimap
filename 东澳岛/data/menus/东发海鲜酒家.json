@@ -1,0 +1,908 @@
+{
+  "shop": "东发海鲜酒家",
+  "kind": "priceList",
+  "sources": [
+    "餐厅菜单/东发海鲜酒家/1.pdf"
+  ],
+  "packages": [],
+  "dishes": [
+    {
+      "name": "洋葱炒牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "韭菜花炒鱿鱼",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒竹肠",
+      "price": 58,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "藕尖炒鸡杂",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "泡椒炒牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "蒜香骨10块",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "椒盐鸭下巴10支",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "辣子鸡",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "蒸三干",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "麻婆豆腐",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "沙姜炒猪舌",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "蒜蓉蒸丝瓜",
+      "price": 38,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "蚝油鲜菇",
+      "price": 38,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "白灼粉肠",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "咸鱼茄子煲",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒五花肉",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "西芹炒鱿鱼",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒鱿鱼",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "尖椒炒牛肉",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "青瓜炒瘦肉",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "炒青瓜",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "丝瓜炒肉片",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "丝瓜炒鱿鱼",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "炒丝瓜",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "苦瓜炒蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "苦瓜煎蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "姜葱炒鸡",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "沙姜炒鸡",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "白切本地鸡",
+      "price": 280,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "花生猪手煲",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "牛腩萝卜煲",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "番茄炒蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "土豆焖鸭",
+      "price": 58,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "酸辣土豆丝",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "清炒土豆丝",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "蒸水蛋",
+      "price": 28,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "韭黄炒蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "萝卜干煎蛋",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "豉汁蒸排骨",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "红烧日本豆腐煲",
+      "price": 38,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "酸菜炒猪大肠",
+      "price": 58,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "冬菇云耳蒸鸡",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "苦瓜炒牛肉",
+      "price": 58,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "豉汁蒸南瓜",
+      "price": 38,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "南瓜蒸排骨",
+      "price": 68,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "榨菜蒸五花肉",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "蒸肉饼",
+      "price": 48,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "虎皮尖椒",
+      "price": 30,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "咸蛋芥菜汤",
+      "price": 38,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "紫菜蛋花汤",
+      "price": 38,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "番茄鸡蛋汤",
+      "price": 38,
+      "unit": "",
+      "category": "汤"
+    },
+    {
+      "name": "水煮牛肉",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "椒盐九吐鱼",
+      "price": 88,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "豉汁炒沙现",
+      "price": 48,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "白贝冬瓜汤",
+      "price": 58,
+      "unit": "例",
+      "category": "汤"
+    },
+    {
+      "name": "椒盐鱿鱼",
+      "price": 88,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "椒盐排骨",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "甜酸排骨",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "椒盐濑尿虾",
+      "price": 88,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "姜葱炒蟹",
+      "price": 98,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "粉丝蒸本地龙虾",
+      "price": 588,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼大海虾",
+      "price": 138,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒸马胶咸鱼",
+      "price": 68,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒸杂鱼干",
+      "price": 68,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "咸鱼干蒸五花肉",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "肉饼蒸咸鱼干",
+      "price": 88,
+      "unit": "",
+      "category": "小炒"
+    },
+    {
+      "name": "蒸咸鲜鱼",
+      "price": 68,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "煎咸鲜鱼",
+      "price": 88,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "皮蛋瘦肉粥",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "排骨粥",
+      "price": 58,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "三丝炒米粉",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "三丝炒面",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "鸡蛋葱花炒饭",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "虾仁鸡蛋炒饭",
+      "price": 48,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "鸡蛋肉片汤面",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "鸡蛋肉片汤粉",
+      "price": 38,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "蒸馒头",
+      "price": 30,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "蒸饺",
+      "price": 30,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "海胆炒饭",
+      "price": 68,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "海胆蒸水蛋",
+      "price": 68,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜蓉炒通菜",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "油生菜",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "油菜心",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "油麦菜",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "蒜蓉炒番薯叶",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "蒜蓉炒小白菜",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "蒜蓉炒大白菜",
+      "price": 23,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "蒜蓉炒包菜",
+      "price": 28,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "上汤芥菜",
+      "price": 38,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "豆豉鲮鱼炒麦菜",
+      "price": 38,
+      "unit": "",
+      "category": "蔬菜"
+    },
+    {
+      "name": "豉汁炒本地花甲",
+      "price": 58,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "豉汁炒本地沙现",
+      "price": 48,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "豉汁蛏子王炒",
+      "price": 58,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "豉汁炒大蛏子王",
+      "price": 80,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "辣炒尖螺",
+      "price": 48,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "辣炒花螺",
+      "price": 128,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "辣酒煮花螺",
+      "price": 128,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "姜葱炒三点蟹",
+      "price": 98,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "姜葱炒花蟹",
+      "price": 128,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "姜葱炒红蟹",
+      "price": 138,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "姜葱珍珠蟹",
+      "price": 108,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "酱爆鱿鱼",
+      "price": 88,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "酱爆八爪鱼",
+      "price": 88,
+      "unit": "只",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜蓉蒸生蚝",
+      "price": 15,
+      "unit": "只",
+      "category": "海鲜"
+    },
+    {
+      "name": "椒盐虾",
+      "price": 108,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "生抽王炒虾",
+      "price": 108,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "红烧鱼例牌",
+      "price": 108,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼苦螺",
+      "price": 58,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼九爪螺",
+      "price": 78,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼青口",
+      "price": 38,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼花螺",
+      "price": 48,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼海螺",
+      "price": 128,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼鱿鱼",
+      "price": 88,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼墨鱼",
+      "price": 88,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "白灼东风螺",
+      "price": 168,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清蒸海斑鱼",
+      "price": 128,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清蒸石斑鱼",
+      "price": 128,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清蒸龙顶鱼",
+      "price": 138,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清蒸金边鱼",
+      "price": 138,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清蒸立鱼",
+      "price": 98,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清蒸瓜子斑鱼",
+      "price": 150,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清杂鱼",
+      "price": 118,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "清蒸石九公鱼",
+      "price": 118,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "太椒蒸九吐鱼",
+      "price": 68,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "原只蒸红蟹",
+      "price": 118,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "原只蒸青蟹",
+      "price": 128,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "原只蒸三点蟹",
+      "price": 98,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "原只蒸珍珠蟹",
+      "price": 118,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜茸粉丝蒸鲍鱼(每只15)元",
+      "price": 88,
+      "unit": "",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜茸粉丝蒸扇贝",
+      "price": 118,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "豉汁蒸立追",
+      "price": 118,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜茸粉丝蒸沙贝",
+      "price": 68,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜茸粉丝蒸带子",
+      "price": 68,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜茸蒸将军帽",
+      "price": 118,
+      "unit": "例",
+      "category": "海鲜"
+    },
+    {
+      "name": "蒜茸蒸青口",
+      "price": 48,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "石九公豆腐元西汤",
+      "price": 68,
+      "unit": "例",
+      "category": "汤"
+    },
+    {
+      "name": "杂鱼芥菜汤",
+      "price": 68,
+      "unit": "例",
+      "category": "汤"
+    },
+    {
+      "name": "凉拌海菜",
+      "price": 28,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌海蜇",
+      "price": 28,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌青瓜",
+      "price": 28,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "凉拌皮蛋",
+      "price": 28,
+      "unit": "",
+      "category": "凉菜"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "整张长图",
+      "reason": "纯价目表截图，无店铺标题与原始分类；category 为按食材粗分。长图已全部转写（共 141 条，已按重叠切片去重）"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "蒸三干",
+      "reason": "原文如此，含义未确认（疑为三样鱼干）"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "豉汁炒沙现 / 豉汁炒本地沙现",
+      "reason": "原文如此，疑为「沙蚬」"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "豉汁蛏子王炒",
+      "reason": "原文语序如此（疑为「豉汁炒蛏子王」）"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "蒜茸粉丝蒸鲍鱼(每只15)元：88元",
+      "reason": "原图括号与「元」的位置如此，价格取 88 元"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "豉汁蒸立追",
+      "reason": "原文如此，疑为「立锥鱼」"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "石九公豆腐元西汤",
+      "reason": "原文如此（元西疑为芫茜/香菜）"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "太椒蒸九吐鱼",
+      "reason": "原文如此，疑为「尖椒」"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "蒸马胶咸鱼",
+      "reason": "原文如此，疑为「马鲛」"
+    },
+    {
+      "file": "东发海鲜酒家_1.jpg",
+      "text": "清蒸龙顶鱼 / 清蒸金边鱼",
+      "reason": "原文如此，疑为龙趸鱼/金鲳鱼，未擅改"
+    }
+  ]
+}

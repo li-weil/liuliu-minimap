@@ -1,0 +1,8 @@
+﻿shop,map_name,source_dir,kind,packages,dishes,uncertain,source_files
+万觅餐吧,万觅餐吧,万觅餐吧,packages,12,54,1,menus/万觅餐吧.json
+东发海鲜酒家,东发海鲜酒家,东发海鲜酒家,priceList,0,141,0,menus/东发海鲜酒家.json
+是旦有愉食堂,是旦有愉食堂,是旦有愉食堂,priceList,0,26,1,menus/是旦有愉食堂.json
+是旦海鲜餐厅,是旦海鲜餐厅,是旦海鲜餐厅,priceList,0,153,0,menus/是旦海鲜餐厅.json
+潮汐咖啡,潮汐咖啡,潮汐咖啡,priceList,0,0,0,menus/潮汐咖啡.json
+精致拾光,精致拾光,精致拾光,priceList,0,63,0,menus/精致拾光.json
+聚鲜楼,聚鲜楼,聚鲜楼,packages,3,12,34,menus/聚鲜楼.json

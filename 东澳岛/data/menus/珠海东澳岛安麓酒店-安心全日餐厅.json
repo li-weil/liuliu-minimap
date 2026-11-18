@@ -1,0 +1,105 @@
+{
+  "shop": "珠海东澳岛安麓酒店-安心全日餐厅",
+  "kind": "packages",
+  "sources": [
+    "餐厅菜单/珠海东澳岛安麓酒店-安心全日餐厅/1.pdf"
+  ],
+  "packages": [
+    {
+      "name": "浪漫绮丽双人套餐",
+      "price": 688,
+      "groups": [
+        {
+          "group": "前菜",
+          "items": [
+            {
+              "name": "水果田园沙拉",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "主菜",
+          "items": [
+            {
+              "name": "番茄汁意面",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "海陆拼盘",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "甜品",
+          "items": [
+            {
+              "name": "巧克力布朗尼蛋糕哈根达斯冰淇淋",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "精选酒水",
+          "items": [
+            {
+              "name": "菲斯奈特珍藏卡瓦起泡酒",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "水果田园沙拉",
+      "price": null,
+      "unit": "",
+      "category": "前菜"
+    },
+    {
+      "name": "番茄汁意面",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "海陆拼盘",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "巧克力布朗尼蛋糕哈根达斯冰淇淋",
+      "price": null,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "菲斯奈特珍藏卡瓦起泡酒",
+      "price": null,
+      "unit": "",
+      "category": "酒水"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "珠海东澳岛安麓酒店-安心全日餐厅_1.jpg",
+      "text": "巧克力布朗尼蛋糕哈根达斯冰淇淋",
+      "reason": "原图该行连写，未分隔；按一行一个套餐内容收录"
+    },
+    {
+      "file": "珠海东澳岛安麓酒店-安心全日餐厅_1.jpg",
+      "text": "套餐内菜品",
+      "reason": "只标套餐总价 688 元，单品无标价，dishes 的 price 记为 null"
+    }
+  ]
+}

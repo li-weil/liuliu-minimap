@@ -1,0 +1,416 @@
+{
+  "shop": "精致拾光",
+  "kind": "priceList",
+  "sources": [
+    "餐厅菜单/精致拾光/1.pdf",
+    "餐厅菜单/精致拾光/2.pdf"
+  ],
+  "packages": [],
+  "dishes": [
+    {
+      "name": "瘦肉粥",
+      "price": 20,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "海鲜粥",
+      "price": 35,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "瘦肉汤粉/面",
+      "price": 20,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "鸡蛋汤粉/面",
+      "price": 20,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "牛肉丸汤粉/面",
+      "price": 25,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "牛腩汤粉/面",
+      "price": 28,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "海鲜汤粉/面",
+      "price": 36,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "鸡扒汤粉/面",
+      "price": 28,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "猪扒汤粉/面",
+      "price": 30,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "牛扒汤粉/面",
+      "price": 48,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "鲍鱼汤粉/面",
+      "price": 88,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "龙虾汤粉/面",
+      "price": 128,
+      "unit": "",
+      "category": "粥/汤粉面"
+    },
+    {
+      "name": "鸡蛋肉肠粉",
+      "price": 16,
+      "unit": "",
+      "category": "肠粉"
+    },
+    {
+      "name": "鲜虾肠粉",
+      "price": 26,
+      "unit": "",
+      "category": "肠粉"
+    },
+    {
+      "name": "牛肉蛋肠粉",
+      "price": 26,
+      "unit": "",
+      "category": "肠粉"
+    },
+    {
+      "name": "海鲜肠粉",
+      "price": 35,
+      "unit": "",
+      "category": "肠粉"
+    },
+    {
+      "name": "马蹄鲜肉云吞",
+      "price": 26,
+      "unit": "",
+      "category": "云吞"
+    },
+    {
+      "name": "蟹籽鲜虾云吞粉/面",
+      "price": 30,
+      "unit": "",
+      "category": "云吞"
+    },
+    {
+      "name": "马蹄鲜肉云吞粉/面",
+      "price": 26,
+      "unit": "",
+      "category": "云吞"
+    },
+    {
+      "name": "蟹籽鲜虾云吞",
+      "price": 36,
+      "unit": "",
+      "category": "云吞"
+    },
+    {
+      "name": "黑椒猪扒饭",
+      "price": 32,
+      "unit": "",
+      "category": "饭"
+    },
+    {
+      "name": "滑蛋牛肉饭",
+      "price": 35,
+      "unit": "",
+      "category": "饭"
+    },
+    {
+      "name": "黑椒鸡扒饭",
+      "price": 29,
+      "unit": "",
+      "category": "饭"
+    },
+    {
+      "name": "虾仁滑蛋饭",
+      "price": 35,
+      "unit": "",
+      "category": "饭"
+    },
+    {
+      "name": "牛腩饭",
+      "price": 35,
+      "unit": "",
+      "category": "饭"
+    },
+    {
+      "name": "黑椒牛扒饭",
+      "price": 52,
+      "unit": "",
+      "category": "饭"
+    },
+    {
+      "name": "香煎猪扒包",
+      "price": 28,
+      "unit": "",
+      "category": "招牌猪扒包"
+    },
+    {
+      "name": "鸡扒猪仔包",
+      "price": 26,
+      "unit": "",
+      "category": "招牌猪扒包"
+    },
+    {
+      "name": "香煎牛扒包",
+      "price": 48,
+      "unit": "",
+      "category": "招牌猪扒包"
+    },
+    {
+      "name": "鱼柳扒包",
+      "price": 42,
+      "unit": "",
+      "category": "招牌猪扒包"
+    },
+    {
+      "name": "鱿鱼扒包",
+      "price": 42,
+      "unit": "",
+      "category": "招牌猪扒包"
+    },
+    {
+      "name": "鲍鱼扒包",
+      "price": 88,
+      "unit": "",
+      "category": "招牌猪扒包"
+    },
+    {
+      "name": "龙虾扒包",
+      "price": 128,
+      "unit": "",
+      "category": "招牌猪扒包"
+    },
+    {
+      "name": "美味薯条",
+      "price": 20,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "黑椒鸡块",
+      "price": 20,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "盐酥鸡",
+      "price": 23,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "甘梅红薯",
+      "price": 22,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "炸鸡中翅2只",
+      "price": 18,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "奥尔良烤翅2只",
+      "price": 18,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "藤椒鸡腿",
+      "price": 16,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "炸鱼排",
+      "price": 26,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "吉列猪扒",
+      "price": 25,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "香煎鸡扒",
+      "price": 22,
+      "unit": "",
+      "category": "特色小吃"
+    },
+    {
+      "name": "黑松露滑蛋",
+      "price": 25,
+      "unit": "",
+      "category": "三文治"
+    },
+    {
+      "name": "猪扒三文治",
+      "price": 28,
+      "unit": "",
+      "category": "三文治"
+    },
+    {
+      "name": "鸡扒三文治",
+      "price": 26,
+      "unit": "",
+      "category": "三文治"
+    },
+    {
+      "name": "牛扒三文治",
+      "price": 48,
+      "unit": "",
+      "category": "三文治"
+    },
+    {
+      "name": "冰柠乐",
+      "price": 15,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "冻柠七",
+      "price": 15,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "酸梅汁",
+      "price": 15,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "鸭屎香奶茶",
+      "price": 22,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "茉莉奶绿",
+      "price": 22,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "手打柠檬茶",
+      "price": 19,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "鸭屎香柠檬茶",
+      "price": 19,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "茉莉柠檬茶",
+      "price": 23,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "芒?柠檬茶",
+      "price": 23,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "巴拉柠檬茶",
+      "price": 23,
+      "unit": "",
+      "category": "夏日饮品"
+    },
+    {
+      "name": "冰美式",
+      "price": 26,
+      "unit": "",
+      "category": "现磨咖啡"
+    },
+    {
+      "name": "橙C美式",
+      "price": 29,
+      "unit": "",
+      "category": "现磨咖啡"
+    },
+    {
+      "name": "椰青美式",
+      "price": 32,
+      "unit": "",
+      "category": "现磨咖啡"
+    },
+    {
+      "name": "拿铁",
+      "price": 28,
+      "unit": "",
+      "category": "现磨咖啡"
+    },
+    {
+      "name": "椰奶拿铁",
+      "price": 28,
+      "unit": "",
+      "category": "现磨咖啡"
+    },
+    {
+      "name": "生椰拿铁",
+      "price": 32,
+      "unit": "",
+      "category": "现磨咖啡"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "精致拾光_2.jpg",
+      "text": "芒?柠檬茶 23元",
+      "reason": "「芒」后一字被杯图/水印遮挡，读不出，按规则用 ? 占位（菜名可能是芒果柠檬茶，未确认）"
+    },
+    {
+      "file": "精致拾光_2.jpg",
+      "text": "吉列猪扒 25元",
+      "reason": "价格右侧被遮挡，可辨「25」，按 25 元记录"
+    },
+    {
+      "file": "精致拾光_2.jpg",
+      "text": "巴拉柠檬茶 23元",
+      "reason": "原文如此（可能为「芭乐」），按原样转写"
+    },
+    {
+      "file": "精致拾光_1.jpg",
+      "text": "整张菜单",
+      "reason": "为门店水印菜单照片，底部有「扫描全能王 创建」水印，个别字被压住"
+    },
+    {
+      "file": "精致拾光_2.jpg",
+      "text": "牛扒三文治 48元",
+      "reason": "该行贴近照片底边，其后可能有更多菜品被裁掉"
+    }
+  ]
+}

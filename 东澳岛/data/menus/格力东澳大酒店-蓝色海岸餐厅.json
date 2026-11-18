@@ -1,0 +1,279 @@
+{
+  "shop": "格力东澳大酒店-蓝色海岸餐厅",
+  "kind": "packages",
+  "sources": [
+    "餐厅菜单/格力东澳大酒店-蓝色海岸餐厅/1.pdf",
+    "餐厅菜单/格力东澳大酒店-蓝色海岸餐厅/2.pdf"
+  ],
+  "packages": [
+    {
+      "name": "精选双人西式套餐",
+      "price": 399,
+      "groups": [
+        {
+          "group": "汤品",
+          "items": [
+            {
+              "name": "黄油蒜香法棍",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "渔夫海鲜南瓜浓汤",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "沙拉",
+          "items": [
+            {
+              "name": "金枪鱼沙拉",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "主菜",
+          "items": [
+            {
+              "name": "泰式柠檬香茅烤鸡",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "金蒜烤生蚝",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "香料海鲜炒饭",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "甜品",
+          "items": [
+            {
+              "name": "椰丝南糕",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "水果",
+          "items": [
+            {
+              "name": "水果拼盘",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "精选双人中式套餐",
+      "price": 399,
+      "groups": [
+        {
+          "group": "汤品",
+          "items": [
+            {
+              "name": "石九公冬瓜（位）",
+              "qty": "2位",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "凉菜",
+          "items": [
+            {
+              "name": "凉拌海草",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "主菜",
+          "items": [
+            {
+              "name": "鲜花椒蒸本岛珍珠斑",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "蒜蓉黄椒蒸生蚝",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "金牌蒜香乳鸽",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "时蔬",
+          "items": [
+            {
+              "name": "蒜蓉菜心",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "虾仁炒饭",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "水果",
+          "items": [
+            {
+              "name": "精美果盘",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "黄油蒜香法棍",
+      "price": null,
+      "unit": "",
+      "category": "汤品"
+    },
+    {
+      "name": "渔夫海鲜南瓜浓汤",
+      "price": null,
+      "unit": "",
+      "category": "汤品"
+    },
+    {
+      "name": "金枪鱼沙拉",
+      "price": null,
+      "unit": "",
+      "category": "沙拉"
+    },
+    {
+      "name": "泰式柠檬香茅烤鸡",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "金蒜烤生蚝",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "香料海鲜炒饭",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "椰丝南糕",
+      "price": null,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "水果拼盘",
+      "price": null,
+      "unit": "",
+      "category": "水果"
+    },
+    {
+      "name": "石九公冬瓜（位）",
+      "price": null,
+      "unit": "位",
+      "category": "汤品"
+    },
+    {
+      "name": "凉拌海草",
+      "price": null,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "鲜花椒蒸本岛珍珠斑",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "蒜蓉黄椒蒸生蚝",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "金牌蒜香乳鸽",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "蒜蓉菜心",
+      "price": null,
+      "unit": "",
+      "category": "时蔬"
+    },
+    {
+      "name": "虾仁炒饭",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "精美果盘",
+      "price": null,
+      "unit": "",
+      "category": "水果"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "格力东澳大酒店-蓝色海岸餐厅_1.jpg",
+      "text": "椰丝南糕",
+      "reason": "原文如此，疑为「椰丝南瓜糕」，未擅改"
+    },
+    {
+      "file": "格力东澳大酒店-蓝色海岸餐厅_1.jpg",
+      "text": "套餐内菜品",
+      "reason": "两张套餐图只标套餐总价 399 元，单品无标价，dishes 的 price 记为 null"
+    },
+    {
+      "file": "格力东澳大酒店-蓝色海岸餐厅_2.jpg",
+      "text": "石九公冬瓜（位）",
+      "reason": "原图标注按位（2位），名称与数量按原样保留"
+    }
+  ]
+}

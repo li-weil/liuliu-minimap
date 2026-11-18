@@ -1,0 +1,295 @@
+{
+  "shop": "珠海东澳岛安麓酒店-麓中餐厅",
+  "kind": "packages",
+  "sources": [
+    "餐厅菜单/珠海东澳岛安麓酒店-麓中餐厅/1.pdf",
+    "餐厅菜单/珠海东澳岛安麓酒店-麓中餐厅/2.pdf"
+  ],
+  "packages": [
+    {
+      "name": "麓秋·共盏",
+      "price": 688,
+      "groups": [
+        {
+          "group": "凉碟小序·静启至鲜",
+          "items": [
+            {
+              "name": "锦绣餐前三宝",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "文火慢煨·汤暖安麓",
+          "items": [
+            {
+              "name": "野姜花海贝花胶汤一位",
+              "qty": "一位",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "岭南入境·烟火修禅",
+          "items": [
+            {
+              "name": "亚麻籽脆皮鸡",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "紫苏酱/清蒸老虎斑",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "时蔬（清炒/鸡汤）",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "安麓泉甘·稻粱盈室",
+          "items": [
+            {
+              "name": "黑松露佛陀饭",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "云逸境·麓式甜莛",
+          "items": [
+            {
+              "name": "岭南甜品&时令水果（位）",
+              "qty": "一位",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "麓膳·飨宴",
+      "price": 4988,
+      "groups": [
+        {
+          "group": "凉碟小序·静启至鲜",
+          "items": [
+            {
+              "name": "精选冰菜芽沙拉/芒果山药慕斯",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "擂椒酱溏心鸽子蛋/翡翠汁深海甜虾",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "文火慢煨·汤暖安麓",
+          "items": [
+            {
+              "name": "野姜花海贝花胶汤一位",
+              "qty": "一位",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "岭南入境·烟火修禅",
+          "items": [
+            {
+              "name": "岭南山楂果香叉烧",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "芝士烤波士顿龙虾",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "杜远凉瓜火焰鲍鱼",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "龙虾汤芙蓉蒸深海东星斑",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "亚麻籽脆皮鸡",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "松露和牛煎烹海岛带子",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "虫草花百合云耳蒸排骨",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "鸡汤浸时蔬",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "安麓泉甘·稻粱盈室",
+          "items": [
+            {
+              "name": "黑松露和牛海皇饭一位",
+              "qty": "一位",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "云逸境·麓式甜莛",
+          "items": [
+            {
+              "name": "岭南甜品&时令水果（位）",
+              "qty": "一位",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "锦绣餐前三宝",
+      "price": null,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "野姜花海贝花胶汤",
+      "price": null,
+      "unit": "位",
+      "category": "汤"
+    },
+    {
+      "name": "亚麻籽脆皮鸡",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "紫苏酱/清蒸老虎斑",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "时蔬（清炒/鸡汤）",
+      "price": null,
+      "unit": "",
+      "category": "时蔬"
+    },
+    {
+      "name": "黑松露佛陀饭",
+      "price": null,
+      "unit": "",
+      "category": "主食"
+    },
+    {
+      "name": "岭南甜品&时令水果（位）",
+      "price": null,
+      "unit": "位",
+      "category": "甜品"
+    },
+    {
+      "name": "精选冰菜芽沙拉/芒果山药慕斯",
+      "price": null,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "擂椒酱溏心鸽子蛋/翡翠汁深海甜虾",
+      "price": null,
+      "unit": "",
+      "category": "凉菜"
+    },
+    {
+      "name": "岭南山楂果香叉烧",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "芝士烤波士顿龙虾",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "杜远凉瓜火焰鲍鱼",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "龙虾汤芙蓉蒸深海东星斑",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "松露和牛煎烹海岛带子",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "虫草花百合云耳蒸排骨",
+      "price": null,
+      "unit": "",
+      "category": "主菜"
+    },
+    {
+      "name": "鸡汤浸时蔬",
+      "price": null,
+      "unit": "",
+      "category": "时蔬"
+    },
+    {
+      "name": "黑松露和牛海皇饭",
+      "price": null,
+      "unit": "位",
+      "category": "主食"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "珠海东澳岛安麓酒店-麓中餐厅_2.jpg",
+      "text": "杜远凉瓜火焰鲍鱼",
+      "reason": "原文如此，「杜远」疑为「杜阮」（江门杜阮凉瓜），未擅改"
+    },
+    {
+      "file": "珠海东澳岛安麓酒店-麓中餐厅_1.jpg",
+      "text": "云逸境·麓式甜莛",
+      "reason": "分节标题原文较花体，另一张图 OCR 为「云藥逸境」，字符未完全确定"
+    },
+    {
+      "file": "珠海东澳岛安麓酒店-麓中餐厅_1.jpg",
+      "text": "整套菜单",
+      "reason": "两份都是高价套餐（688/4988 元），无单品价目表，dishes 的 price 均为 null"
+    }
+  ]
+}

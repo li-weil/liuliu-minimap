@@ -1,0 +1,194 @@
+{
+  "shop": "珠海东澳岛安麓酒店-安麓书院",
+  "kind": "mixed",
+  "sources": [
+    "餐厅菜单/珠海东澳岛安麓酒店-安麓书院/1.pdf",
+    "餐厅菜单/珠海东澳岛安麓酒店-安麓书院/2.pdf"
+  ],
+  "packages": [
+    {
+      "name": "麓屿秋叙双人下午茶",
+      "price": 528,
+      "groups": [
+        {
+          "group": "麓屿秋叙双人下午茶",
+          "items": [
+            {
+              "name": "芝士松露素菜春卷",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "蜂巢香芋牛肉酥",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "蟹肉大虾三明治",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "红菜头芝士塔",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "蜂蜜柚子芝士蛋糕",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "姜香芒果蛋糕",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "桂花酒酿玄米慕斯",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "咖啡歌剧院蛋糕",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "红丝绒奶酪司康",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "山楂果酱和稀凝脂奶油配桂花糖酱",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "水果碗",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "饮品（10选2）",
+          "items": [
+            {
+              "name": "九曲红梅/凤凰单丛/普洱茶/茉莉花茶",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "拿铁/美式/卡布奇诺/橙C美式",
+              "qty": "",
+              "unitPrice": null
+            },
+            {
+              "name": "陈皮红枣椰香奶茶/肉桂苹果茶",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "鸡蛋仔冰淇淋（单球）",
+      "price": 48,
+      "unit": "",
+      "category": "小食"
+    },
+    {
+      "name": "鸡蛋仔冰淇淋（双球）",
+      "price": 78,
+      "unit": "",
+      "category": "小食"
+    },
+    {
+      "name": "芝士松露素菜春卷",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "蜂巢香芋牛肉酥",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "蟹肉大虾三明治",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "红菜头芝士塔",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "蜂蜜柚子芝士蛋糕",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "姜香芒果蛋糕",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "桂花酒酿玄米慕斯",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "咖啡歌剧院蛋糕",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "红丝绒奶酪司康",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "山楂果酱和稀凝脂奶油配桂花糖酱",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    },
+    {
+      "name": "水果碗",
+      "price": null,
+      "unit": "",
+      "category": "下午茶"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "珠海东澳岛安麓酒店-安麓书院_1.jpg",
+      "text": "鸡蛋仔冰淇淋（单球）¥48 /（双球）¥78",
+      "reason": "该图为单品详情图（含两句文案），只有 2 个 SKU，已收进 dishes"
+    },
+    {
+      "file": "珠海东澳岛安麓酒店-安麓书院_2.jpg",
+      "text": "饮品（10选2）",
+      "reason": "饮品以「/」并列写成三行选项，未拆成 10 个单品"
+    },
+    {
+      "file": "珠海东澳岛安麓酒店-安麓书院_2.jpg",
+      "text": "套餐内点心",
+      "reason": "套餐只标总价 528 元，单品无标价，dishes 的 price 记为 null"
+    }
+  ]
+}

@@ -56,7 +56,7 @@
     </view>
 
     <view class="mission-body" wx:elif="{{currentCard.mission}}">
-      <view class="mission-label">试着做这个</view>
+      <view class="mission-label">{{currentCard.mode === 'food' ? '推荐这么吃' : '试着做这个'}}</view>
       <view class="mission-text">{{currentCard.mission}}</view>
     </view>
     <view class="mission-body mission-body-empty" wx:else>
@@ -74,7 +74,7 @@
     </view>
 
     <view class="mission-safety" wx:if="{{phase !== 'loading' && currentCard.safetyNote}}">
-      <view class="mission-safety-label">安全提醒</view>
+      <view class="mission-safety-label">{{currentCard.mode === 'food' ? '点单提醒' : '安全提醒'}}</view>
       <view class="mission-safety-text">{{currentCard.safetyNote}}</view>
     </view>
 

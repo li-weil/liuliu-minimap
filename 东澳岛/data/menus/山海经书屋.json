@@ -1,0 +1,383 @@
+{
+  "shop": "山海经书屋",
+  "kind": "mixed",
+  "sources": [
+    "餐厅菜单/山海经书屋/1.pdf",
+    "餐厅菜单/山海经书屋/2.pdf",
+    "餐厅菜单/山海经书屋/3.pdf"
+  ],
+  "packages": [
+    {
+      "name": "单人套餐",
+      "price": 61,
+      "groups": [
+        {
+          "group": "套餐内容",
+          "items": [
+            {
+              "name": "拿铁/手冲咖啡+蛋糕（抹茶红豆蛋糕/草莓蛋糕）",
+              "qty": "",
+              "unitPrice": 61
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "小程序专属4-5人套餐",
+      "price": 154,
+      "groups": [
+        {
+          "group": "小吃",
+          "items": [
+            {
+              "name": "小吃一份（绿茶瓜子/陈皮花生）",
+              "qty": "一份",
+              "unitPrice": null
+            }
+          ]
+        },
+        {
+          "group": "蛋糕",
+          "items": [
+            {
+              "name": "三块蛋糕（草莓/芒果千层）",
+              "qty": "三块",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": "空间活动包场（最多容纳人：46人）"
+    },
+    {
+      "name": "单人套餐（店内黑板）",
+      "price": 58,
+      "groups": [
+        {
+          "group": "套餐内容",
+          "items": [
+            {
+              "name": "任意1杯饮品+1块蛋糕",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "双人套餐（店内黑板）",
+      "price": 99,
+      "groups": [
+        {
+          "group": "套餐内容",
+          "items": [
+            {
+              "name": "任意2杯饮品+1块蛋糕",
+              "qty": "",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "经典美式",
+      "price": 30,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "拿铁",
+      "price": 35,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "澳白（热）",
+      "price": 36,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "卡布奇诺（热）",
+      "price": 36,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "香草拿铁",
+      "price": 36,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "榛果拿铁",
+      "price": 36,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "摩卡",
+      "price": 36,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "焦糖拿铁",
+      "price": 36,
+      "unit": "",
+      "category": "经典咖啡"
+    },
+    {
+      "name": "冰橙美式（冷）",
+      "price": 32,
+      "unit": "",
+      "category": "创意咖啡"
+    },
+    {
+      "name": "椰青美式（冷）",
+      "price": 36,
+      "unit": "",
+      "category": "创意咖啡"
+    },
+    {
+      "name": "生椰拿铁",
+      "price": 39,
+      "unit": "",
+      "category": "创意咖啡"
+    },
+    {
+      "name": "燕麦拿铁",
+      "price": 39,
+      "unit": "",
+      "category": "创意咖啡"
+    },
+    {
+      "name": "抹茶拿铁（不含咖啡因）",
+      "price": 36,
+      "unit": "",
+      "category": "创意咖啡"
+    },
+    {
+      "name": "海盐荔枝气泡水",
+      "price": 32,
+      "unit": "",
+      "category": "气泡"
+    },
+    {
+      "name": "湖绿柠檬气泡水",
+      "price": 32,
+      "unit": "",
+      "category": "气泡"
+    },
+    {
+      "name": "绝对日落",
+      "price": 32,
+      "unit": "",
+      "category": "气泡"
+    },
+    {
+      "name": "香水柠檬茶（冷）",
+      "price": null,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "陈皮柠檬茶（冷）",
+      "price": null,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "杨梅爆柠茶（冷）",
+      "price": 30,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "芭乐冰柠茶（冷）",
+      "price": 32,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "百香果多多（冷）",
+      "price": 35,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "混合水果茶（冷）",
+      "price": 36,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "芭乐椰椰（冷）",
+      "price": 36,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "荔枝冰椰（冷）",
+      "price": 32,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "天然柚子茶",
+      "price": 28,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "驱寒生姜茶",
+      "price": 28,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "养颜红枣茶",
+      "price": 28,
+      "unit": "",
+      "category": "果茶"
+    },
+    {
+      "name": "葡萄冰奶（冷）",
+      "price": 32,
+      "unit": "",
+      "category": "奶茶"
+    },
+    {
+      "name": "薄荷茉莉冰奶（冷）",
+      "price": 32,
+      "unit": "",
+      "category": "奶茶"
+    },
+    {
+      "name": "橙子冰奶（冷）",
+      "price": 32,
+      "unit": "",
+      "category": "奶茶"
+    },
+    {
+      "name": "奥利奥碎碎奶",
+      "price": 30,
+      "unit": "",
+      "category": "奶茶"
+    },
+    {
+      "name": "抹茶燕麦奶",
+      "price": 32,
+      "unit": "",
+      "category": "奶茶"
+    },
+    {
+      "name": "朱古力奶",
+      "price": 28,
+      "unit": "",
+      "category": "奶茶"
+    },
+    {
+      "name": "芭乐冰沙",
+      "price": 38,
+      "unit": "",
+      "category": "冰沙"
+    },
+    {
+      "name": "荔枝冰沙",
+      "price": 38,
+      "unit": "",
+      "category": "冰沙"
+    },
+    {
+      "name": "香橙冰沙",
+      "price": 38,
+      "unit": "",
+      "category": "冰沙"
+    },
+    {
+      "name": "提拉米苏",
+      "price": 35,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "芒果千层",
+      "price": 35,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "草莓慕斯",
+      "price": 35,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "抹茶红豆慕斯",
+      "price": 35,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "厚乳酪吐司",
+      "price": 25,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "肉松小贝",
+      "price": 18,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "华夫饼",
+      "price": 25,
+      "unit": "",
+      "category": "甜品"
+    },
+    {
+      "name": "腰果",
+      "price": 25,
+      "unit": "",
+      "category": "小吃"
+    },
+    {
+      "name": "泡面",
+      "price": 15,
+      "unit": "",
+      "category": "小吃"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "山海经书屋_1.jpg",
+      "text": "单人套餐 ¥61",
+      "reason": "团购页单人套餐 61 元；图3店内套餐黑板写的是 58 元，两者并存，分别收录"
+    },
+    {
+      "file": "山海经书屋_3.jpg",
+      "text": "香水柠檬茶（冷）/ 陈皮柠檬茶（冷）",
+      "reason": "这两行在价目表上右侧没有标价（其余行都有），price 记为 null"
+    },
+    {
+      "file": "山海经书屋_3.jpg",
+      "text": "湖绿柠檬气泡水 / 绝对日落",
+      "reason": "原文如此（「湖绿」疑为口味名），未擅改"
+    },
+    {
+      "file": "山海经书屋_2.jpg",
+      "text": "小吃一份（绿茶瓜子/陈皮花生）/ 三块蛋糕（草莓/芒果千层）",
+      "reason": "套餐内写法是「多选一」的组合描述，未拆成单品"
+    }
+  ]
+}

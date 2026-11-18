@@ -1,0 +1,196 @@
+{
+  "shop": "洒哥海鲜餐厅",
+  "kind": "packages",
+  "sources": [
+    "餐厅菜单/洒哥海鲜餐厅/1.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/10.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/11.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/2.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/3.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/4.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/5.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/6.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/7.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/8.pdf",
+    "餐厅菜单/洒哥海鲜餐厅/9.pdf"
+  ],
+  "packages": [
+    {
+      "name": "海鲜套餐1",
+      "price": 388,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "海虾",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "蟹",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "花甲",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "圣子",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "鲍鱼",
+              "qty": "5只",
+              "unitPrice": null
+            },
+            {
+              "name": "花螺",
+              "qty": "0.5斤",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "海鲜套餐2",
+      "price": 488,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "海虾",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "蟹",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "青口",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "花螺",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "花甲",
+              "qty": "1斤",
+              "unitPrice": null
+            },
+            {
+              "name": "鲍鱼",
+              "qty": "8只",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "name": "海鲜套餐3",
+      "price": 688,
+      "groups": [
+        {
+          "group": "主食",
+          "items": [
+            {
+              "name": "海虾",
+              "qty": "2斤",
+              "unitPrice": null
+            },
+            {
+              "name": "蟹",
+              "qty": "2斤",
+              "unitPrice": null
+            },
+            {
+              "name": "青口",
+              "qty": "2斤",
+              "unitPrice": null
+            },
+            {
+              "name": "花螺",
+              "qty": "1.5斤",
+              "unitPrice": null
+            },
+            {
+              "name": "花甲",
+              "qty": "2斤",
+              "unitPrice": null
+            }
+          ]
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "dishes": [
+    {
+      "name": "海虾",
+      "price": null,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "蟹",
+      "price": null,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "花甲",
+      "price": null,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "圣子",
+      "price": null,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "鲍鱼",
+      "price": null,
+      "unit": "只",
+      "category": "海鲜"
+    },
+    {
+      "name": "花螺",
+      "price": null,
+      "unit": "斤",
+      "category": "海鲜"
+    },
+    {
+      "name": "青口",
+      "price": null,
+      "unit": "斤",
+      "category": "海鲜"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "洒哥海鲜餐厅_1.jpg",
+      "text": "整组 1-8 号图片",
+      "reason": "这 8 张是纸质菜单照片，OCR 基本读不出、且无可靠切图，属于次要店铺，本次未转写（避免猜写）；已转写的只有 9/10/11 三张团购套餐截图"
+    },
+    {
+      "file": "洒哥海鲜餐厅_9.jpg",
+      "text": "海鲜套餐1/2/3",
+      "reason": "套餐内只写重量（1斤/5只等），无单价；套餐总价分别为 388/488/688 元"
+    }
+  ]
+}

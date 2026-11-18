@@ -54,7 +54,20 @@ const SPOTS_DATA = [
   { "map_name": "万海平波", "amap_name": "万海平波", "coords": "113.716655,22.021730" },
   { "map_name": "观月台", "amap_name": "观月台", "coords": "113.701011,22.019421" },
   { "map_name": "东澳岛-铳城亭", "amap_name": "东澳岛-铳城", "coords": "113.721045,22.024948" },
-  { "map_name": "街心公园", "amap_name": "街心公园", "coords": "113.714679,22.019882" }
+  { "map_name": "街心公园", "amap_name": "街心公园", "coords": "113.714679,22.019882" },
+  { "map_name": "珠海东澳岛万豪度假酒店", "amap_name": "珠海东澳岛万豪度假酒店", "coords": "113.703981,22.025062", "category": "stay" },
+  { "map_name": "阿丽拉珠海东澳岛", "amap_name": "阿丽拉珠海东澳岛", "coords": "113.706530,22.009122", "category": "stay" },
+  { "map_name": "珠海东澳岛安麓酒店", "amap_name": "珠海东澳岛安麓酒店", "coords": "113.726610,22.020223", "category": "stay" },
+  { "map_name": "格力东澳大酒店", "amap_name": "格力东澳大酒店", "coords": "113.703204,22.019507", "category": "stay" },
+  { "map_name": "珠海东澳岛可域度假村", "amap_name": "珠海东澳岛可域度假村", "coords": "113.706252,22.015404", "category": "stay" },
+  { "map_name": "万觅餐吧", "amap_name": "东澳湾万觅餐吧(东澳岛店)", "coords": "113.714015,22.017014", "category": "food" },
+  { "map_name": "东发海鲜酒家", "amap_name": "东发海鲜酒家", "coords": "113.715075,22.020275", "category": "food" },
+  { "map_name": "是旦有愉食堂", "amap_name": "是旦有愉食堂(东澳岛店)", "coords": "113.714420,22.020122", "category": "food" },
+  { "map_name": "是旦海鲜餐厅", "amap_name": "是旦海鲜餐厅总店", "coords": "113.713932,22.018573", "category": "food" },
+  { "map_name": "潮汐咖啡", "amap_name": "潮汐咖啡", "coords": "113.715475,22.020075", "category": "food" },
+  { "map_name": "精致拾光", "amap_name": "精致拾光", "coords": "113.714515,22.019481", "category": "food" },
+  { "map_name": "聚鲜楼", "amap_name": "聚鲜楼·东澳岛酒楼·海鲜加工", "coords": "113.714792,22.019740", "category": "food" },
+  { "map_name": "东澳岛游客服务中心", "amap_name": "东澳岛游客服务中心", "coords": "113.715672,22.020272", "category": "shop" },
 ];
 
 exports.main = async () => {
@@ -65,6 +78,15 @@ exports.main = async () => {
   } catch (e) {
     // 集合已存在时会抛错，忽略
     console.log('[INIT] spots 集合已存在（或创建失败）:', e.message);
+  }
+
+  // dongaoGenerate 每次生成都会写一张卡片到 dongaoCards；
+  // 集合不存在时写入会报 -502005 并被静默吞掉，所以这里顺手建上。
+  try {
+    await db.createCollection('dongaoCards');
+    console.log('[INIT] dongaoCards 集合已创建');
+  } catch (e) {
+    console.log('[INIT] dongaoCards 集合已存在（或创建失败）:', e.message);
   }
 
   const collection = db.collection('spots');
@@ -91,6 +113,7 @@ exports.main = async () => {
           map_name: entry.map_name,
           amap_name: entry.amap_name || '',
           coords: entry.coords,
+          category: entry.category || 'spot',
           location: db.Geo.Point(lng, lat),
         },
       });
@@ -102,26 +125,11 @@ exports.main = async () => {
     }
   }
 
-  // Create geo index
-  try {
-    await db.command({
-      createIndexes: 'spots',
-      indexes: [{
-        key: { location: '2dsphere' },
-        name: 'location_geo',
-      }],
-    });
-    console.log('[INDEX] geo index created on location');
-  } catch (e) {
-    // Fallback: try runCommand approach
-    try {
-      await collection.createIndex({ location: '2dsphere' });
-      console.log('[INDEX] geo index created (fallback)');
-    } catch (e2) {
-      console.error('[INDEX] createIndex failed:', e.message, '| fallback:', e2.message);
-      console.error('[INDEX] 请在云开发控制台 → 数据库 → spots → 索引管理 → 新建索引: location 字段, 地理位置索引');
-    }
-  }
+  // wx-server-sdk 没有创建索引的接口（db.command 是操作符对象，不是函数），
+  // 所以地理索引只能由控制台或 CLI 管理，本函数不再做无效尝试。
+  // 换新环境时必须手动补建一次，否则 dongaoRecommend 的 geoNear 查询无索引：
+  //   云开发控制台 → 数据库 → spots → 索引管理 → location 字段，地理位置索引。
+  console.log('[INDEX] location 2dsphere 索引由控制台/CLI 维护（本环境索引名：经纬度）');
 
   return { inserted, skipped, total: SPOTS_DATA.length };
 };

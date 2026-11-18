@@ -716,6 +716,7 @@ const ENDPOINTS = {
   dongaoGenerate: {
     cloudName: 'dongaoGenerate',
     normalizeCloudResponse: (data) => ({
+      mode: (data && data.mode) === 'food' ? 'food' : 'spot',
       mission: (data && data.mission) || '',
       tips: (data && data.tips) || '',
       safetyNote: (data && data.safetyNote) || '',

@@ -1,0 +1,16 @@
+{
+  "shop": "潮汐咖啡",
+  "kind": "priceList",
+  "sources": [
+    "餐厅菜单/潮汐咖啡/1.pdf"
+  ],
+  "packages": [],
+  "dishes": [],
+  "uncertain": [
+    {
+      "file": "潮汐咖啡_1.jpg",
+      "text": "扫码点餐",
+      "reason": "该图只有点餐二维码（含微信小程序码），没有任何菜单文字，故 dishes/packages 为空"
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "shop": "是旦有愉食堂",
+  "kind": "priceList",
+  "sources": [
+    "餐厅菜单/是旦有愉食堂/1.pdf"
+  ],
+  "packages": [],
+  "dishes": [
+    {
+      "name": "韭菜水晶饺",
+      "price": 25,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "虾饺皇",
+      "price": 21,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "糯米鸡",
+      "price": 17,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "蟹籽烧卖",
+      "price": 23,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "广式蒸排骨",
+      "price": 25,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "金钱肚",
+      "price": 26,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "豉汁凤爪",
+      "price": 23,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "酸辣粉",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "重庆小面",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "肥肠刀削面",
+      "price": 28,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "牛肉刀削面",
+      "price": 28,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "红烧肥肠面",
+      "price": 28,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "红烧牛肉面",
+      "price": 28,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "豆浆",
+      "price": 6,
+      "unit": "",
+      "category": "饮品"
+    },
+    {
+      "name": "粥",
+      "price": 10,
+      "unit": "",
+      "category": "粥"
+    },
+    {
+      "name": "小笼包",
+      "price": 25,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "笑口叉烧包",
+      "price": null,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "爆汁流沙包",
+      "price": 17,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "鸡蛋肉肠粉",
+      "price": 16,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "手工水饺",
+      "price": 26,
+      "unit": "",
+      "category": "点心"
+    },
+    {
+      "name": "桂林米粉",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "猪杂汤粉/面",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "原味汤粉/面",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "清汤抄手",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "干拌抄手",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    },
+    {
+      "name": "红油抄手",
+      "price": 26,
+      "unit": "",
+      "category": "面食"
+    }
+  ],
+  "uncertain": [
+    {
+      "file": "是旦有愉食堂_1.jpg",
+      "text": "笑口叉烧包 / ?元",
+      "reason": "价格被「扫描全能王」水印盖住，读不出，price 记为 null"
+    },
+    {
+      "file": "是旦有愉食堂_1.jpg",
+      "text": "另加：牛肉10元 肥肠10元 杂酱8元 煎蛋5元",
+      "reason": "菜单板底部的加料价，不是独立菜品，未放进 dishes"
+    },
+    {
+      "file": "是旦有愉食堂_1.jpg",
+      "text": "粥",
+      "reason": "只有单品名「粥」，未写具体种类"
+    },
+    {
+      "file": "是旦有愉食堂_1.jpg",
+      "text": "整张菜单板",
+      "reason": "店面菜单板照片，带「扫描全能王」水印与「是旦必吃榜」大字，部分小字被水印遮挡"
+    }
+  ]
+}

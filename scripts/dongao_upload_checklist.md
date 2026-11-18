@@ -138,3 +138,64 @@
 ```
 
 部署后可在东澳岛页面开发工具里点击“测试爬虫”。成功时日志应显示 `weather=OK 24h`，失败时会返回 `missing_weathercn_api_key`、`weathercn_api_unauthorized` 或 `weathercn_hourly_no_data` 等明确原因。
+
+## 七、语料文件（2026-11-08 新增，2026-11-10 二期扩充）
+
+MVP 改造把新采集资料做成 AI 生成用的检索式语料，**并行新增**，不替换原有 `dongao-content/`。
+
+二期（2026-11-10）加入住宿/餐饮/游客服务中心点位：点位库 52 → 65，餐饮点位生成「美食推荐」卡片（`mode=food`），景点/住宿仍生成漫步任务。
+
+### 7.1 目录与文件
+
+云存储路径：`dongao-corpus/`
+
+| 文件 | 说明 |
+|---|---|
+| `_index.json` | L2 片区语料 + L3 风格样本（全局一份） |
+| `{map_name}.json` × N | L1 点位档案；文件名必须与 `spots.map_name` 完全一致（N 见构建报告 matched 数） |
+
+本地源文件：`东澳岛/data/corpus/`（由 `scripts/build_dongao_corpus.py` 生成）。
+
+### 7.2 上传步骤（2026-11-11 已在云端执行完）
+
+以下 5 步由开发代理直接通过云开发 API Key（`cbx`）执行，实际命令与结果见 7.4。
+换新环境、或整环境重装时，按同样顺序做。
+
+1. **补点位库**：调用 `initDongaoSpots`，把 13 个二期新点位写进 `spots`（按 `map_name` 去重，重复执行安全）；
+2. **部署 `dongaoGenerate`**：必须带 `corpus.js`（缺这个文件云函数启动即报错，页面表现为「生成失败」）；
+3. **上传语料**：`东澳岛/data/corpus/` 下全部 `.json` → 云存储 `dongao-corpus/`，共 **26 个**（1 个 `_index.json` + 25 份 L1）；不要传 `README.md`；
+4. **确认环境变量**：`dongaoGenerate` 需要 `DEEPSEEK_API_KEY` 与 `DONGAO_CORPUS_ENABLED=1`（默认开启；`0` = 回滚）；
+5. **确认集合**：`dongaoCards` 必须存在（`initDongaoSpots` 会顺带创建）。缺集合时每次生成都会报 `-502005` 并静默丢历史卡。
+
+### 7.3 校验（已执行，结果见 `docs/东澳岛AI生成改造说明.md` §5）
+
+1. 生成返回的 `debug.modelInput.corpus` 应包含 `hit`（L1/L2/none）、`playCount`、`injectedChars`；
+2. 若 `hit=none`，检查文件名是否与 `spots.map_name` 完全一致（含括号、全半角）；
+3. 美食推荐（二期）在码头片区触发，应满足：
+   - 返回 `mode=food`、`debug.modelInput.corpus.mode=food`、`dishCount>0`；
+   - 推荐里出现的菜名都能在该点位 `corpus/{map_name}.json` 的 `menu.dishes` **或** `menu.packages[].items` 里找到（很多店只有套餐截图，菜名在套餐内容里），且**不含菜价**；
+   - 无菜单的餐饮点位（潮汐咖啡）按设计退化为 `mode=spot`；
+4. 回滚：`DONGAO_CORPUS_ENABLED=0`，无需重新部署代码。
+
+### 7.4 本次实际执行记录（2026-11-11）
+
+| 步骤 | 命令 | 结果 |
+| --- | --- | --- |
+| 部署 `initDongaoSpots` | `cbx fn deploy initDongaoSpots --dir cloudfunctions/initDongaoSpots --force` | 13:11 部署成功（Nodejs16.13 / 20s） |
+| 初始化点位 | `cbx fn invoke initDongaoSpots -d '{}' --json` | `inserted:13, skipped:52, total:65` |
+| 部署 `dongaoGenerate` | `cbx fn deploy dongaoGenerate --dir cloudfunctions/dongaoGenerate --force` | 13:15 部署成功（60s / 256MB / 环境变量保留） |
+| 上传语料 | `cbx storage upload <file> dongao-corpus/<name>` × 26 | 26/26 成功，云存储与本地同名同大小，无缺失无多余 |
+| 点位复核 | `db nosql execute`（`find spots`） | 65 条无重复，`location` 齐全，类别 `spot52/stay5/food7/shop1` |
+| 集合复核 | `db nosql execute`（`listCollections`） | 14 个集合，含 `dongaoCards`（当前 0 条） |
+
+备注：
+
+- CLI 直接部署会保留已有环境变量与运行时配置（实测 `cbx fn deploy … --force` 后 `DEEPSEEK_API_KEY`、`DONGAO_CORPUS_ENABLED` 都还在）；改环境变量走 `cbx config pull fn dongaoGenerate --stdout --json` → 改 `.tmp` 里配置 → 建 `cloudbaserc.json` → `cbx config update fn dongaoGenerate -y`，完成后删掉 `cloudbaserc.json`（含密钥，已在 `.gitignore`）；
+- `spots` 的地理索引无法在云函数里建（`wx-server-sdk` 没有建索引 API），换新环境需在控制台手动补一次：数据库 → `spots` → 索引管理 → `location` 地理位置索引。
+
+### 7.5 云端自检脚本
+
+    node scripts/verify_dongao_cloud.js --no-generate   # 只查存储/点位库/集合
+    node scripts/verify_dongao_cloud.js                 # 加跑 7 次生成断言（消耗少量模型额度）
+
+通过时末行输出「全部通过：东澳岛二期云端状态正常。」；失败会列出具体项。
