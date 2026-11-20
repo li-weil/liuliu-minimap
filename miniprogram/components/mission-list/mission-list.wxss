@@ -1,0 +1,439 @@
+.mission-accordion {
+  border-top: 1rpx solid rgba(126, 111, 89, 0.14);
+}
+
+.mission-group {
+  border-bottom: 1rpx solid rgba(126, 111, 89, 0.14);
+}
+
+.mission-group:last-child {
+  border-bottom: none;
+}
+
+.mission-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 24rpx 0;
+  transition-property: transform, opacity, background-color;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mission-row:active {
+  transform: scale(0.99);
+  opacity: 0.84;
+}
+
+.mission-status {
+  width: 42rpx;
+  height: 42rpx;
+  margin-right: 16rpx;
+  margin-top: 6rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 3rpx solid rgba(126, 111, 89, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fffdf8;
+  box-sizing: border-box;
+}
+
+.mission-status-done {
+  border-color: #66704a;
+  background: rgba(102, 112, 74, 0.1);
+}
+
+.mission-status-inner {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: #66704a;
+}
+
+.mission-copy {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+}
+
+.mission-row-label {
+  display: inline-block;
+  margin-bottom: 8rpx;
+  padding: 7rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(98, 98, 71, 0.1);
+  color: #626247;
+  font-size: 20rpx;
+  line-height: 1.2;
+}
+
+.mission-row-title {
+  color: #241f19;
+  font-size: 28rpx;
+  line-height: 1.68;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.mission-row-title-done {
+  color: #8a8173;
+}
+
+.mission-row-action {
+  flex-shrink: 0;
+  margin-top: 8rpx;
+  padding: 10rpx 14rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #faf4ea;
+  color: #746b5f;
+  font-size: 21rpx;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.mission-group-expanded .mission-row-action {
+  background: rgba(98, 98, 71, 0.1);
+  color: #626247;
+}
+
+.mission-inline-shell {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-14rpx);
+  transition-property: max-height, opacity, transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: max-height, opacity, transform;
+}
+
+.mission-inline-shell-open {
+  max-height: 4200rpx;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.mission-inline-panel {
+  margin: 0 0 24rpx 58rpx;
+  padding: 22rpx;
+  border-radius: 28rpx;
+  background: #faf4ea;
+  box-shadow: inset 0 0 0 1rpx rgba(126, 111, 89, 0.14);
+  box-sizing: border-box;
+  transform: scale(0.985);
+  transition-property: transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mission-inline-shell-open .mission-inline-panel {
+  transform: scale(1);
+}
+
+.mission-inline-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18rpx;
+}
+
+.mission-inline-title {
+  color: #241f19;
+  font-size: 29rpx;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.mission-inline-copy {
+  margin-top: 8rpx;
+  color: #746b5f;
+  font-size: 22rpx;
+  line-height: 1.55;
+}
+
+.recording-badge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-left: 16rpx;
+  padding: 10rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(165, 84, 73, 0.1);
+  color: #a55449;
+  font-size: 21rpx;
+  line-height: 1.2;
+}
+
+.recording-dot {
+  width: 14rpx;
+  height: 14rpx;
+  margin-right: 8rpx;
+  border-radius: 50%;
+  background: #a55449;
+  animation: recording-pulse 1.3s ease-in-out infinite;
+}
+
+.mission-inline-row {
+  display: flex;
+  width: 100%;
+}
+
+.mission-inline-btn {
+  flex: 1;
+  min-width: 0;
+  min-height: 88rpx;
+  margin-right: 12rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fffdf8;
+  color: #3a332b;
+  font-size: 25rpx;
+  line-height: 1.2;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  box-shadow: inset 0 0 0 1rpx rgba(126, 111, 89, 0.16);
+  overflow: hidden;
+  transition-property: transform, opacity, background-color, box-shadow;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mission-inline-btn:last-child {
+  margin-right: 0;
+}
+
+.mission-inline-btn:active {
+  transform: scale(0.98);
+  opacity: 0.86;
+}
+
+.mission-inline-btn-recording {
+  background: rgba(165, 84, 73, 0.1);
+  color: #a55449;
+  box-shadow: inset 0 0 0 1rpx rgba(165, 84, 73, 0.24);
+}
+
+.mission-inline-btn-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  width: 100%;
+  padding: 0 10rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.mission-inline-icon-image {
+  width: 30rpx;
+  height: 30rpx;
+  margin-right: 9rpx;
+  flex-shrink: 0;
+  opacity: 0.82;
+}
+
+.mission-inline-btn-text {
+  display: block;
+  font-size: 25rpx;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mission-inline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+
+.mission-inline-pill {
+  margin-right: 10rpx;
+  margin-bottom: 10rpx;
+  padding: 9rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 21rpx;
+  line-height: 1.2;
+  color: #626247;
+  background: rgba(98, 98, 71, 0.1);
+}
+
+.mission-note-area {
+  width: 100%;
+  min-height: 156rpx;
+  margin-top: 18rpx;
+  padding: 22rpx;
+  box-sizing: border-box;
+  border-radius: 24rpx;
+  background: #fffdf8;
+  border: 1rpx solid rgba(126, 111, 89, 0.16);
+  font-size: 25rpx;
+  line-height: 1.7;
+  color: #3a332b;
+}
+
+.media-preview-block {
+  margin-top: 18rpx;
+}
+
+.media-scroll {
+  display: flex;
+}
+
+.media-thumb {
+  position: relative;
+  margin-right: 14rpx;
+}
+
+.media-image {
+  width: 170rpx;
+  height: 170rpx;
+  border-radius: 24rpx;
+  background: #efe7da;
+}
+
+.media-remove {
+  position: absolute;
+  top: 10rpx;
+  right: 10rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(36, 31, 25, 0.78);
+  box-shadow: 0 8rpx 18rpx rgba(36, 31, 25, 0.18);
+}
+
+.media-remove:active,
+.asset-remove-btn:active {
+  transform: scale(0.94);
+  opacity: 0.86;
+}
+
+.media-remove-icon {
+  font-size: 30rpx;
+  line-height: 1;
+  color: #fffdf8;
+  font-weight: 700;
+}
+
+.asset-list {
+  margin-top: 16rpx;
+  border-radius: 24rpx;
+  background: #fffdf8;
+  box-shadow: inset 0 0 0 1rpx rgba(126, 111, 89, 0.14);
+}
+
+.asset-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18rpx 18rpx;
+  border-bottom: 1rpx solid rgba(126, 111, 89, 0.12);
+}
+
+.asset-row:last-child {
+  border-bottom: none;
+}
+
+.asset-row-recording {
+  background: rgba(165, 84, 73, 0.08);
+}
+
+.asset-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+}
+
+.asset-title {
+  color: #241f19;
+  font-size: 26rpx;
+  line-height: 1.35;
+  font-weight: 650;
+  word-break: break-word;
+}
+
+.asset-meta {
+  margin-top: 7rpx;
+  color: #746b5f;
+  font-size: 21rpx;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.asset-remove-btn {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(165, 84, 73, 0.1);
+  color: #a55449;
+  transition-property: transform, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.asset-remove-icon {
+  font-size: 32rpx;
+  line-height: 1;
+  color: #a55449;
+  font-weight: 700;
+}
+
+.mission-checkin-btn {
+  width: 100%;
+  margin-top: 18rpx;
+  min-height: 88rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.mission-checkin-btn {
+  background: #626247;
+  color: #fffdf8;
+  box-shadow: 0 12rpx 22rpx rgba(63, 64, 47, 0.16);
+}
+
+.mission-checkin-btn[disabled] {
+  background: #9a9082;
+  box-shadow: none;
+  opacity: 0.72;
+}
+
+@keyframes recording-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.32);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}

@@ -1,0 +1,173 @@
+.achievement-detail-page {
+  background:
+    radial-gradient(circle at top center, rgba(255, 240, 220, 0.74), transparent 28%),
+    linear-gradient(180deg, #fffdf8 0%, #f5efe6 100%);
+}
+
+.detail-shell {
+  padding-top: 24rpx;
+}
+
+.detail-hero {
+  display: flex;
+  justify-content: center;
+}
+
+.detail-badge-image {
+  width: 420rpx;
+  height: 420rpx;
+  display: block;
+}
+
+.detail-badge-placeholder {
+  border-radius: 44rpx;
+  background:
+    radial-gradient(circle at top right, rgba(255, 241, 220, 0.96), transparent 42%),
+    linear-gradient(135deg, #f0e0c7, #d9c2a0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5b4b37;
+}
+
+.detail-badge-placeholder-glyph {
+  font-size: 82rpx;
+  font-weight: 600;
+}
+
+.detail-copy {
+  margin-top: 12rpx;
+  text-align: center;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.detail-title {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #2e261d;
+}
+
+.detail-status {
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(145, 133, 117, 0.14);
+  color: #7d7566;
+  font-size: 24rpx;
+}
+
+.detail-status-on {
+  background: #5a5a40;
+  color: #fff;
+}
+
+.detail-desc {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #54493d;
+}
+
+.detail-meta {
+  margin-top: 24rpx;
+  display: flex;
+  justify-content: center;
+  gap: 28rpx;
+  flex-wrap: wrap;
+}
+
+.detail-meta-item,
+.detail-time {
+  font-size: 24rpx;
+  color: #817868;
+}
+
+.detail-meta-strong {
+  color: #2f2a22;
+  font-weight: 600;
+}
+
+.detail-time {
+  margin-top: 18rpx;
+}
+
+.detail-progress-board {
+  margin-top: 40rpx;
+  padding: 28rpx;
+  border-radius: 38rpx;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1rpx solid #e9dfcf;
+}
+
+.detail-progress-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #3c342a;
+}
+
+.detail-progress-track {
+  margin-top: 26rpx;
+  display: flex;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.detail-progress-node {
+  flex: 1;
+  text-align: center;
+}
+
+.detail-progress-badge {
+  width: 72rpx;
+  height: 72rpx;
+  margin: 0 auto;
+  border-radius: 22rpx;
+  background: rgba(233, 226, 213, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: grayscale(1);
+  opacity: 0.46;
+}
+
+.detail-progress-badge-on {
+  filter: none;
+  opacity: 1;
+}
+
+.detail-progress-badge-current {
+  box-shadow: 0 0 0 4rpx rgba(90, 90, 64, 0.18);
+}
+
+.detail-progress-image {
+  width: 60rpx;
+  height: 60rpx;
+}
+
+.detail-progress-glyph {
+  font-size: 24rpx;
+  color: #5c4c36;
+}
+
+.detail-progress-label {
+  margin-top: 10rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+  color: #8b816f;
+}
+
+.detail-actions {
+  margin-top: 36rpx;
+  display: flex;
+  gap: 20rpx;
+}
+
+.detail-action-btn {
+  flex: 1;
+}

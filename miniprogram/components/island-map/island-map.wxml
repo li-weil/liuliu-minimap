@@ -1,0 +1,11 @@
+<view class="island-map">
+  <view class="island-map-frame">
+    <canvas
+      id="islandCanvas"
+      class="island-map-canvas"
+      type="2d"
+      bindtap="onMapTap"
+    ></canvas>
+  </view>
+  <view class="island-map-caption">点景点可设为当前位置 · 路线是探索示意，非实际导航</view>
+</view>

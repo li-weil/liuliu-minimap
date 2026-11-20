@@ -1,0 +1,15 @@
+node_modules/
+miniprogram_npm/
+dist/
+.DS_Store
+*.log
+private/
+feature-worklog/
+
+.playwright-mcp/
+.codegraph/
+.claude/
+CLAUDE.md
+superpowers/
+campus-data/
+tools/

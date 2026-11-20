@@ -1,0 +1,315 @@
+<view class="detail-page">
+  <view wx:if="{{loading}}" class="detail-loading">
+    <view class="loading-ticket">
+      <view class="loading-line loading-line-title"></view>
+      <view class="loading-line"></view>
+      <view class="loading-line loading-line-short"></view>
+      <view class="loading-grid">
+        <view class="loading-cell"></view>
+        <view class="loading-cell"></view>
+        <view class="loading-cell"></view>
+      </view>
+    </view>
+    <view class="loading-map"></view>
+  </view>
+
+  <block wx:elif="{{walk}}">
+    <view class="detail-content">
+      <view class="detail-hero">
+        <view class="detail-hero-ribbon">
+          <view>{{source === 'feed' || source === 'share' ? '来自分享' : '我的足迹'}}</view>
+          <view>{{walk.detailMetrics.statusLabel}}</view>
+        </view>
+
+        <view class="detail-hero-body">
+          <view class="detail-hero-kicker">{{walk.detailMetrics.modeLabel}}</view>
+          <view class="detail-title">{{walk.themeTitle || '未命名漫步'}}</view>
+          <view class="detail-desc">{{walk.themeSnapshot.description || '这次漫步还没有留下主题说明。'}}</view>
+
+          <view class="detail-place-line">
+            <view class="detail-place-main">{{walk.locationName || '未记录地点'}}</view>
+            <view class="detail-place-sub">{{walk.createdAtLabel || '时间未记录'}}</view>
+          </view>
+
+          <view class="progress-panel">
+            <view class="progress-panel-head">
+              <view class="progress-label">任务完成</view>
+              <view class="progress-value">{{walk.detailMetrics.completedCount}} / {{walk.detailMetrics.missionTotalCount}}</view>
+            </view>
+            <view class="progress-track">
+              <view class="progress-fill" style="width: {{walk.detailMetrics.missionProgressPercent}}%;"></view>
+            </view>
+          </view>
+
+          <button wx:if="{{canResume}}" class="primary-btn detail-resume-btn" bindtap="handleResumeWalk">
+            继续记录这次漫步
+          </button>
+        </view>
+      </view>
+
+      <view class="detail-stats">
+        <view class="detail-stat">
+          <view class="detail-stat-value">{{walk.routeStats.distanceLabel || '0 m'}}</view>
+          <view class="detail-stat-label">行走距离</view>
+        </view>
+        <view class="detail-stat">
+          <view class="detail-stat-value">{{walk.routeStats.durationLabel || '0秒'}}</view>
+          <view class="detail-stat-label">记录时长</view>
+        </view>
+        <view class="detail-stat">
+          <view class="detail-stat-value">{{walk.detailMetrics.evidenceCount}}</view>
+          <view class="detail-stat-label">采撷素材</view>
+        </view>
+      </view>
+
+      <view wx:if="{{walk.detailMetrics.hasRoute}}" class="route-panel">
+        <view class="panel-head">
+          <view>
+            <view class="panel-kicker">路线回看</view>
+            <view class="panel-title">走过的位置</view>
+          </view>
+          <view class="panel-side-label">{{walk.detailMetrics.visibilityLabel}}</view>
+        </view>
+
+        <view class="route-map-wrap">
+          <map
+            class="route-map"
+            longitude="{{mapCenterLongitude}}"
+            latitude="{{mapCenterLatitude}}"
+            scale="15"
+            show-location
+            polyline="{{routePolyline}}"
+          />
+        </view>
+
+        <view class="route-timeline">
+          <view class="route-time-item">
+            <view class="route-time-label">开始</view>
+            <view class="route-time-value">{{walk.routeStats.startedLabel || '未记录'}}</view>
+          </view>
+          <view class="route-time-item">
+            <view class="route-time-label">结束</view>
+            <view class="route-time-value">{{walk.routeStats.stoppedLabel || '未记录'}}</view>
+          </view>
+          <view class="route-time-item">
+            <view class="route-time-label">轨迹点</view>
+            <view class="route-time-value">{{walk.detailMetrics.routePointCount}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="route-empty-panel">
+        <view class="route-empty-kicker">路线回看</view>
+        <view class="route-empty-copy">这次漫步没有开启位置记录，暂无路线可回看。</view>
+      </view>
+
+      <view class="mission-archive">
+        <view class="panel-head mission-archive-head">
+          <view>
+            <view class="panel-kicker">任务回看</view>
+            <view class="panel-title">一路收集的线索</view>
+          </view>
+          <view class="panel-side-label">{{walk.detailMetrics.photoCount}} 图 · {{walk.detailMetrics.videoCount}} 影 · {{walk.detailMetrics.audioCount}} 音</view>
+        </view>
+
+        <view wx:if="{{walk.missionItems.length}}" class="mission-stack">
+          <block wx:for="{{walk.missionItems}}" wx:key="mission" wx:for-item="missionItem">
+            <view class="mission-item">
+              <view
+                class="mission-row {{activeMission === missionItem.mission ? 'mission-row-active' : ''}}"
+                bindtap="switchMissionTab"
+                data-mission="{{missionItem.mission}}"
+              >
+                <view class="mission-marker {{missionItem.isCompleted ? 'mission-marker-done' : ''}}">
+                  <view wx:if="{{!missionItem.isSupplemental}}" class="mission-marker-dot"></view>
+                  <view wx:else class="mission-marker-plus">+</view>
+                </view>
+                <view class="mission-row-copy">
+                  <view class="mission-row-title">{{missionItem.label}}</view>
+                  <view class="mission-row-meta">
+                    {{missionItem.statusLabel}} · {{missionItem.evidenceCount}} 条记录
+                  </view>
+                </view>
+                <view class="mission-row-action">{{activeMission === missionItem.mission ? '收起' : '展开'}}</view>
+              </view>
+
+              <view class="mission-detail-shell {{activeMission === missionItem.mission ? 'mission-detail-shell-open' : ''}}">
+                <view class="mission-detail">
+                  <view class="mission-detail-stats">
+                    <view class="mission-detail-stat">
+                      <view class="mission-detail-number">{{missionItem.photoCount}}</view>
+                      <view class="mission-detail-label">图片</view>
+                    </view>
+                    <view class="mission-detail-stat">
+                      <view class="mission-detail-number">{{missionItem.videoCount}}</view>
+                      <view class="mission-detail-label">视频</view>
+                    </view>
+                    <view class="mission-detail-stat">
+                      <view class="mission-detail-number">{{missionItem.audioCount}}</view>
+                      <view class="mission-detail-label">录音</view>
+                    </view>
+                  </view>
+
+                  <view class="note-paper">
+                    <view class="note-title">文字记录</view>
+                    <view class="note-copy">{{missionItem.assets.noteText || '这个任务下还没有留下文字记录。'}}</view>
+                    <view wx:if="{{missionItem.assets.companionNote}}" class="companion-note">
+                      <view class="note-title">66 记录</view>
+                      <view class="note-copy">{{missionItem.assets.companionNote}}</view>
+                    </view>
+                  </view>
+
+                  <view class="media-section">
+                    <view class="media-title">图片记录</view>
+                    <view wx:if="{{missionItem.assets.photoList.length}}" class="photo-grid">
+                      <image
+                        wx:for="{{missionItem.assets.photoList}}"
+                        wx:key="index"
+                        wx:for-item="photoSrc"
+                        class="photo-tile"
+                        src="{{photoSrc}}"
+                        mode="aspectFill"
+                      />
+                    </view>
+                    <view wx:else class="detail-empty-inline">没有图片记录。</view>
+                  </view>
+
+                  <view class="media-section">
+                    <view class="media-title">视频记录</view>
+                    <view wx:if="{{missionItem.assets.videoList.length}}" class="video-list">
+                      <video
+                        wx:for="{{missionItem.assets.videoList}}"
+                        wx:key="index"
+                        wx:for-item="videoItem"
+                        class="video-tile"
+                        src="{{videoItem.tempFilePath || videoItem}}"
+                        controls
+                        objectFit="cover"
+                      />
+                    </view>
+                    <view wx:else class="detail-empty-inline">没有视频记录。</view>
+                  </view>
+
+                  <view class="media-section">
+                    <view class="media-title">录音记录</view>
+                    <view wx:if="{{missionItem.assets.audioList.length}}" class="audio-list">
+                      <view wx:for="{{missionItem.assets.audioList}}" wx:key="index" wx:for-item="audioItem" class="audio-tile">
+                        <view class="audio-title">录音 {{index + 1}}</view>
+                        <audio-player src="{{audioItem.tempFilePath || audioItem}}" />
+                      </view>
+                    </view>
+                    <view wx:else class="detail-empty-inline">没有录音记录。</view>
+                  </view>
+
+                  <view class="mission-card-preview">
+                    <view class="mission-card-preview-head">
+                      <view>
+                        <view class="media-title">打卡卡片</view>
+                        <view class="mission-card-hint">把这条任务整理成可保存的纪念图。</view>
+                      </view>
+                      <button
+                        wx:if="{{!currentMissionCardSrc}}"
+                        class="ghost-btn mission-card-generate"
+                        bindtap="handleGenerateMissionCard"
+                        disabled="{{missionCardPendingNote}}"
+                      >
+                        生成
+                      </button>
+                    </view>
+
+                    <view wx:if="{{isRenderingMissionCard}}" class="card-rendering">
+                      <view class="card-rendering-line"></view>
+                      <view>66 正在整理这张卡片</view>
+                    </view>
+                    <view wx:elif="{{missionCardPendingNote}}" class="card-rendering">
+                      <view class="card-rendering-line"></view>
+                      <view>{{missionCardPendingText}}</view>
+                    </view>
+                    <image
+                      wx:elif="{{currentMissionCardSrc}}"
+                      class="mission-card-preview-image"
+                      src="{{currentMissionCardSrc}}"
+                      mode="widthFix"
+                      bindtap="openMissionCardModal"
+                      data-src="{{currentMissionCardSrc}}"
+                      data-title="{{missionItem.label || '打卡卡片'}}"
+                    />
+                    <view wx:else class="detail-empty-inline detail-empty-card">还没有生成卡片。</view>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </block>
+        </view>
+
+        <view wx:else class="detail-empty-panel">
+          <view class="detail-empty-title">这次漫步还没有任务级记录</view>
+          <view class="detail-empty-copy">可以回到探索页开始新的路线，把下一次的线索留在足迹册里。</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{walk.canShare || walk.canDelete}}" class="detail-action-bar">
+      <button
+        wx:if="{{walk.canShare}}"
+        class="primary-btn action-main"
+        open-type="share"
+        bindtap="handleShareTap"
+      >
+        分享这次漫步
+      </button>
+      <button
+        wx:if="{{walk.canDelete}}"
+        class="danger-action-btn action-delete"
+        bindtap="handleDeleteWalk"
+        loading="{{isDeletingWalk}}"
+        disabled="{{isDeletingWalk}}"
+      >
+        删除记录
+      </button>
+    </view>
+  </block>
+
+  <view wx:else class="detail-empty-panel detail-empty-page">
+    <view class="detail-empty-title">没有找到这条足迹</view>
+    <view class="detail-empty-copy">这条记录可能已被删除，或当前账号没有查看权限。</view>
+  </view>
+
+  <checkin-card
+    wx:if="{{isRenderingMissionCard && missionCardRenderPayload.renderVersion > 0}}"
+    mission="{{missionCardRenderPayload.mission}}"
+    assets="{{missionCardRenderPayload.assets}}"
+    locationName="{{missionCardRenderPayload.locationName}}"
+    themeTitle="{{missionCardRenderPayload.themeTitle}}"
+    dateLabel="{{missionCardRenderPayload.dateLabel}}"
+    renderVersion="{{missionCardRenderPayload.renderVersion}}"
+    autoRender="{{true}}"
+    bind:generated="handleMissionCardGenerated"
+  />
+
+  <view wx:if="{{showMissionCardModal}}" class="mission-card-modal-mask" catchtap="closeMissionCardModal">
+    <view class="mission-card-modal-sheet" catchtap="noop">
+      <view class="mission-card-modal-panel">
+        <view class="mission-card-modal-title">{{missionCardModal.title || '打卡卡片'}}</view>
+        <scroll-view scroll-y class="mission-card-modal-scroll">
+          <image wx:if="{{missionCardModal.imageSrc}}" class="mission-card-modal-image" src="{{missionCardModal.imageSrc}}" mode="widthFix" />
+        </scroll-view>
+      </view>
+      <view class="modal-actions">
+        <button class="ghost-btn modal-action" bindtap="closeMissionCardModal">关闭</button>
+        <button class="primary-btn modal-action" bindtap="handleSaveMissionCardToAlbum">保存到本地</button>
+      </view>
+    </view>
+  </view>
+</view>
+
+<privacy-consent
+  visible="{{privacyPopup.visible}}"
+  title="{{privacyPopup.title}}"
+  content="{{privacyPopup.content}}"
+  buttonText="{{privacyPopup.buttonText}}"
+  contractName="{{privacyPopup.contractName}}"
+  bind:agree="handlePrivacyAgree"
+  bind:close="handlePrivacyReject"
+  bind:opencontract="handleOpenPrivacyContract"
+/>

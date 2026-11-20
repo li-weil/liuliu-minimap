@@ -1,0 +1,9 @@
+{
+  "name": "askLiuliu",
+  "version": "1.1.0",
+  "description": "东澳岛专属 AI 向导「小猫遛遛」问答云函数（走云开发 AI+，无需自配 API Key）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~4.0.2"
+  }
+}

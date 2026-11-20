@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "记录漫步",
+  "enableShareAppMessage": true,
+  "usingComponents": {
+    "mission-list": "/components/mission-list/mission-list",
+    "privacy-consent": "/components/privacy-consent/privacy-consent"
+  }
+}

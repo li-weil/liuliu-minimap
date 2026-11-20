@@ -1,0 +1,167 @@
+<view class="page-shell dongao-page">
+  <view class="location-panel">
+    <view class="location-main">
+      <view class="location-label">
+        <image class="location-label-icon" src="/images/icon-compass.png" mode="aspectFit" />
+        <text>{{locationModeLabel}}</text>
+      </view>
+      <view class="location-name">{{debugSpotName || (currentCard.spotName || '请选择定位或模拟位置')}}</view>
+      <view class="location-note">
+        {{debugSpotName ? '正在用这个景点作为当前位置生成任务。' : '不会自动定位；需要你手动点击定位或选择一个岛上景点模拟。'}}
+      </view>
+    </view>
+    <view class="location-actions">
+      <picker mode="selector" range="{{allSpotNames}}" bindchange="onDebugSpotChange">
+        <view class="location-picker">模拟位置</view>
+      </picker>
+      <view class="location-clear" bindtap="devClearDebug">定位</view>
+    </view>
+  </view>
+
+  <view class="island-map-panel">
+    <island-map
+      selected-id="{{mapSelectedId}}"
+      bindpointtap="onMapPointTap"
+    />
+    <view class="island-3d-entry" bindtap="onOpenIsland3d">
+      <image class="island-3d-icon" src="/images/icon-palm.png" mode="aspectFit" />
+      <view class="island-3d-copy">
+        <view class="island-3d-main">3D 云游海岛</view>
+        <view class="island-3d-sub">全屏微缩东澳岛 · 复制链接在浏览器打开</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="mission-card {{cardMotion}} {{phase === 'loading' ? 'mission-card-loading' : ''}}"
+    bindtouchstart="onTouchStart"
+    bindtouchend="onTouchEnd"
+  >
+    <view class="mission-card-top" bindtap="onNavigateToSpot">
+      <view class="spot-copy">
+        <view class="spot-label">当前景点</view>
+        <view class="spot-name">{{phase === 'loading' ? (generatingSpotName || currentCard.spotName || '东澳岛') : (currentCard.spotName || '东澳岛')}}</view>
+      </view>
+      <view class="spot-meta">
+        <view class="spot-distance" wx:if="{{phase !== 'loading' && currentCard.distance}}">{{currentCard.distance}}</view>
+        <view class="spot-nav" wx:if="{{phase !== 'loading' && currentCard.lat}}">导航</view>
+      </view>
+    </view>
+
+    <view class="generation-body" wx:if="{{phase === 'loading'}}">
+      <view class="mission-label">生成中</view>
+      <view class="generation-title">正在生成今天的任务票据</view>
+      <view class="generation-progress-panel">
+        <view class="generation-progress-head">
+          <view class="generation-progress-title">读取景点、天气和潮汐线索</view>
+          <view class="generation-progress-number">{{generationProgress}}%</view>
+        </view>
+        <view class="generation-progress-track">
+          <view class="generation-progress-fill" style="width: {{generationProgress}}%;"></view>
+        </view>
+      </view>
+      <view class="generation-steps">
+        <view wx:for="{{generationSteps}}" wx:key="key" class="generation-step {{index < generationStepIndex ? 'generation-step-done' : (index === generationStepIndex ? 'generation-step-active' : '')}}">
+          <view class="generation-step-dot">{{index + 1}}</view>
+          <view class="generation-step-text">{{item.label}}</view>
+        </view>
+      </view>
+      <view class="mission-skeleton">
+        <view class="mission-skeleton-line mission-skeleton-line-main"></view>
+        <view class="mission-skeleton-line mission-skeleton-line-sub"></view>
+        <view class="mission-skeleton-line mission-skeleton-line-short"></view>
+      </view>
+    </view>
+
+    <view class="mission-body" wx:elif="{{currentCard.mission}}">
+      <view class="mission-label">试着做这个</view>
+      <view class="mission-text">{{currentCard.mission}}</view>
+    </view>
+    <view class="mission-body mission-body-empty" wx:else>
+      <image class="empty-surfboard" src="/images/icon-surfboard.png" mode="aspectFit" />
+      <view class="mission-label">东澳岛任务</view>
+      <view class="mission-text">选一个岛上位置，生成一条可以马上出发的观察任务</view>
+    </view>
+
+    <view class="mission-info" wx:if="{{phase !== 'loading' && currentCard.tips}}">
+      <view class="mission-info-label">提示</view>
+      <view class="mission-info-text">{{currentCard.tips}}</view>
+    </view>
+    <view class="mission-info mission-info-error" wx:elif="{{phase !== 'loading' && !currentCard.mission && errorMsg}}">
+      <view class="mission-info-label">错误</view>
+      <view class="mission-info-text">{{errorMsg}}</view>
+    </view>
+
+    <view class="mission-safety" wx:if="{{phase !== 'loading' && currentCard.safetyNote}}">
+      <view class="mission-safety-label">安全提醒</view>
+      <view class="mission-safety-text">{{currentCard.safetyNote}}</view>
+    </view>
+
+    <view
+      wx:if="{{phase === 'ready' && currentCard.mission}}"
+      class="primary-btn start-btn"
+      bindtap="onStartWalk"
+    >
+      <view class="start-main">开始这次漫步</view>
+      <view class="start-sub">{{currentCard.spotName || '生成任务后出发'}}</view>
+    </view>
+
+    <view class="mission-card-foot">
+      <view class="swipe-hint">左滑换新内容，右滑看历史</view>
+      <view class="history-count" wx:if="{{historyCards.length > 1}}">{{historyCards.length - cardIndex}} / {{historyCards.length}}</view>
+    </view>
+  </view>
+
+  <view wx:if="{{phase === 'locating'}}" class="overlay">
+    <view class="overlay-card">
+      <view class="overlay-title">正在确认位置</view>
+      <view class="overlay-text">会使用你刚刚手动选择的定位方式。</view>
+    </view>
+  </view>
+
+  <view wx:if="{{phase === 'choosing'}}" class="overlay">
+    <view class="choose-card">
+      <view class="choose-title">想怎么换？</view>
+      <view class="choose-options">
+        <view class="choose-btn" bindtap="onNewMission">
+          <view class="choose-label">换个任务</view>
+          <view class="choose-desc">同个景点，重新生成</view>
+        </view>
+        <view class="choose-btn" bindtap="onNewSpot">
+          <view class="choose-label">换个地点</view>
+          <view class="choose-desc">使用下一个推荐景点</view>
+        </view>
+      </view>
+      <view class="choose-cancel" bindtap="onCancelChoose">返回</view>
+    </view>
+  </view>
+
+  <view class="dev-toggle" bindtap="toggleDevTools">
+    {{showDevTools ? '收起开发工具' : (errorMsg ? '开发工具有错误' : '开发工具')}}
+  </view>
+  <view wx:if="{{showDevTools}}" class="dev-panel">
+    <view class="dev-btns">
+      <button class="dev-btn" bindtap="devInitSpots" size="mini">初始化spots</button>
+      <button class="dev-btn" bindtap="devCreateIndex" size="mini">建geo索引</button>
+      <button class="dev-btn" bindtap="devTestRefreshData" size="mini">测试天气潮汐</button>
+      <button class="dev-btn" bindtap="devTestRecommend" size="mini">测试推荐</button>
+      <button class="dev-btn" bindtap="devTestGenerate" size="mini">测试生成</button>
+      <button class="dev-btn" bindtap="showModelInput" size="mini">模型输入</button>
+      <button class="dev-btn" bindtap="showModelOutput" size="mini">模型输出</button>
+    </view>
+    <scroll-view wx:if="{{devLog}}" class="dev-log" scroll-y>
+      <text>{{devLog}}</text>
+    </scroll-view>
+  </view>
+
+  <view wx:if="{{showDebugDetail}}" class="debug-detail-mask" bindtap="closeDebugDetail">
+    <view class="debug-detail-panel" catchtap="noop">
+      <view class="debug-detail-head">
+        <view class="debug-detail-title">{{devDebugTitle}}</view>
+        <view class="debug-detail-close" bindtap="closeDebugDetail">关闭</view>
+      </view>
+      <scroll-view class="debug-detail-scroll" scroll-y>
+        <text>{{devDebugText}}</text>
+      </scroll-view>
+    </view>
+  </view>
+</view>

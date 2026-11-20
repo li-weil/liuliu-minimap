@@ -1,0 +1,72 @@
+{
+  "entryPagePath": "pages/dongao/dongao",
+  "pages": [
+    "pages/dongao/dongao",
+    "pages/onboarding/onboarding",
+    "pages/ai-chat/ai-chat",
+    "pages/index/index",
+    "pages/campus/campus",
+    "pages/team-join/team-join",
+    "pages/team-room/team-room",
+    "pages/team-record/team-record",
+    "pages/team-detail/team-detail",
+    "pages/feedback/feedback",
+    "pages/record/record",
+    "pages/walk-detail/walk-detail",
+    "pages/achievement-detail/achievement-detail",
+    "pages/history/history",
+    "pages/profile/profile"
+  ],
+  "__usePrivacyCheck__": true,
+  "requiredPrivateInfos": [
+    "getLocation",
+    "onLocationChange",
+    "startLocationUpdate"
+  ],
+  "window": {
+    "navigationBarTitleText": "遛遛东澳",
+    "navigationBarBackgroundColor": "#f5f2ed",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f2ed",
+    "backgroundTextStyle": "light"
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于获取当前位置、选点探索和记录漫步位置"
+    }
+  },
+  "tabBar": {
+    "color": "#6f6a5f",
+    "selectedColor": "#626247",
+    "backgroundColor": "#fcfaf6",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/dongao/dongao",
+        "text": "探索",
+        "iconPath": "images/tab-compass.png",
+        "selectedIconPath": "images/tab-compass-active.png"
+      },
+      {
+        "pagePath": "pages/ai-chat/ai-chat",
+        "text": "问问遛遛",
+        "iconPath": "images/tab-catface.png",
+        "selectedIconPath": "images/tab-catface-active.png"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "足迹",
+        "iconPath": "images/tab-pawprints.png",
+        "selectedIconPath": "images/tab-pawprints-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/tab-strawhat.png",
+        "selectedIconPath": "images/tab-strawhat-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

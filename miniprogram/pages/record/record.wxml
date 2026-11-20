@@ -1,0 +1,145 @@
+<view class="page-shell record-page" wx:if="{{theme && draft}}">
+  <view class="record-hero">
+    <view wx:if="{{isTracking || hasRoutePoints}}" class="record-map-stage">
+      <map
+        longitude="{{mapCenterLongitude}}"
+        latitude="{{mapCenterLatitude}}"
+        scale="15"
+        show-location
+        polyline="{{routePolyline}}"
+        class="record-map"
+      />
+      <view wx:if="{{!isTracking}}" class="record-map-badge">
+        <view class="record-map-badge-title">{{theme.title}}</view>
+        <view class="record-map-badge-sub">已记录轨迹 · {{routeStats.pointCount}} 个点</view>
+      </view>
+    </view>
+
+    <view wx:else class="record-theme-stage">
+      <view class="record-theme-copy">
+        <view class="record-kicker">正在漫步</view>
+        <view class="record-stage-title">{{theme.title}}</view>
+        <view class="record-stage-desc">{{theme.description}}</view>
+      </view>
+      <view class="record-stage-stamp">
+        <view class="record-stage-glyph">{{theme.displayGlyph || '遛'}}</view>
+        <view class="record-stage-stamp-text">{{draft.walkMode === 'dongao' ? '东澳岛' : (draft.walkMode === 'advanced' ? '进阶' : '纯粹')}}</view>
+      </view>
+    </view>
+
+    <view class="record-hero-footer">
+      <view class="record-meta-grid">
+        <view class="record-meta-item">
+          <view class="record-meta-label">地点</view>
+          <view class="record-meta-value">{{draft.locationName}}</view>
+        </view>
+        <view class="record-meta-item">
+          <view class="record-meta-label">模式</view>
+          <view class="record-meta-value">{{draft.walkMode === 'dongao' ? '东澳岛模式' : (draft.walkMode === 'advanced' ? '进阶模式' : '纯粹模式')}}</view>
+        </view>
+      </view>
+      <view class="hero-progress-head">
+        <view>已完成 {{missionCompletedCount}} / {{missionTotalCount}}</view>
+        <view>{{missionProgressPercent}}%</view>
+      </view>
+      <view class="hero-progress-track">
+        <view class="hero-progress-fill" style="width: {{missionProgressPercent}}%;"></view>
+      </view>
+    </view>
+  </view>
+
+  <view class="location-status-bar">
+    <view class="location-status-copy-cell">
+      <view class="location-status-dot {{isTracking ? 'location-status-dot-active' : ''}}"></view>
+      <view class="location-status-main">
+        <view class="location-status-title">{{isTracking ? '前台定位中' : (hasRoutePoints ? '轨迹已记录' : '位置显示未开启')}}</view>
+        <view class="location-status-copy">{{isTracking ? '当前位置会显示在顶部地图。' : (hasRoutePoints ? '顶部地图展示已记录的轨迹，开启定位可继续记录。' : '仅在当前页显示位置。')}}</view>
+      </view>
+    </view>
+    <view class="location-status-duration">
+      <view class="location-status-number">{{routeStats.durationLabel}}</view>
+      <view class="location-status-label">显示时长</view>
+    </view>
+    <view class="location-toggle-cell">
+      <button class="ghost-btn location-toggle-btn" bindtap="toggleTracking">{{isTracking ? '停止' : '开启'}}</button>
+    </view>
+  </view>
+
+  <view class="track-time-strip">
+    <view class="track-time-item">
+      <view class="track-time-label">开始显示</view>
+      <view class="track-time-value">{{routeStats.startedLabel}}</view>
+    </view>
+    <view class="track-time-divider"></view>
+    <view class="track-time-item">
+      <view class="track-time-label">结束显示</view>
+      <view class="track-time-value">{{routeStats.stoppedLabel}}</view>
+    </view>
+  </view>
+
+  <view class="mission-workbench">
+    <view class="mission-workbench-head">
+      <view>
+        <view class="section-title">任务打卡</view>
+        <view class="section-subtitle">展开当前任务，添加素材和文字，再完成这一站的打卡。</view>
+      </view>
+      <view class="mission-count-badge">{{missionCompletedCount}} / {{missionTotalCount}}</view>
+    </view>
+    <mission-list
+      missions="{{theme.missions}}"
+      supplementalMissionKey="{{summaryMissionKey}}"
+      supplementalMissionLabel="花些时间回顾一路的采撷"
+      activeMission="{{activeMission}}"
+      expandedMission="{{expandedMission}}"
+      completedMissions="{{draft.completedMissions}}"
+      missionReviews="{{draft.missionReviews}}"
+      missionAssetMap="{{draft.missionAssetMap}}"
+      isRecordingAudio="{{isRecordingAudio}}"
+      recordingMission="{{recordingMission || ''}}"
+      locationName="{{draft.locationName}}"
+      themeTitle="{{theme.title}}"
+      dateLabel="{{routeStats.startedLabel}}"
+      accentColor="{{theme.vibeColor || '#626247'}}"
+      checkingInMission="{{checkingInMission}}"
+      bind:select="selectMission"
+      bind:capturemedia="handleMissionMediaCapture"
+      bind:checkin="handleMissionCheckIn"
+      bind:missionnote="handleMissionNoteInput"
+      bind:removephoto="removeMissionPhoto"
+      bind:removevideo="removeMissionVideo"
+      bind:removeaudio="removeMissionAudio"
+    />
+  </view>
+
+  <view class="record-save-spacer"></view>
+
+  <view class="save-action-bar">
+    <view wx:if="{{isSaving}}" class="save-progress-card">
+      <view class="save-progress-head">
+        <view class="save-progress-title">{{saveStatusText || '正在保存这次漫步'}}</view>
+        <view class="save-progress-percent">{{uploadProgressPercent}}%</view>
+      </view>
+      <view wx:if="{{uploadProgressTotal}}" class="save-progress-meta">已处理 {{uploadProgressCurrent}} / {{uploadProgressTotal}} 项素材</view>
+      <view class="save-progress-track">
+        <view class="save-progress-fill" style="width: {{uploadProgressPercent}}%;"></view>
+      </view>
+    </view>
+
+    <button class="primary-btn save-btn" bindtap="handleSave" loading="{{isSaving}}" disabled="{{isSaving}}">
+      {{isSaving ? '正在保存' : '完成本次漫步并保存'}}
+    </button>
+  </view>
+</view>
+
+<view wx:else class="page-shell empty-copy">还没有属于今天的漫步主题，先去探索页挑一段想走的城市情绪吧</view>
+
+<privacy-consent
+  visible="{{privacyPopup.visible}}"
+  title="{{privacyPopup.title}}"
+  content="{{privacyPopup.content}}"
+  buttonText="{{privacyPopup.buttonText}}"
+  contractName="{{privacyPopup.contractName}}"
+  bind:agree="handlePrivacyAgree"
+  bind:close="handlePrivacyReject"
+  bind:opencontract="handleOpenPrivacyContract"
+/>

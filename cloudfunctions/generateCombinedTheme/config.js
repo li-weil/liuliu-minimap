@@ -1,0 +1,6 @@
+module.exports = {
+  apiKey: '',
+  baseUrl: 'https://api.deepseek.com',
+  model: 'deepseek-v4-flash',
+  timeoutMs: 60000,
+};

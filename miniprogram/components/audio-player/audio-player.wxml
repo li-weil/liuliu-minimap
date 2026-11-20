@@ -1,0 +1,29 @@
+<view class="audio-player-shell">
+  <button
+    class="audio-toggle {{isPlaying ? 'audio-toggle-playing' : ''}}"
+    bindtap="handleTogglePlay"
+    disabled="{{!src}}"
+  >
+    {{isPlaying ? '暂停' : '播放'}}
+  </button>
+
+  <view class="audio-main">
+    <view class="audio-meta-row">
+      <view class="audio-progress-label">{{currentTimeLabel}} / {{durationLabel}}</view>
+      <view wx:if="{{loadError}}" class="audio-error">{{loadError}}</view>
+    </view>
+    <slider
+      class="audio-slider"
+      min="0"
+      max="1000"
+      step="1"
+      value="{{sliderValue}}"
+      activeColor="{{accentColor}}"
+      backgroundColor="rgba(108, 106, 73, 0.16)"
+      block-color="{{accentColor}}"
+      block-size="18"
+      bindchanging="handleSliderChanging"
+      bindchange="handleSliderChange"
+    />
+  </view>
+</view>

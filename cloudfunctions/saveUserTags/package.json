@@ -1,0 +1,9 @@
+{
+  "name": "saveUserTags",
+  "version": "1.0.0",
+  "description": "保存开屏选择题产生的用户客群标签",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~4.0.2"
+  }
+}

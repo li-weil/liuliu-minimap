@@ -1,0 +1,21 @@
+<view wx:if="{{visible}}" class="privacy-mask" catchtap="noop">
+  <view class="privacy-panel" catchtap="noop">
+    <view class="privacy-title">{{title}}</view>
+    <view class="privacy-content">{{content}}</view>
+    <view class="privacy-contract-row">
+      <text class="privacy-contract-prefix">你可以先查看</text>
+      <text class="privacy-contract-link" bindtap="handleOpenContract">{{contractName}}</text>
+    </view>
+    <view class="privacy-actions">
+      <button class="privacy-btn privacy-btn-ghost" bindtap="handleClose">暂不使用</button>
+      <button
+        class="privacy-btn privacy-btn-primary"
+        open-type="agreePrivacyAuthorization"
+        bindagreeprivacyauthorization="handleAgree"
+        binderror="handleAgreeError"
+      >
+        {{buttonText}}
+      </button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,43 @@
+<view class="page-shell ai-chat-page">
+  <view class="ai-hero">
+    <image class="ai-avatar" src="/images/liuliu-cat.png" mode="aspectFill" />
+    <view class="ai-hero-copy">
+      <view class="ai-hero-title">小猫遛遛</view>
+      <view class="ai-hero-sub">东澳岛专属 AI 向导 · 有问必答</view>
+    </view>
+    <image class="ai-hero-fish" src="/images/icon-fish.png" mode="aspectFit" />
+  </view>
+
+  <scroll-view
+    class="ai-message-list"
+    scroll-y
+    scroll-into-view="{{scrollIntoView}}"
+    scroll-with-animation
+  >
+    <view
+      wx:for="{{messages}}"
+      wx:key="index"
+      id="msg-{{index}}"
+      class="ai-msg-row {{item.role === 'user' ? 'ai-msg-row-user' : ''}}"
+    >
+      <view class="ai-bubble {{item.role === 'user' ? 'ai-bubble-user' : ''}} {{item.pending ? 'ai-bubble-pending' : ''}}">
+        {{item.text}}
+      </view>
+    </view>
+    <view class="ai-list-tail"></view>
+  </scroll-view>
+
+  <view class="ai-input-bar">
+    <view class="ai-mic" bindtap="onMicTap">语音</view>
+    <input
+      class="ai-input"
+      value="{{inputValue}}"
+      placeholder="问问岛上的玩法、路线、潮汐…"
+      confirm-type="send"
+      bindinput="onInputValueChange"
+      bindconfirm="onInputConfirm"
+      disabled="{{sending}}"
+    />
+    <view class="ai-send {{sending || !inputValue ? 'ai-send-disabled' : ''}}" bindtap="onSendTap">发送</view>
+  </view>
+</view>

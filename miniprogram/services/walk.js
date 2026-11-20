@@ -1,0 +1,29 @@
+const { callApi } = require('./api');
+
+function createWalk(payload) {
+  return callApi('createWalk', payload);
+}
+
+function listMyWalks(payload = {}) {
+  return callApi('listMyWalks', payload);
+}
+
+function getWalkDetail(payload = {}) {
+  return callApi('getWalkDetail', payload);
+}
+
+function publishWalkShare(payload = {}) {
+  return callApi('publishWalkShare', payload);
+}
+
+function deleteWalk(payload = {}) {
+  return callApi('deleteWalk', payload);
+}
+
+module.exports = {
+  createWalk,
+  deleteWalk,
+  getWalkDetail,
+  listMyWalks,
+  publishWalkShare,
+};

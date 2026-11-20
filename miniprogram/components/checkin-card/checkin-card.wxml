@@ -1,0 +1,7 @@
+<view class="checkin-card-shell">
+  <canvas
+    id="cardCanvas"
+    type="2d"
+    class="checkin-card-canvas"
+  ></canvas>
+</view>

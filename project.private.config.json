@@ -1,0 +1,62 @@
+{
+  "libVersion": "3.15.0",
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "pages/dongao/dongao",
+          "pathName": "pages/dongao/dongao",
+          "query": "",
+          "scene": null,
+          "launchMode": "default"
+        },
+        {
+          "name": "pages/index/index",
+          "pathName": "pages/index/index",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "pages/audio-test/audio-test",
+          "pathName": "pages/audio-test/audio-test",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "pages/font-test/font-test",
+          "pathName": "pages/font-test/font-test",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
+          "name": "pages/achievement-image-test/achievement-image-test",
+          "pathName": "pages/achievement-image-test/achievement-image-test",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        }
+      ]
+    }
+  },
+  "projectname": "liuliu-miniapp",
+  "setting": {
+    "urlCheck": false,
+    "coverView": true,
+    "lazyloadPlaceholderEnable": false,
+    "skylineRenderEnable": false,
+    "preloadBackgroundData": false,
+    "autoAudits": false,
+    "useApiHook": true,
+    "showShadowRootInWxmlPanel": true,
+    "useStaticServer": false,
+    "useLanDebug": false,
+    "showES6CompileOption": false,
+    "compileHotReLoad": true,
+    "checkInvalidKey": true,
+    "ignoreDevUnusedFiles": true,
+    "bigPackageSizeSupport": false
+  }
+}

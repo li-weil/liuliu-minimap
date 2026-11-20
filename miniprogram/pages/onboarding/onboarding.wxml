@@ -1,0 +1,39 @@
+<view class="ob-page">
+  <view class="ob-top">
+    <view class="ob-step-pill">第 {{step + 1}} / {{stepCount}} 题</view>
+    <view class="ob-skip" bindtap="onSkip">跳过</view>
+  </view>
+
+  <view class="ob-title-block" wx:if="{{question}}">
+    <view class="ob-kicker-row">
+      <view class="ob-kicker">Little Quiz</view>
+      <image class="ob-q-icon" src="{{question.icon}}" mode="aspectFit" />
+    </view>
+    <view class="ob-title">{{question.title}}</view>
+    <view class="ob-hint">{{question.hint}}</view>
+  </view>
+
+  <view class="ob-circles" wx:if="{{question}}">
+    <image class="ob-deco ob-deco-fish" src="/images/icon-fish.png" mode="aspectFit" />
+    <image class="ob-deco ob-deco-sailboat" src="/images/icon-sailboat.png" mode="aspectFit" />
+    <view
+      wx:for="{{question.options}}"
+      wx:key="label"
+      class="ob-option ob-c{{index % 5}} {{selected === index ? 'picked' : ''}}"
+      data-index="{{index}}"
+      bindtap="onSelect"
+    >
+      <image class="ob-opt-img" src="{{item.img}}" mode="aspectFit" />
+      <view class="ob-opt-label">{{item.label}}</view>
+    </view>
+  </view>
+
+  <image class="ob-deco ob-deco-shell" src="/images/icon-shell.png" mode="aspectFit" />
+  <image class="ob-deco ob-deco-starfish" src="/images/icon-starfish.png" mode="aspectFit" />
+  <image class="ob-deco ob-deco-crab" src="/images/icon-crab.png" mode="aspectFit" />
+
+  <view class="ob-bottom-bar">
+    <image class="ob-bar-cat" src="/images/liuliu-cat.png" mode="aspectFit" />
+    <text>答完四道小题，遛遛会更懂你 · 全程可跳过</text>
+  </view>
+</view>

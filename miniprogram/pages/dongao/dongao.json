@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "探索 · 遛遛东澳",
+  "navigationBarBackgroundColor": "#e8f4f0",
+  "backgroundColor": "#f5f2ed",
+  "usingComponents": {
+    "island-map": "/components/island-map/island-map"
+  }
+}

@@ -1,0 +1,204 @@
+<view class="page-shell">
+  <view wx:if="{{loading}}" class="empty-copy">正在整理团队结果...</view>
+
+  <view wx:elif="{{room}}">
+    <view class="theme-card detail-hero">
+      <view class="meta-row detail-meta">
+        <view class="meta-pill">同行</view>
+        <view class="meta-pill">{{statusLabel}}</view>
+        <view class="meta-pill">{{room.createdAtLabel}}</view>
+      </view>
+      <view class="detail-title">{{room.themeTitle}}</view>
+      <view class="detail-copy">{{room.locationName}}</view>
+      <view wx:if="{{room.teamSummary}}" class="detail-summary">{{room.teamSummary}}</view>
+      <button wx:if="{{showActionButton}}" class="primary-btn detail-resume-btn" bindtap="handleResume">{{actionLabel}}</button>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">团队概览</view>
+      <view class="meta-row">
+        <view class="meta-pill">{{room.teamStats.memberCount}} 人同行</view>
+        <view class="meta-pill">{{room.teamStats.completedMissionCount}} / {{room.teamStats.totalMissionCount}} 个任务已完成</view>
+        <view class="meta-pill">{{room.teamStats.contributionCount}} 份任务记录</view>
+      </view>
+      <view class="meta-row" style="margin-top: 14rpx;">
+        <view class="meta-pill">{{room.teamStats.photoCount}} 张图片</view>
+        <view class="meta-pill">{{room.teamStats.videoCount}} 段视频</view>
+        <view class="meta-pill">{{room.teamStats.audioCount}} 段录音</view>
+      </view>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">成员</view>
+      <view class="member-list">
+        <view wx:for="{{room.members}}" wx:key="userId" class="member-item">
+          <image wx:if="{{item.avatarUrl}}" class="member-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="member-avatar member-avatar-fallback">友</view>
+          <view class="member-name">{{item.nickName}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">任务记录</view>
+      <view wx:if="{{hasMissionGroups}}" class="mission-list-block">
+        <block wx:for="{{missionGroups}}" wx:key="mission" wx:for-item="missionItem">
+          <view class="mission-group">
+            <view
+              class="{{missionItem.rowClass}}"
+              bindtap="switchMissionTab"
+              data-mission="{{missionItem.mission}}"
+            >
+              <view class="{{missionItem.anchorClass}}"></view>
+              <view class="mission-copy">{{missionItem.mission}}</view>
+              <view class="mission-state">{{missionItem.completedLabel}}</view>
+            </view>
+
+            <view wx:if="{{missionItem.isActive}}" class="mission-detail-block">
+              <view class="meta-row mission-detail-meta">
+                <view class="meta-pill">{{missionItem.contributionCount}} 位成员有记录</view>
+                <view class="meta-pill" wx:if="{{missionItem.aggregate.photoCount}}">{{missionItem.aggregate.photoCount}} 张图片</view>
+                <view class="meta-pill" wx:if="{{missionItem.aggregate.videoCount}}">{{missionItem.aggregate.videoCount}} 段视频</view>
+                <view class="meta-pill" wx:if="{{missionItem.aggregate.audioCount}}">{{missionItem.aggregate.audioCount}} 段录音</view>
+              </view>
+
+              <view wx:if="{{missionItem.contributions.length}}">
+                <view wx:for="{{missionItem.contributions}}" wx:key="id" class="contribution-detail-card">
+                  <view class="contribution-head">
+                    <image wx:if="{{item.avatarUrl}}" class="contribution-avatar" src="{{item.avatarUrl}}" mode="aspectFill" />
+                    <view wx:else class="contribution-avatar contribution-avatar-fallback">友</view>
+                    <view class="contribution-meta">
+                      <view class="contribution-author">{{item.nickName}}</view>
+                      <view class="contribution-time">{{item.updatedAtLabel}}</view>
+                    </view>
+                  </view>
+
+                  <view class="mission-detail-note">{{item.noteTextDisplay}}</view>
+                  <view class="mission-media-group">
+                    <view class="section-subtitle">图片记录</view>
+                    <view wx:if="{{item.photoList.length}}" class="photo-grid">
+                      <image wx:for="{{item.photoList}}" wx:key="index" src="{{item}}" mode="aspectFill" class="photo-grid-image" />
+                    </view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传图片</view>
+                  </view>
+
+                  <view class="mission-media-group">
+                    <view class="section-subtitle">视频记录</view>
+                    <view wx:if="{{item.videoList.length}}">
+                      <video
+                        wx:for="{{item.videoList}}"
+                        wx:key="index"
+                        src="{{item}}"
+                        controls
+                        objectFit="cover"
+                        class="mission-video"
+                      />
+                    </view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传视频</view>
+                  </view>
+
+                  <view class="mission-media-group">
+                    <view class="section-subtitle">录音记录</view>
+                    <view wx:if="{{item.audioList.length}}">
+                      <view wx:for="{{item.audioList}}" wx:key="index" class="mission-card audio-card">
+                        <view class="audio-card-title">录音 {{index + 1}}</view>
+                        <audio-player src="{{item}}" />
+                      </view>
+                    </view>
+                    <view wx:else class="empty-copy mission-empty-copy">这个成员没有上传录音</view>
+                  </view>
+
+                  <button
+                    class="ghost-btn"
+                    bindtap="openFeedback"
+                    data-scene="team-detail"
+                    data-contribution-id="{{item.id}}"
+                    data-mission-key="{{missionItem.mission}}"
+                    data-target-user-id="{{item.userId}}"
+                    data-target-nick-name="{{item.nickName}}"
+                  >
+                    举报 / 反馈这条记录
+                  </button>
+                </view>
+              </view>
+              <view wx:else class="empty-copy detail-empty">这个任务下还没有团队记录</view>
+
+              <view class="mission-card-preview">
+                <view class="section-subtitle">打卡卡片</view>
+                <view wx:if="{{isRenderingMissionCard}}" class="mission-card-preview-loading">正在汇总全部成员的内容，生成团队打卡卡片...</view>
+                <view wx:elif="{{missionCardPendingNote}}" class="mission-card-preview-loading">{{missionCardPendingText}}</view>
+                <image
+                  wx:elif="{{currentMissionCardSrc}}"
+                  class="mission-card-preview-image"
+                  src="{{currentMissionCardSrc}}"
+                  mode="widthFix"
+                  bindtap="openMissionCardModal"
+                  data-src="{{currentMissionCardSrc}}"
+                  data-title="{{missionItem.mission}}"
+                />
+                <view wx:else class="empty-copy mission-empty-copy">还没有生成团队卡片</view>
+                <button wx:if="{{missionItem.contributionCount && !currentMissionCardSrc}}" class="ghost-btn" bindtap="handleGenerateMissionCard" disabled="{{missionCardPendingNote}}">
+                  生成卡片
+                </button>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
+      <view wx:else class="empty-copy detail-empty">这场同行漫步还没有任务记录。</view>
+    </view>
+
+    <view class="section-card detail-section">
+      <view class="section-title">团队动态</view>
+      <view wx:if="{{room.activities.length}}">
+        <view wx:for="{{room.activities}}" wx:key="id" class="activity-item">{{item.content}}</view>
+      </view>
+      <view wx:else class="empty-copy detail-empty">这次同行漫步还没有动态记录。</view>
+    </view>
+
+    <button class="danger-action-btn" bindtap="handleDeleteTeamWalk" loading="{{isDeleting}}" disabled="{{isDeleting}}">
+      删除这条同行记录
+    </button>
+    <button class="ghost-btn detail-feedback-btn" bindtap="openFeedback" data-scene="team-detail">举报 / 反馈</button>
+  </view>
+
+  <view wx:else class="empty-copy">没有找到这场同行漫步。</view>
+
+  <checkin-card
+    wx:if="{{isRenderingMissionCard && missionCardRenderPayload.renderVersion > 0}}"
+    mission="{{missionCardRenderPayload.mission}}"
+    entries="{{missionCardRenderPayload.entries}}"
+    locationName="{{missionCardRenderPayload.locationName}}"
+    themeTitle="{{missionCardRenderPayload.themeTitle}}"
+    dateLabel="{{missionCardRenderPayload.dateLabel}}"
+    renderVersion="{{missionCardRenderPayload.renderVersion}}"
+    autoRender="{{true}}"
+    bind:generated="handleMissionCardGenerated"
+  />
+
+  <view wx:if="{{showMissionCardModal}}" class="mission-card-modal-mask" catchtap="closeMissionCardModal">
+    <view class="mission-card-modal-sheet" catchtap="noop">
+      <view class="mission-card-modal-panel">
+        <view class="mission-card-modal-title">{{missionCardModal.title}}</view>
+        <scroll-view scroll-y class="mission-card-modal-scroll">
+          <image wx:if="{{missionCardModal.imageSrc}}" class="mission-card-modal-image" src="{{missionCardModal.imageSrc}}" mode="widthFix" />
+        </scroll-view>
+      </view>
+      <view class="mission-card-modal-actions">
+        <button class="ghost-btn mission-card-modal-action" bindtap="closeMissionCardModal">关闭</button>
+        <button class="primary-btn mission-card-modal-action" bindtap="handleSaveMissionCardToAlbum">保存到本地</button>
+      </view>
+    </view>
+  </view>
+</view>
+
+<privacy-consent
+  visible="{{privacyPopup.visible}}"
+  title="{{privacyPopup.title}}"
+  content="{{privacyPopup.content}}"
+  buttonText="{{privacyPopup.buttonText}}"
+  contractName="{{privacyPopup.contractName}}"
+  bind:agree="handlePrivacyAgree"
+  bind:close="handlePrivacyReject"
+  bind:opencontract="handleOpenPrivacyContract"
+/>
